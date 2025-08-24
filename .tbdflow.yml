@@ -1,5 +1,18 @@
 main_branch_name: main
+release_url_template: https://github.com/username/repository/releases/tag/{{version}}
 stale_branch_threshold_days: 1
+issue_handling:
+  strategy: branch-name
+branch_types:
+  fix: fix/
+  feat: feat/
+  docs: docs/
+  refactor: refactor/
+  ci: ci/
+  release: release_
+  feature: feature_
+  hotfix: hotfix_
+  chore: chore/
 branch_prefixes:
   feature: feature_
   release: release_
@@ -25,9 +38,13 @@ lint:
   issue_key_missing:
     enabled: false
     pattern: ^[A-Z]+-\d+$
+  scope:
+    enabled: true
+    enforce_lowercase: true
   subject_line_rules:
-    subject_line_max_length: 72
-    subject_line_not_capitalized: true
-    subject_line_no_period: true
+    max_length: 72
+    enforce_lowercase: true
+    no_period: true
   body_line_rules:
-    body_max_line_length: 80
+    max_line_length: 80
+    leading_blank: true
