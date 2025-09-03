@@ -25,7 +25,7 @@ then_block = { "then:" ~ action+ }
 // The "if" part of a rule.
 condition = { time_condition | output_condition | state_condition }
 
-time_condition   = { "time" ~ comparison_op ~ time_marker }
+time_condition = { "time" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ time_marker }
 output_condition = { identifier ~ "output_contains" ~ string }
 state_condition  = { "Test" ~ "has_succeeded" ~ identifier }
 
@@ -39,90 +39,12 @@ test_action  = { "Test" ~ "succeeds" ~ identifier }
 
 // The basic building blocks of the language.
 //identifier    = @{('a'..'z' | 'A'..'Z' | "_" ) ~ ('a'..'z' | 'A'..'Z' | '0'..'9' | '_')* }
-# Do I need to define these?
-ASCII_ALPHA = _{ 'a'..'z' | 'A'..'Z' }
-ASCII_ALPHANUMERIC = _{ ASCII_ALPHA | '0'..'9' }
-identifier    = @{ ('_' | ASCII_ALPHA) ~ ('_' | ASCII_ALPHANUMERIC)* }
+identifier = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
 string = { "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
 // These are the parts your Rust parser will actually capture.
 inner_double = @{ (!"\"" ~ ANY)* }
 inner_single = @{ (!"'" ~ ANY)* }
-number        = @{ ('0'..'9')+ }
+number        = { ('0'..'9')+ }
 time_marker   = @{ number ~ "s" }
 value         = { string | number }
-comparison_op = @{ "==" | ">" | "<" | ">=" | "<=" }
-
-# Example choreo test file for a simple CLI todo application.
-# The syntax below is the goal for the choreo DSL.
-/*
-# test_medi_workflow.chor
-# A test suite for our 'medi' CLI tool.
-
-actors: Terminal
-
-outcomes:
-  - NoteCreationSuccess
-  - TaskAddedToList
-  - CleanupSuccess
-
-# Rule 1: Create a new note using a non-interactive flag.
-rule "Action: Create a new note" {
-  when:
-    time >= 1s
-  then:
-    Terminal types "medi new blog-idea-for-dsl-test -m 'Write a post about my new CLI tool'"
-    Terminal presses "Enter"
-}
-
-# Rule 2: Assert that the note was created successfully.
-rule "Assertion: Check for note creation message" {
-  when:
-    Terminal output_contains "Successfully created note: 'blog-idea-for-dsl-test'"
-  then:
-    Test succeeds NoteCreationSuccess
-}
-
-# Rule 3: Add a task to the note we just created.
-rule "Action: Add a task to the new note" {
-  when:
-    Test has_succeeded NoteCreationSuccess
-  then:
-    Terminal types "medi task add blog-idea-for-dsl-test 'Write the first draft'"
-    Terminal presses "Enter"
-}
-
-# Rule 4: Verify the task was added by listing all tasks.
-rule "Verify: List tasks to confirm creation" {
-  when:
-    Terminal output_contains "Added new task with ID:"
-  then:
-    Terminal types "medi task list"
-    Terminal presses "Enter"
-}
-
-# Rule 5: Assert that the new task appears in the list.
-rule "Assertion: Confirm task appears in list" {
-  when:
-    Terminal output_contains "Write the first draft (for note 'blog-idea-for-dsl-test')"
-  then:
-    Test succeeds TaskAddedToList
-}
-
-# Rule 6: Cleanup the test data.
-rule "Cleanup: Delete the test note" {
-  when:
-    Test has_succeeded TaskAddedToList
-  then:
-    # Use --force to avoid the interactive confirmation prompt.
-    Terminal types "medi delete blog-idea-for-dsl-test --force"
-    Terminal presses "Enter"
-}
-
-# Rule 7: Assert that the cleanup was successful.
-rule "Assertion: Confirm deletion message" {
-  when:
-    Terminal output_contains "Successfully deleted note: 'blog-idea-for-dsl-test'"
-  then:
-    Test succeeds CleanupSuccess
-}
-*/
+comparison_op = @{ ">=" | "<=" | "==" | ">" | "<" }

@@ -61,6 +61,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
 
 [[package]]
+name = "choreo"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "pest",
+ "pest_derive",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -199,20 +213,6 @@ name = "log"
 version = "0.4.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
-
-[[package]]
-name = "medi"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "pest",
- "pest_derive",
- "serde",
- "serde_json",
- "thiserror",
- "toml",
-]
 
 [[package]]
 name = "memchr"
