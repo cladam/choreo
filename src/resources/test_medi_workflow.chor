@@ -3,7 +3,7 @@
 
 actors: Terminal
 
-outcomes: NoteCreationSuccess, TaskAddedToList, CleanupSuccess
+outcomes: NoteCreationSuccess, TasksListedForVerification, TaskAddedToList, CleanupSuccess
 
 # Rule 1: Create a new note using a non-interactive flag.
 rule "Action: Create a new note" {
@@ -31,19 +31,23 @@ rule "Action: Add a task to the new note" {
     Terminal presses "Enter"
 }
 
-# Rule 4: Verify the task was added by listing all tasks.
+# Rule 4: Add an outcome to the verify step
 rule "Verify: List tasks to confirm creation" {
   when:
     Terminal output_contains "Added new task with ID:"
   then:
     Terminal types "medi task list"
     Terminal presses "Enter"
+    # Add this action to signal that the list command has been sent.
+    Test succeeds TasksListedForVerification
 }
 
-# Rule 5: Assert that the new task appears in the list.
+# Rule 5: Make the assertion dependent on the previous step
 rule "Assertion: Confirm task appears in list" {
   when:
-    Terminal output_contains "Write the first draft (for note 'blog-idea-for-dsl-test')"
+    # This condition ensures we only start checking AFTER the list command has run.
+    Test has_succeeded TasksListedForVerification
+    Terminal output_contains "Write the first draft (for note blog-idea-for-dsl-test)"
   then:
     Test succeeds TaskAddedToList
 }
@@ -51,7 +55,8 @@ rule "Assertion: Confirm task appears in list" {
 # Rule 6: Cleanup the test data.
 rule "Cleanup: Delete the test note" {
   when:
-    Test has_succeeded TaskAddedToList
+    # This should wait for the final assertion to pass
+    Test has_succeeded TaskAddedToList # Assuming you used this from the last step
   then:
     # Use --force to avoid the interactive confirmation prompt.
     Terminal types "medi delete blog-idea-for-dsl-test --force"

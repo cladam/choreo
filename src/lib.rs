@@ -1,3 +1,3 @@
-mod ast;
-mod parser;
-mod terminal_backend;
+pub mod ast;
+pub mod parser;
+pub mod terminal_backend;

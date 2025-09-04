@@ -1,8 +1,8 @@
+use crate::ast;
+use crate::ast::{Action, Condition, Statement, TestSuite, Value};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
-use crate::ast;
-use crate::ast::{Action, Condition, Statement, TestSuite, Value};
 
 #[derive(Parser)]
 #[grammar = "resources/choreo.pest"]
@@ -13,30 +13,32 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
     let pairs = ChoreoParser::parse(Rule::grammar, source)?.next().unwrap();
 
     let mut statements = vec![];
-    for pair in pairs.into_inner() {
-        // Each pair at this level is a top-level statement.
-        if pair.as_rule() == Rule::EOI { break; } // End of input
-        println!("Parsed statement: {:?}", pair);
+    for statement_pair in pairs.into_inner() {
+        if statement_pair.as_rule() == Rule::EOI {
+            break;
+        }
+        //println!("Parsed statement: {:?}", statement_pair);
 
-        // All top-level statements are handled here.
+        // This opens the "statement" container to get the content.
+        let pair = statement_pair.into_inner().next().unwrap();
+
         statements.push(match pair.as_rule() {
+            // Now this will correctly match on the inner rule.
             Rule::actors_def => build_actors_def(pair),
             Rule::outcomes_def => build_outcomes_def(pair),
             Rule::rule => build_rule(pair),
-            Rule::setting => build_setting(pair),
+            Rule::settings_def => build_setting(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
         });
     }
 
-
-    println!("Parsing was successful! (AST construction logic is a TODO)");
-    // Return a dummy AST for now.
-    Ok(TestSuite { statements: vec![] })
+    Ok(TestSuite { statements })
 }
 
 // Helper function for a simple definition.
 fn build_actors_def(pair: Pair<Rule>) -> Statement {
-    let identifiers: Vec<String> = pair.into_inner()
+    let identifiers: Vec<String> = pair
+        .into_inner()
         .filter(|p| p.as_rule() == Rule::identifier)
         .map(|p| p.as_str().to_string())
         .collect();
@@ -44,30 +46,12 @@ fn build_actors_def(pair: Pair<Rule>) -> Statement {
 }
 
 fn build_outcomes_def(pair: Pair<Rule>) -> Statement {
-    let identifiers: Vec<String> = pair.into_inner()
+    let identifiers: Vec<String> = pair
+        .into_inner()
         .filter(|p| p.as_rule() == Rule::identifier)
         .map(|p| p.as_str().to_string())
         .collect();
     Statement::OutcomeDef(identifiers)
-}
-
-// Helper function for a complex rule.
-fn build_rule(pair: Pair<Rule>) -> Statement {
-    let mut inner = pair.into_inner();
-
-    // The first inner pair is the rule's name (a string).
-    let name = inner.next().unwrap().into_inner().next().unwrap().as_str().to_string();
-
-    // The next pairs are the when/then blocks.
-    let when_block = inner.next().unwrap();
-    let then_block = inner.next().unwrap();
-
-    let rule = ast::Rule {
-        name,
-        when: build_conditions(when_block.into_inner()),
-        then: build_actions(then_block.into_inner()),
-    };
-    Statement::Rule(rule)
 }
 
 // Helper function for settings
@@ -85,62 +69,117 @@ fn build_setting(pair: Pair<Rule>) -> Statement {
 }
 
 fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
-    pairs.filter_map(|pair| {
-        match pair.as_rule() {
-            Rule::time_condition => {
-                let mut inner = pair.into_inner();
-                inner.next(); // Skip "time" keyword
-                let op = inner.next().unwrap().as_str().to_string();
-                let time_marker = inner.next().unwrap();
-                let time_str = time_marker.into_inner().next().unwrap().as_str();
-                let time = time_str.parse().unwrap();
-                Some(Condition::Time { op, time })
+    pairs
+        .map(|pair| {
+            let inner_cond = pair.into_inner().next().unwrap();
+            match inner_cond.as_rule() {
+                Rule::time_condition => {
+                    let mut inner = inner_cond.into_inner();
+                    let op = inner.next().unwrap().as_str().to_string();
+                    let time_str = inner.next().unwrap().as_str();
+                    let time: f32 = time_str[..time_str.len() - 1].parse().unwrap();
+                    Condition::Time { op, time }
+                }
+                Rule::output_condition => {
+                    let mut inner = inner_cond.into_inner();
+                    let actor = inner.next().unwrap().as_str().to_string();
+                    let text = inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Condition::OutputContains { actor, text }
+                }
+                Rule::state_condition => {
+                    let mut inner = inner_cond.into_inner();
+                    let outcome = inner.next().unwrap().as_str().to_string();
+                    Condition::StateSucceeded { outcome }
+                }
+                _ => unreachable!(),
             }
-            Rule::output_condition => {
-                let mut inner = pair.into_inner();
-                let actor = inner.next().unwrap().as_str().to_string();
-                inner.next(); // Skip "output_contains" keyword
-                let text = inner.next().unwrap().as_str().to_string();
-                Some(Condition::OutputContains { actor, text })
-            }
-            Rule::state_condition => {
-                let mut inner = pair.into_inner();
-                inner.next(); // Skip "state" keyword
-                inner.next(); // Skip "succeeded" keyword
-                let outcome = inner.next().unwrap().as_str().to_string();
-                Some(Condition::StateSucceeded { outcome })
-            }
-            _ => None,
-        }
-    }).collect()
+        })
+        .collect()
 }
 
+// This is the other key function to implement.
 fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
-    pairs.filter_map(|pair| {
-        match pair.as_rule() {
-            Rule::type_action => {
-                let mut inner = pair.into_inner();
-                let actor = inner.next().unwrap().as_str().to_string();
-                let content = inner.next().unwrap().as_str().to_string();
-                Some(Action::Type { actor, content })
+    pairs
+        .map(|pair| {
+            let inner_action = pair.into_inner().next().unwrap();
+            match inner_action.as_rule() {
+                Rule::type_action => {
+                    let mut inner = inner_action.into_inner();
+                    let actor = inner.next().unwrap().as_str().to_string();
+                    let content = inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::Type { actor, content }
+                }
+                Rule::press_action => {
+                    let mut inner = inner_action.into_inner();
+                    let actor = inner.next().unwrap().as_str().to_string();
+                    let key = inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::Press { actor, key }
+                }
+                Rule::run_action => {
+                    let mut inner = inner_action.into_inner();
+                    let actor = inner.next().unwrap().as_str().to_string();
+                    let command = inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::Run { actor, command }
+                }
+                Rule::test_action => {
+                    let mut inner = inner_action.into_inner();
+                    let outcome = inner.next().unwrap().as_str().to_string();
+                    Action::Succeeds { outcome }
+                }
+                _ => unreachable!(),
             }
-            Rule::press_action => {
-                let mut inner = pair.into_inner();
-                let actor = inner.next().unwrap().as_str().to_string();
-                let key = inner.next().unwrap().as_str().to_string();
-                Some(Action::Press { actor, key })
-            }
-            Rule::run_action => {
-                let mut inner = pair.into_inner();
-                let actor = inner.next().unwrap().as_str().to_string();
-                let command = inner.next().unwrap().as_str().to_string();
-                Some(Action::Run { actor, command })
-            }
-            Rule::test_action => {
-                let outcome = pair.into_inner().next().unwrap().as_str().to_string();
-                Some(Action::Succeeds { outcome })
-            }
-            _ => None,
-        }
-    }).collect()
+        })
+        .collect()
+}
+
+// Make sure your build_rule function calls these new helpers:
+fn build_rule(pair: Pair<Rule>) -> Statement {
+    let mut inner = pair.into_inner();
+
+    let name = inner
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
+
+    let when_block = inner.next().unwrap();
+    let then_block = inner.next().unwrap();
+
+    let rule = ast::Rule {
+        name,
+        when: build_conditions(when_block.into_inner()), // Use the new function
+        then: build_actions(then_block.into_inner()),    // Use the new function
+    };
+    Statement::Rule(rule)
 }
