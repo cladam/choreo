@@ -22,10 +22,22 @@ pub struct Rule {
 // All possible conditions that can trigger a rule.
 #[derive(Debug, Clone)]
 pub enum Condition {
-    Time { op: String, time: f32 },
-    OutputContains { actor: String, text: String },
-    StateSucceeded { outcome: String },
-    OutputMatches { actor: String, regex: String, capture_as: Option<String> },
+    Time {
+        op: String,
+        time: f32,
+    },
+    OutputContains {
+        actor: String,
+        text: String,
+    },
+    StateSucceeded {
+        outcome: String,
+    },
+    OutputMatches {
+        actor: String,
+        regex: String,
+        capture_as: Option<String>,
+    },
 }
 
 // All possible actions that can be executed.

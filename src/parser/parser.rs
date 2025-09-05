@@ -70,10 +70,7 @@ fn build_setting(pair: Pair<Rule>) -> Statement {
 }
 
 fn build_env_def(pair: Pair<Rule>) -> Statement {
-    let identifiers: Vec<String> = pair
-        .into_inner()
-        .map(|p| p.as_str().to_string())
-        .collect();
+    let identifiers: Vec<String> = pair.into_inner().map(|p| p.as_str().to_string()).collect();
     Statement::EnvDef(identifiers)
 }
 
