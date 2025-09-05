@@ -7,34 +7,37 @@ COMMENT    = _{ "#" ~ (!NEWLINE ~ ANY)* }
 
 // The program is a series of statements.
 grammar = { SOI ~ statement* ~ EOI }
-statement = { settings_def | env_def | actors_def | outcomes_def | rule }
+statement = { settings_def | env_def | actors_def  | test }
 
 // Setting up the test suite.
 settings_def = { "settings:" ~ setting+ }
 setting      = { identifier ~ value }
-
 env_def = { "env:" ~ identifier ~ ("," ~ identifier)* }
-output_matches_condition = { identifier ~ "output_matches" ~ string ~ ("as" ~ identifier)? }
-
 actors_def   = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 outcomes_def = { "outcomes:" ~ identifier ~ ("," ~ identifier)* }
 
-// The core of the testing logic.
-rule = { "rule" ~ string ~ "{" ~ when_block ~ then_block ~ "}" }
+// Defining a test case.
+test = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
+given_block = { "given:" ~ condition+ }
+when_block  = { "when:"  ~ action+ }
+then_block  = { "then:"  ~ condition+ }
 
-when_block = { "when:" ~ condition+ }
-then_block = { "then:" ~ action+ }
+// --- Generic Rule Block (for non-test logic) ---
+rule = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }
+when_block_rule = { "when:" ~ condition+ }
+then_block_rule = { "then:" ~ action+ }
 
-// The "if" part of a rule.
-condition = { time_condition | output_condition | state_condition | output_matches_condition}
+// --- Conditions & Actions ---
+condition = { time_condition | output_contains_condition | output_matches_condition | state_condition }
+action    = { type_action | press_action | run_action }
 
-time_condition = { "time" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ time_marker }
-output_condition = { identifier ~ "output_contains" ~ string }
-state_condition  = { "Test" ~ "has_succeeded" ~ identifier }
+// Condition Types
+time_condition           = { "time" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ time_marker }
+output_contains_condition  = { identifier ~ "output_contains" ~ string }
+output_matches_condition = { identifier ~ "output_matches" ~ string ~ ("as" ~ identifier)? }
+state_condition          = { "Test" ~ "has_succeeded" ~ identifier }
 
-// The "do this" part of a rule.
-action = { type_action | press_action | run_action | test_action }
-
+// Action Types
 type_action  = { identifier ~ "types" ~ string }
 press_action = { identifier ~ "presses" ~ string }
 run_action   = { identifier ~ "runs" ~ string }
