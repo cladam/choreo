@@ -1,23 +1,24 @@
-use crate::parser::ast::{Action, Condition, Rule, Statement, TestSuite};
+use crate::parser::ast::{Action, Condition, TestState};
 use predicates::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use strip_ansi_escapes::strip;
 
-/// Helper to check if all `when` conditions for a rule are true.
-pub fn check_all_conditions_met(
-    rule: &Rule,
-    succeeded_outcomes: &HashSet<String>,
+/// Helper to check if all conditions in a list are true.
+fn check_all_conditions_met(
+    conditions: &[Condition],
+    test_states: &HashMap<String, TestState>,
     output_buffer: &str,
     current_time: f32,
-    test_state: &mut HashMap<String, String>,
+    env_vars: &mut HashMap<String, String>,
 ) -> bool {
-    rule.when.iter().all(|condition| {
+    conditions.iter().all(|condition| {
+        let substituted_c = substitute_variables_in_condition(condition, env_vars);
         check_condition(
-            condition,
-            succeeded_outcomes,
+            &substituted_c,
+            test_states,
             output_buffer,
             current_time,
-            test_state,
+            env_vars,
         )
     })
 }
@@ -25,10 +26,10 @@ pub fn check_all_conditions_met(
 /// Helper to check a single condition.
 pub fn check_condition(
     condition: &Condition,
-    succeeded_outcomes: &HashSet<String>,
+    test_states: &HashMap<String, TestState>,
     output_buffer: &str,
     current_time: f32,
-    test_state: &mut HashMap<String, String>,
+    env_vars: &mut HashMap<String, String>,
 ) -> bool {
     match condition {
         Condition::Time { op, time } => match op.as_str() {
@@ -41,14 +42,12 @@ pub fn check_condition(
         },
         Condition::OutputContains { text, .. } => {
             let cleaned_buffer = strip(output_buffer);
-            let buffer = String::from_utf8_lossy(&cleaned_buffer).to_string();
+            let buffer = String::from_utf8_lossy(&cleaned_buffer);
             let predicate = predicate::str::contains(text.as_str());
-            predicate.eval(&buffer)
+            predicate.eval(buffer.as_ref())
         }
         Condition::OutputMatches {
-            regex,
-            actor: _,
-            capture_as,
+            regex, capture_as, ..
         } => {
             let re = regex::Regex::new(regex).unwrap();
             if let (Some(captures), Some(var_name)) = (re.captures(output_buffer), capture_as) {
@@ -58,25 +57,15 @@ pub fn check_condition(
                         value.as_str(),
                         var_name
                     );
-                    test_state.insert(var_name.clone(), value.as_str().to_string());
+                    env_vars.insert(var_name.clone(), value.as_str().to_string());
                 }
             }
             re.is_match(output_buffer)
         }
-        Condition::StateSucceeded { outcome } => succeeded_outcomes.contains(outcome),
+        Condition::StateSucceeded { outcome } => {
+            matches!(test_states.get(outcome), Some(&TestState::Passed))
+        }
     }
-}
-
-/// Helper to extract all defined outcome names from the AST.
-pub fn get_all_outcomes(test_suite: &TestSuite) -> Vec<String> {
-    test_suite
-        .statements
-        .iter()
-        .find_map(|s| match s {
-            Statement::OutcomeDef(outcomes) => Some(outcomes.clone()),
-            _ => None,
-        })
-        .unwrap_or_default()
 }
 
 /// Creates a new Action with its string values substituted from the state map.
@@ -95,7 +84,7 @@ pub fn substitute_variables(action: &Action, state: &HashMap<String, String>) ->
 }
 
 /// Finds and replaces all ${...} placeholders in a string.
-pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> String {
+fn substitute_string(content: &str, state: &HashMap<String, String>) -> String {
     let mut result = content.to_string();
     for (key, value) in state {
         let placeholder = format!("${{{}}}", key);

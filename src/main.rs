@@ -7,7 +7,7 @@ use choreo::parser::ast::{Statement, TestCase, TestState};
 use choreo::parser::helpers::*;
 use choreo::parser::parser;
 use clap::Parser;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::thread;
 use std::time::{Duration, Instant};
 use std::{env, fs};
@@ -99,7 +99,7 @@ fn main() {
                                         substitute_variables_in_condition(c, &env_vars);
                                     check_condition(
                                         &substituted_c,
-                                        &HashSet::new(),
+                                        &test_states,
                                         &output_buffer,
                                         elapsed_secs,
                                         &mut env_vars,
@@ -122,7 +122,7 @@ fn main() {
                                         substitute_variables_in_condition(c, &env_vars);
                                     check_condition(
                                         &substituted_c,
-                                        &HashSet::new(),
+                                        &test_states,
                                         &output_buffer,
                                         elapsed_secs,
                                         &mut env_vars,
