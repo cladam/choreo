@@ -1,0 +1,19 @@
+# test_ls.chor
+
+actors: Terminal
+outcomes: FilesListed
+
+rule "List files in the current directory" {
+    when:
+        time >= 1s
+    then:
+        Terminal types "ls -l"
+        Terminal presses "Enter"
+}
+
+rule "Verify that README.md is in the output" {
+    when:
+        Terminal output_contains "README.md"
+    then:
+        Test succeeds FilesListed
+}
