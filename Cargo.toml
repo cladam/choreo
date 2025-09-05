@@ -27,6 +27,7 @@ toml = "0.9.5"
 chrono = { version = "0.4.41", features = ["serde"] }
 portable-pty = "0.9.0"
 regex = "1.11.2"
+quick-xml = { version = "0.38.3", features = ["serialize"] }
 
 [lib]
 name = "choreo"

@@ -32,10 +32,10 @@ impl TerminalBackend {
             // Provide a sensible default if the size can't be determined.
             (100, 40)
         };
-        // 1. Create a new PtySystem.
+        // Create a new PtySystem.
         let pty_system = NativePtySystem::default();
 
-        // 2. Create a PTY pair.
+        // Create a PTY pair.
         let pair = pty_system
             .openpty(PtySize {
                 rows,
@@ -45,7 +45,7 @@ impl TerminalBackend {
             })
             .expect("Failed to open pty");
 
-        // 3. Spawn the command in the PTY.
+        // Spawn the command in the PTY.
         let cmd = CommandBuilder::new("zsh");
         let child = pair
             .slave
@@ -87,9 +87,11 @@ impl TerminalBackend {
     }
 
     /// Checks for new output from the reader thread without blocking.
-    pub fn read_output(&mut self, output_buffer: &mut String) {
+    pub fn read_output(&mut self, output_buffer: &mut String, verbose: bool) {
         for new_output in self.output_receiver.try_iter() {
-            print!("{}", new_output); // Echo to the real console for debugging
+            if verbose {
+                print!("{}", new_output); // Echo to the real console for debugging
+            }
             output_buffer.push_str(&new_output);
         }
     }

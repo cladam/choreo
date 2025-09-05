@@ -1,16 +1,18 @@
+use choreo::backend::report::{TestCaseReport, TestStatus, TestSuiteReport};
 use choreo::backend::terminal_backend::TerminalBackend;
 use choreo::cli;
 use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
-use choreo::parser::ast::{Statement, TestCase, TestState};
+use choreo::parser::ast::{Statement, TestCase};
 use choreo::parser::helpers::*;
 use choreo::parser::parser;
 use clap::Parser;
 use std::collections::HashMap;
-use std::thread;
+use std::fs::File;
+use std::io::Write;
 use std::time::{Duration, Instant};
-use std::{env, fs};
+use std::{env, fs, thread};
 
 fn main() {
     let cli = cli::Cli::parse();
@@ -23,28 +25,23 @@ fn main() {
     pub fn run(cli: Cli) -> Result<(), AppError> {
         match cli.command {
             Commands::Run { file, verbose } => {
-                colours::info(&format!("Starting Choreo Test Runner: {}", file));
-                // Read and parse the test file.
+                let suite_name = file.clone();
+
                 if verbose {
-                    colours::info("Verbose mode enabled.");
-                }
-                // Read the test file.
-                if !fs::metadata(&file).is_ok() {
-                    return Err(AppError::FileNotFound(file));
+                    colours::info(&format!("Starting Choreo Test Runner: {}", file));
                 }
 
-                let source = fs::read_to_string(file)?;
+                let source = fs::read_to_string(&file)?;
                 let test_suite = match parser::parse(&source) {
                     Ok(suite) => {
-                        colours::success("Test suite parsed successfully.");
+                        if verbose {
+                            colours::info("Test suite parsed successfully.");
+                        }
                         suite
                     }
-                    Err(e) => {
-                        return Err(AppError::ParseError(e.to_string()));
-                    }
+                    Err(e) => return Err(AppError::ParseError(e.to_string())),
                 };
 
-                // Find the EnvDef statement and load the variables.
                 let mut env_vars: HashMap<String, String> = HashMap::new();
                 for s in &test_suite.statements {
                     if let Statement::EnvDef(vars) = s {
@@ -56,12 +53,10 @@ fn main() {
                     }
                 }
 
-                // Initialise the backend and test state.
                 let mut terminal = TerminalBackend::new();
                 let mut output_buffer = String::new();
 
-                // --- Test State Management ---
-                let mut test_cases: Vec<TestCase> = test_suite
+                let test_cases: Vec<TestCase> = test_suite
                     .statements
                     .into_iter()
                     .filter_map(|s| match s {
@@ -69,115 +64,246 @@ fn main() {
                         _ => None,
                     })
                     .collect();
-                let mut test_states: HashMap<String, TestState> = test_cases
+
+                let mut test_reports: HashMap<String, TestCaseReport> = test_cases
                     .iter()
-                    .map(|tc| (tc.name.clone(), TestState::Pending))
+                    .map(|tc| {
+                        (
+                            tc.name.clone(),
+                            TestCaseReport {
+                                name: tc.description.clone(),
+                                time: Duration::default(),
+                                status: TestStatus::Skipped,
+                                failure_message: None,
+                            },
+                        )
+                    })
                     .collect();
+                let mut test_start_times: HashMap<String, Instant> = HashMap::new();
 
-                // Run the main simulation loop.
-                let start_time = Instant::now();
-                let test_timeout = Duration::from_secs(30); // Max duration for the test.
+                let suite_start_time = Instant::now();
+                let test_timeout = Duration::from_secs(30);
 
-                // Loop until timeout or all outcomes succeeded.
                 loop {
-                    // Read any new input from the terminal.
-                    terminal.read_output(&mut output_buffer);
-                    let elapsed = start_time.elapsed();
-                    let elapsed_secs = elapsed.as_secs_f32();
-                    //println!("Elapsed time: {:.2} seconds", elapsed_secs);
+                    terminal.read_output(&mut output_buffer, verbose);
+                    let elapsed = suite_start_time.elapsed();
 
-                    let mut all_tests_done = true;
-                    // Check each rule to see if it should fire.
-                    for test_case in &mut test_cases {
-                        let current_state = test_states.get(&test_case.name).unwrap().clone();
+                    let mut tests_to_start = Vec::new();
+                    let mut tests_to_pass = Vec::new();
 
-                        match current_state {
-                            TestState::Pending => {
-                                all_tests_done = false;
-                                let given_conditions_met = test_case.given.iter().all(|c| {
-                                    let substituted_c =
-                                        substitute_variables_in_condition(c, &env_vars);
-                                    check_condition(
-                                        &substituted_c,
-                                        &test_states,
-                                        &output_buffer,
-                                        elapsed_secs,
-                                        &mut env_vars,
-                                    )
-                                });
-
-                                if given_conditions_met {
-                                    println!("▶️ Starting test: {}", test_case.description);
-                                    for action in &test_case.when {
-                                        let substituted_a = substitute_variables(action, &env_vars);
-                                        terminal.execute_action(&substituted_a);
-                                    }
-                                    test_states.insert(test_case.name.clone(), TestState::Running);
+                    // --- Checking Phase (Immutable Borrows) ---
+                    for test_case in &test_cases {
+                        let report = test_reports.get(&test_case.name).unwrap();
+                        match report.status {
+                            TestStatus::Skipped => {
+                                if check_all_conditions_met(
+                                    &test_case.given,
+                                    &test_reports,
+                                    &output_buffer,
+                                    elapsed.as_secs_f32(),
+                                    &mut env_vars,
+                                    verbose,
+                                ) {
+                                    tests_to_start.push(test_case.name.clone());
                                 }
                             }
-                            TestState::Running => {
-                                all_tests_done = false;
-                                let then_conditions_met = test_case.then.iter().all(|c| {
-                                    let substituted_c =
-                                        substitute_variables_in_condition(c, &env_vars);
-                                    check_condition(
-                                        &substituted_c,
-                                        &test_states,
-                                        &output_buffer,
-                                        elapsed_secs,
-                                        &mut env_vars,
-                                    )
-                                });
-
-                                if then_conditions_met {
-                                    println!("✅ Test Passed: {}", test_case.description);
-                                    test_states.insert(test_case.name.clone(), TestState::Passed);
+                            TestStatus::Running => {
+                                if check_all_conditions_met(
+                                    &test_case.then,
+                                    &test_reports,
+                                    &output_buffer,
+                                    elapsed.as_secs_f32(),
+                                    &mut env_vars,
+                                    verbose,
+                                ) {
+                                    tests_to_pass.push(test_case.name.clone());
                                 }
                             }
-                            _ => {} // Test is already Passed or Failed, do nothing.
+                            _ => {}
                         }
                     }
 
-                    if all_tests_done {
-                        println!("\n🎉 All tests completed!");
+                    // --- Updating Phase (Mutable Borrows) ---
+                    for name in tests_to_start {
+                        if let Some(report) = test_reports.get_mut(&name) {
+                            let test_case = test_cases.iter().find(|tc| tc.name == name).unwrap();
+                            if verbose {
+                                colours::info(&format!("Starting test: {}", test_case.description));
+                            }
+                            test_start_times.insert(name.clone(), Instant::now());
+                            for action in &test_case.when {
+                                let substituted_a = substitute_variables(action, &env_vars);
+                                terminal.execute_action(&substituted_a);
+                            }
+                            report.status = TestStatus::Running;
+                        }
+                    }
+
+                    for name in tests_to_pass {
+                        if let Some(report) = test_reports.get_mut(&name) {
+                            let test_case = test_cases.iter().find(|tc| tc.name == name).unwrap();
+                            if verbose {
+                                colours::info(&format!("Test passed: {}", test_case.description));
+                            }
+                            report.status = TestStatus::Passed;
+                            report.time = test_start_times.get(&name).unwrap().elapsed();
+                        }
+                    }
+
+                    // --- Check for Completion ---
+                    if test_reports
+                        .values()
+                        .all(|r| r.status == TestStatus::Passed || r.status == TestStatus::Failed)
+                    {
+                        if verbose {
+                            colours::success("All tests completed.");
+                        }
                         break;
                     }
+
                     if elapsed > test_timeout {
-                        eprintln!("\n⏰ Test run timed out!");
-                        let to_fail: Vec<String> = test_states
-                            .iter()
-                            .filter_map(|(name, state)| {
-                                if matches!(state, TestState::Running | TestState::Pending) {
-                                    Some(name.clone())
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-                        for name in to_fail {
-                            test_states.insert(name, TestState::Failed("Timeout".to_string()));
+                        if verbose {
+                            colours::error("Test run timed out.");
+                        }
+                        for (name, report) in test_reports.iter_mut() {
+                            if matches!(report.status, TestStatus::Skipped | TestStatus::Running) {
+                                report.status = TestStatus::Failed;
+                                report.failure_message = Some("Timeout".to_string());
+                                report.time = test_start_times
+                                    .get(name)
+                                    .map_or(test_timeout, |s| s.elapsed());
+                            }
                         }
                         break;
                     }
-
                     thread::sleep(Duration::from_millis(50));
                 }
 
-                // --- New Final Report ---
-                println!("\n--- Test Report ---");
-                for test_case in &test_cases {
-                    match test_states.get(&test_case.name) {
-                        Some(TestState::Passed) => println!("✅ PASSED: {}", test_case.description),
-                        Some(TestState::Failed(reason)) => {
-                            println!("❌ FAILED: {} ({})", test_case.description, reason)
+                let suite_duration = suite_start_time.elapsed();
+                let final_reports: Vec<TestCaseReport> = test_cases
+                    .iter()
+                    .map(|tc| test_reports.get(&tc.name).unwrap().clone())
+                    .collect();
+
+                if verbose {
+                    colours::info(&format!(
+                        "Test suite '{}' completed in {:.2}s",
+                        suite_name,
+                        suite_duration.as_secs_f32()
+                    ));
+                }
+                for report in &final_reports {
+                    match &report.status {
+                        TestStatus::Passed => {
+                            if verbose {
+                                colours::success(&format!(
+                                    "Test '{}' passed in {:.2}s",
+                                    report.name,
+                                    report.time.as_secs_f32()
+                                ));
+                            } else {
+                                println!(
+                                    "✅ PASSED: {} ({:.2}s)",
+                                    report.name,
+                                    report.time.as_secs_f32()
+                                )
+                            }
                         }
-                        _ => println!("❔ SKIPPED: {}", test_case.description),
+                        TestStatus::Failed => {
+                            if verbose {
+                                colours::error(&format!(
+                                    "Test '{}' failed in {:.2}s - {}",
+                                    report.name,
+                                    report.time.as_secs_f32(),
+                                    report.failure_message.as_deref().unwrap_or("")
+                                ));
+                            } else {
+                                println!(
+                                    "❌ FAILED: {} ({:.2}s) - {}",
+                                    report.name,
+                                    report.time.as_secs_f32(),
+                                    report.failure_message.as_deref().unwrap_or("")
+                                )
+                            }
+                        }
+                        TestStatus::Skipped => {
+                            if verbose {
+                                colours::warn(&format!("Test '{}' was skipped.", report.name));
+                            } else {
+                                println!("❔ SKIPPED: {}", report.name)
+                            }
+                        }
+                        TestStatus::Running => {
+                            if verbose {
+                                colours::warn(&format!("Test '{}' is still running.", report.name));
+                            } else {
+                                println!("❔ HUNG: {}", report.name)
+                            }
+                        }
                     }
                 }
-                println!("-------------------");
-                println!("Test run complete.");
+                if verbose {
+                    colours::info(&format!(
+                        "Test suite '{}' summary: {} tests, {} failures, total time {:.2}s",
+                        suite_name,
+                        final_reports.len(),
+                        final_reports
+                            .iter()
+                            .filter(|r| r.status == TestStatus::Failed)
+                            .count(),
+                        suite_duration.as_secs_f32()
+                    ));
+                }
+
+                generate_reports(&suite_name, suite_duration, final_reports, verbose)?;
+
+                if verbose {
+                    colours::success("Reports generated successfully.");
+                }
                 Ok(())
             }
         }
     }
+}
+
+/// Generates JSON and JUnit XML reports from the test results.
+fn generate_reports(
+    suite_name: &str,
+    suite_duration: Duration,
+    reports: Vec<TestCaseReport>,
+    verbose: bool,
+) -> Result<(), AppError> {
+    let test_suite_report = TestSuiteReport {
+        name: suite_name.to_string(),
+        tests: reports.len(),
+        failures: reports
+            .iter()
+            .filter(|r| r.status == TestStatus::Failed)
+            .count(),
+        time: suite_duration,
+        testcases: reports,
+    };
+
+    // Generate JSON Report
+    let json = serde_json::to_string_pretty(&test_suite_report)?;
+    let mut json_file = File::create("report.json")?;
+    json_file.write_all(json.as_bytes())?;
+    if verbose {
+        colours::info("JSON report content:");
+        println!("{}", json);
+    }
+
+    // Generate JUnit XML Report
+    /*    let mut xml_buffer = Vec::new();
+        let mut writer = quick_xml::Writer::new_with_indent(&mut xml_buffer, b' ', 2);
+        let mut serializer = quick_xml::se::Serializer::new(&mut writer);
+        test_suite_report
+            .serialize(&mut serializer)
+            .map_err(|e| AppError::Io(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
+
+        let mut xml_file = File::create("junit.xml")?;
+        xml_file.write_all(&xml_buffer)?;
+        colours::success("JUnit XML report generated at junit.xml");
+    */
+    Ok(())
 }

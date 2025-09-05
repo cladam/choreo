@@ -1,0 +1,28 @@
+{
+  "name": "examples/test_medi_env_workflow.chor",
+  "tests": 4,
+  "failures": 0,
+  "time": "1.695",
+  "testcase": [
+    {
+      "name": "Create a new note",
+      "time": "0.271",
+      "status": "Passed"
+    },
+    {
+      "name": "Add a task to the new note",
+      "time": "0.055",
+      "status": "Passed"
+    },
+    {
+      "name": "Confirm task appears in list",
+      "time": "0.055",
+      "status": "Passed"
+    },
+    {
+      "name": "Cleanup the test note",
+      "time": "0.109",
+      "status": "Passed"
+    }
+  ]
+}
