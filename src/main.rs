@@ -11,7 +11,7 @@ fn main() {
     println!("Starting Choreo Test Runner...");
 
     // Read and parse the test file.
-    let file_path = "src/example/test_ls.chor";
+    let file_path = "example/test_ls.chor";
     let source = fs::read_to_string(file_path).expect("Failed to read test file");
     let test_suite = match parser::parse(&source) {
         Ok(suite) => {

@@ -2,7 +2,9 @@
 
 **A declarative DSL for choreographing and testing command-line workflows.**
 
-Choreo is a test runner and automation tool that uses a simple, readable, rule-based language to define and execute complex interactions with command-line applications. It's designed for behavior-driven testing, integration testing, and generating reproducible demos of CLI tools.
+Choreo is a test runner and automation tool that uses a simple, readable, rule-based language to define and execute
+complex interactions with command-line applications. It's designed for behavior-driven testing, integration testing, and
+generating reproducible demos of CLI tools.
 
 Think of it as **Cucumber for the command line**, with the reactive power of a rules engine.
 
@@ -17,6 +19,7 @@ Think of it as **Cucumber for the command line**, with the reactive power of a r
 ### **Example Usage**
 
 Here is a simple `test_ls.chor` script that lists files and verifies the output:
+
 ```
 # test_ls.chor
 
@@ -39,7 +42,8 @@ rule "Verify that README.md is in the output" {
 }
 ```
 
-See [test_medi_env_workflow.chor](src/example/test_medi_env_workflow.chor) for a more comprehensive example using [medi](https://github.com/cladam/medi) as the tools to test
+See [test_medi_env_workflow.chor](example/test_medi_env_workflow.chor) for a more comprehensive example
+using [medi](https://github.com/cladam/medi) as the tools to test
 
 ### How it works
 
@@ -48,7 +52,7 @@ Choreo is built on a simple but powerful pipeline:
 1. **Parser**: A `pest`-based parser reads thr `.chor` script and validates its syntax.
 2. **AST**: The script is transformed into a structured in-memory representation called an Abstract Syntax Tree.
 3. **Runner**: A simulation loop ticks forward, checking the conditions of all rules against the current state.
-4. **Backend**: When a rule's actions are executed, they are sent to an "Actor" backend. The `TerminalBackend` spawns a 
+4. **Backend**: When a rule's actions are executed, they are sent to an "Actor" backend. The `TerminalBackend` spawns a
    pseudo-terminal (PTY) and interacts with it programmatically, just like a real user.
 
 ### Getting Started
@@ -65,7 +69,9 @@ cargo build --release
 
 #### Run a script
 
-Currently, the path to the script is hardcoded in `src/main.rs`. In the future, this will be handled by a command-line argument.
+Currently, the path to the script is hardcoded in `src/main.rs`. In the future, this will be handled by a command-line
+argument.
+
 ```bash
 # (After updating main.rs with the path to your .chor file)  
 cargo run
@@ -77,11 +83,13 @@ Choreo is currently in the **alpha stage**. The core engine is functional, but i
 
 The journey ahead includes:
 
-* [ ] **CLI Arguments**: Implement proper command-line argument parsing with clap to specify the test file and other options.
+* [ ] **CLI Arguments**: Implement proper command-line argument parsing with clap to specify the test file and other
+  options.
 * [ ] **More Actors**:
     * WebActor for making and asserting against HTTP API calls.
     * FileSystemActor for checking file existence, content, etc.
-* [ ] **Richer Assertions**: Add more conditions, like regex matching without capturing (output_matches_pattern) and checking command exit codes.
+* [ ] **Richer Assertions**: Add more conditions, like regex matching without capturing (output_matches_pattern) and
+  checking command exit codes.
 * [ ] **Test Reporting**: Generate JUnit XML reports for better CI/CD integration.
 * [ ] **GIF Generation**: Revisit the vhs inspiration by adding an option to record the terminal session as a GIF.
 * [ ] **Publish**: Publish the crate to crates.io.
