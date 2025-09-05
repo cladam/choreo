@@ -1,6 +1,7 @@
 # test_medi_workflow.chor
 # A test suite for our 'medi' CLI tool.
 
+# export EVAR="My environment variable" in bash
 env: EVAR
 actors: Terminal
 

@@ -42,7 +42,7 @@ rule "Verify that README.md is in the output" {
 }
 ```
 
-See [test_medi_env_workflow.chor](example/test_medi_env_workflow.chor) for a more comprehensive example
+See [test_medi_env_workflow.chor](examples/test_medi_env_workflow.chor) for a more comprehensive example
 using [medi](https://github.com/cladam/medi) as the tools to test
 
 ### How it works
