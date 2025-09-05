@@ -3,26 +3,6 @@ use predicates::prelude::*;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
 
-/// Helper to check if all conditions in a list are true.
-fn check_all_conditions_met(
-    conditions: &[Condition],
-    test_states: &HashMap<String, TestState>,
-    output_buffer: &str,
-    current_time: f32,
-    env_vars: &mut HashMap<String, String>,
-) -> bool {
-    conditions.iter().all(|condition| {
-        let substituted_c = substitute_variables_in_condition(condition, env_vars);
-        check_condition(
-            &substituted_c,
-            test_states,
-            output_buffer,
-            current_time,
-            env_vars,
-        )
-    })
-}
-
 /// Helper to check a single condition.
 pub fn check_condition(
     condition: &Condition,

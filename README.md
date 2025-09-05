@@ -22,23 +22,21 @@ Here is a simple `test_ls.chor` script that lists files and verifies the output:
 
 ```
 # test_ls.chor
+actors: Terminal
 
-actors: Terminal  
-outcomes: FilesListed
+test FilesListed "Verify that README.md is in the output" {
+    # GIVEN: The context or precondition for the test.
+    given:
+        time >= 1s
 
-rule "List files in the current directory" {  
-    when:  
-        time >= 1s  
-    then:  
-        Terminal types "ls -l"  
-        Terminal presses "Enter"  
-}
+    # WHEN: The single, specific action you are testing.
+    when:
+        Terminal types "ls -l"
+        Terminal presses "Enter"
 
-rule "Verify that README.md is in the output" {  
-    when:  
-        Terminal output_contains "README.md"  
-    then:  
-        Test succeeds FilesListed  
+    # THEN: The expected outcome that defines success.
+    then:
+        Terminal output_contains "README.md"
 }
 ```
 
@@ -74,7 +72,7 @@ argument.
 
 ```bash
 # (After updating main.rs with the path to your .chor file)  
-cargo run
+cargo run -- run --file "/path/to/your_script.chor"
 ```
 
 ### Status & Roadmap
@@ -83,7 +81,7 @@ Choreo is currently in the **alpha stage**. The core engine is functional, but i
 
 The journey ahead includes:
 
-* [ ] **CLI Arguments**: Implement proper command-line argument parsing with clap to specify the test file and other
+* [x] **CLI Arguments**: Implement proper command-line argument parsing with clap to specify the test file and other
   options.
 * [ ] **More Actors**:
     * WebActor for making and asserting against HTTP API calls.
