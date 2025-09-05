@@ -1,5 +1,5 @@
 use crate::parser::ast;
-use crate::parser::ast::{Action, Condition, Statement, TestSuite, Value};
+use crate::parser::ast::{Action, Condition, Statement, TestCase, TestSuite, Value};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
@@ -25,10 +25,10 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
         statements.push(match pair.as_rule() {
             // Now this will correctly match on the inner rule.
             Rule::actors_def => build_actors_def(pair),
-            Rule::outcomes_def => build_outcomes_def(pair),
             Rule::rule => build_rule(pair),
             Rule::settings_def => build_setting(pair),
             Rule::env_def => build_env_def(pair),
+            Rule::test => build_test(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
         });
     }
@@ -46,13 +46,30 @@ fn build_actors_def(pair: Pair<Rule>) -> Statement {
     Statement::ActorDef(identifiers)
 }
 
-fn build_outcomes_def(pair: Pair<Rule>) -> Statement {
-    let identifiers: Vec<String> = pair
+fn build_test(pair: Pair<Rule>) -> Statement {
+    let mut inner = pair.into_inner();
+    let name = inner.next().unwrap().as_str().to_string();
+    let description = inner
+        .next()
+        .unwrap()
         .into_inner()
-        .filter(|p| p.as_rule() == Rule::identifier)
-        .map(|p| p.as_str().to_string())
-        .collect();
-    Statement::OutcomeDef(identifiers)
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
+
+    let given_block = inner.next().unwrap();
+    let when_block = inner.next().unwrap();
+    let then_block = inner.next().unwrap();
+
+    let test_case = TestCase {
+        name,
+        description,
+        given: build_conditions(given_block.into_inner()),
+        when: build_actions(when_block.into_inner()),
+        then: build_conditions(then_block.into_inner()),
+    };
+    Statement::TestCase(test_case)
 }
 
 // Helper function for settings
@@ -86,7 +103,7 @@ fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
                     let time: f32 = time_str[..time_str.len() - 1].parse().unwrap();
                     Condition::Time { op, time }
                 }
-                Rule::output_condition => {
+                Rule::output_contains_condition => {
                     let mut inner = inner_cond.into_inner();
                     let actor = inner.next().unwrap().as_str().to_string();
                     let text = inner
@@ -175,11 +192,6 @@ fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
                         .as_str()
                         .to_string();
                     Action::Run { actor, command }
-                }
-                Rule::test_action => {
-                    let mut inner = inner_action.into_inner();
-                    let outcome = inner.next().unwrap().as_str().to_string();
-                    Action::Succeeds { outcome }
                 }
                 _ => unreachable!(),
             }

@@ -3,9 +3,9 @@ use choreo::cli;
 use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
-use choreo::parser::ast::Statement;
+use choreo::parser::ast::{Statement, TestCase, TestState};
 use choreo::parser::helpers::*;
-use choreo::{parser::ast, parser::parser};
+use choreo::parser::parser;
 use clap::Parser;
 use std::collections::{HashMap, HashSet};
 use std::thread;
@@ -44,15 +44,14 @@ fn main() {
                     }
                 };
 
-                let mut test_state: HashMap<String, String> = HashMap::new();
-
                 // Find the EnvDef statement and load the variables.
+                let mut env_vars: HashMap<String, String> = HashMap::new();
                 for s in &test_suite.statements {
                     if let Statement::EnvDef(vars) = s {
                         for var_name in vars {
                             let value = env::var(var_name)
                                 .expect(&format!("Environment variable '{}' not set", var_name));
-                            test_state.insert(var_name.clone(), value);
+                            env_vars.insert(var_name.clone(), value);
                         }
                     }
                 }
@@ -60,11 +59,20 @@ fn main() {
                 // Initialise the backend and test state.
                 let mut terminal = TerminalBackend::new();
                 let mut output_buffer = String::new();
-                let mut succeeded_outcomes: HashSet<String> = HashSet::new();
-                let mut fired_rules: HashSet<String> = HashSet::new();
 
-                // Extract all defined outcomes for the final report.
-                let all_outcomes = get_all_outcomes(&test_suite);
+                // --- Test State Management ---
+                let mut test_cases: Vec<TestCase> = test_suite
+                    .statements
+                    .into_iter()
+                    .filter_map(|s| match s {
+                        Statement::TestCase(tc) => Some(tc),
+                        _ => None,
+                    })
+                    .collect();
+                let mut test_states: HashMap<String, TestState> = test_cases
+                    .iter()
+                    .map(|tc| (tc.name.clone(), TestState::Pending))
+                    .collect();
 
                 // Run the main simulation loop.
                 let start_time = Instant::now();
@@ -74,77 +82,96 @@ fn main() {
                 loop {
                     // Read any new input from the terminal.
                     terminal.read_output(&mut output_buffer);
-
                     let elapsed = start_time.elapsed();
                     let elapsed_secs = elapsed.as_secs_f32();
                     //println!("Elapsed time: {:.2} seconds", elapsed_secs);
 
+                    let mut all_tests_done = true;
                     // Check each rule to see if it should fire.
-                    for s in &test_suite.statements {
-                        if let Statement::Rule(rule) = s {
-                            // Skip rules that have already fired.
-                            if fired_rules.contains(&rule.name) {
-                                continue;
-                            }
-                            let substituted_rule = ast::Rule {
-                                name: rule.name.clone(),
-                                when: rule
-                                    .when
-                                    .iter()
-                                    .map(|c| substitute_variables_in_condition(c, &test_state))
-                                    .collect(),
-                                then: rule.then.clone(), // `then` is substituted later, so we just clone it here.
-                            };
+                    for test_case in &mut test_cases {
+                        let current_state = test_states.get(&test_case.name).unwrap().clone();
 
-                            // Check the conditions of the NEW substituted rule.
-                            if check_all_conditions_met(
-                                &substituted_rule, // Use the substituted rule for checking
-                                &succeeded_outcomes,
-                                &output_buffer,
-                                elapsed_secs,
-                                &mut test_state,
-                            ) {
-                                println!("🔥 Firing rule: {}", rule.name);
-                                for action in &rule.then {
-                                    // Create a new, substituted action before executing.
-                                    let substituted_action =
-                                        substitute_variables(action, &test_state);
+                        match current_state {
+                            TestState::Pending => {
+                                all_tests_done = false;
+                                let given_conditions_met = test_case.given.iter().all(|c| {
+                                    let substituted_c =
+                                        substitute_variables_in_condition(c, &env_vars);
+                                    check_condition(
+                                        &substituted_c,
+                                        &HashSet::new(),
+                                        &output_buffer,
+                                        elapsed_secs,
+                                        &mut env_vars,
+                                    )
+                                });
 
-                                    // Use the new action
-                                    terminal.execute_action(&substituted_action);
-                                    if let ast::Action::Succeeds { outcome } = &substituted_action {
-                                        succeeded_outcomes.insert(outcome.clone());
+                                if given_conditions_met {
+                                    println!("▶️ Starting test: {}", test_case.description);
+                                    for action in &test_case.when {
+                                        let substituted_a = substitute_variables(action, &env_vars);
+                                        terminal.execute_action(&substituted_a);
                                     }
+                                    test_states.insert(test_case.name.clone(), TestState::Running);
                                 }
-                                fired_rules.insert(rule.name.clone());
                             }
+                            TestState::Running => {
+                                all_tests_done = false;
+                                let then_conditions_met = test_case.then.iter().all(|c| {
+                                    let substituted_c =
+                                        substitute_variables_in_condition(c, &env_vars);
+                                    check_condition(
+                                        &substituted_c,
+                                        &HashSet::new(),
+                                        &output_buffer,
+                                        elapsed_secs,
+                                        &mut env_vars,
+                                    )
+                                });
+
+                                if then_conditions_met {
+                                    println!("✅ Test Passed: {}", test_case.description);
+                                    test_states.insert(test_case.name.clone(), TestState::Passed);
+                                }
+                            }
+                            _ => {} // Test is already Passed or Failed, do nothing.
                         }
                     }
 
-                    // Check for completion or timeout.
-                    if succeeded_outcomes.len() == all_outcomes.len() {
-                        println!("\n🎉 All outcomes achieved!");
+                    if all_tests_done {
+                        println!("\n🎉 All tests completed!");
                         break;
                     }
                     if elapsed > test_timeout {
-                        eprintln!(
-                            "\n⏰ Test timed out after {} seconds!",
-                            test_timeout.as_secs()
-                        );
+                        eprintln!("\n⏰ Test run timed out!");
+                        let to_fail: Vec<String> = test_states
+                            .iter()
+                            .filter_map(|(name, state)| {
+                                if matches!(state, TestState::Running | TestState::Pending) {
+                                    Some(name.clone())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        for name in to_fail {
+                            test_states.insert(name, TestState::Failed("Timeout".to_string()));
+                        }
                         break;
                     }
 
-                    // Sleep to prevent the loop from consuming 100% CPU.
                     thread::sleep(Duration::from_millis(50));
                 }
 
-                // 4. Print the final report.
+                // --- New Final Report ---
                 println!("\n--- Test Report ---");
-                for outcome in &all_outcomes {
-                    if succeeded_outcomes.contains(outcome) {
-                        println!("✅ PASSED: {}", outcome);
-                    } else {
-                        println!("❌ FAILED: {}", outcome);
+                for test_case in &test_cases {
+                    match test_states.get(&test_case.name) {
+                        Some(TestState::Passed) => println!("✅ PASSED: {}", test_case.description),
+                        Some(TestState::Failed(reason)) => {
+                            println!("❌ FAILED: {} ({})", test_case.description, reason)
+                        }
+                        _ => println!("❔ SKIPPED: {}", test_case.description),
                     }
                 }
                 println!("-------------------");

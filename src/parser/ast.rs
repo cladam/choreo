@@ -3,6 +3,23 @@ pub struct TestSuite {
     pub statements: Vec<Statement>,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum TestState {
+    Pending,
+    Running,
+    Passed,
+    Failed(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct TestCase {
+    pub name: String,
+    pub description: String,
+    pub given: Vec<Condition>,
+    pub when: Vec<Action>,
+    pub then: Vec<Condition>,
+}
+
 // All possible top-level statements in a .chor file.
 pub enum Statement {
     Setting(String, Value),
@@ -10,6 +27,7 @@ pub enum Statement {
     ActorDef(Vec<String>),
     OutcomeDef(Vec<String>),
     Rule(Rule),
+    TestCase(TestCase),
 }
 
 // The core logic block.
@@ -46,7 +64,6 @@ pub enum Action {
     Type { actor: String, content: String },
     Press { actor: String, key: String },
     Run { actor: String, command: String },
-    Succeeds { outcome: String },
 }
 
 // Primitive values.

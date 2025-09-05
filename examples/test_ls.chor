@@ -1,19 +1,17 @@
 # test_ls.chor
-
 actors: Terminal
-outcomes: FilesListed
 
-rule "List files in the current directory" {
-    when:
+test FilesListed "Verify that README.md is in the output" {
+    # GIVEN: The context or precondition for the test.
+    given:
         time >= 1s
-    then:
+
+    # WHEN: The single, specific action you are testing.
+    when:
         Terminal types "ls -l"
         Terminal presses "Enter"
-}
 
-rule "Verify that README.md is in the output" {
-    when:
-        Terminal output_contains "README.md"
+    # THEN: The expected outcome that defines success.
     then:
-        Test succeeds FilesListed
+        Terminal output_contains "README.md"
 }
