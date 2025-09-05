@@ -16,6 +16,9 @@ pest_derive = "2.8.1"
 predicates = "3.1.3"
 strip-ansi-escapes = "0.2.1"
 terminal_size = "0.4.3"
+clap = { version = "4.5.47", features = ["derive"] }
+clap_complete = "4.5.57"
+colored = "3.0.0"
 thiserror = "2.0.16"
 anyhow = "1.0.99"
 serde = { version = "1.0.219", features = ["derive"] }

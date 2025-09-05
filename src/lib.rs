@@ -1,2 +1,5 @@
 pub mod backend;
+pub mod cli;
+pub mod colours;
+pub mod error;
 pub mod parser;
