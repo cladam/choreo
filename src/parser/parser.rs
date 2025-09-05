@@ -1,11 +1,11 @@
-use crate::ast;
-use crate::ast::{Action, Condition, Statement, TestSuite, Value};
+use crate::parser::ast;
+use crate::parser::ast::{Action, Condition, Statement, TestSuite, Value};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
 
-#[derive(Parser)]
-#[grammar = "resources/choreo.pest"]
+#[derive(Parser, Debug)]
+#[grammar = "parser/choreo.pest"]
 pub struct ChoreoParser;
 
 /// Parses a source string into an Abstract Syntax Tree (AST).
@@ -28,6 +28,7 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
             Rule::outcomes_def => build_outcomes_def(pair),
             Rule::rule => build_rule(pair),
             Rule::settings_def => build_setting(pair),
+            Rule::env_def => build_env_def(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
         });
     }
@@ -68,6 +69,14 @@ fn build_setting(pair: Pair<Rule>) -> Statement {
     Statement::Setting(name, value)
 }
 
+fn build_env_def(pair: Pair<Rule>) -> Statement {
+    let identifiers: Vec<String> = pair
+        .into_inner()
+        .map(|p| p.as_str().to_string())
+        .collect();
+    Statement::EnvDef(identifiers)
+}
+
 fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
     pairs
         .map(|pair| {
@@ -97,6 +106,27 @@ fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
                     let mut inner = inner_cond.into_inner();
                     let outcome = inner.next().unwrap().as_str().to_string();
                     Condition::StateSucceeded { outcome }
+                }
+                Rule::output_matches_condition => {
+                    let mut inner = inner_cond.into_inner();
+                    let actor = inner.next().unwrap().as_str().to_string();
+                    let regex = inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+
+                    // The 'as <variable>' part is optional, so we check if it exists.
+                    let capture_as = inner.next().map(|p| p.as_str().to_string());
+
+                    Condition::OutputMatches {
+                        actor,
+                        regex,
+                        capture_as,
+                    }
                 }
                 _ => unreachable!(),
             }

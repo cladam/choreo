@@ -1,6 +1,7 @@
 # test_medi_workflow.chor
 # A test suite for our 'medi' CLI tool.
 
+env: EVAR
 actors: Terminal
 
 outcomes: NoteCreationSuccess, TasksListedForVerification, TaskAddedToList, CleanupSuccess
@@ -10,14 +11,14 @@ rule "Action: Create a new note" {
   when:
     time >= 1s
   then:
-    Terminal types "medi new blog-idea-for-dsl-test -m 'Write a post about my new CLI tool'"
+    Terminal types "echo $EVAR | medi new blog-idea-for-dsl-test"
     Terminal presses "Enter"
 }
 
-# Rule 2: Assert that the note was created successfully.
+# Rule 2: Assert note creation and capture the note name
 rule "Assertion: Check for note creation message" {
   when:
-    Terminal output_contains "Successfully created note: 'blog-idea-for-dsl-test'"
+    Terminal output_matches "Successfully created note: '([\w-]+)'" as noteName
   then:
     Test succeeds NoteCreationSuccess
 }
@@ -27,7 +28,7 @@ rule "Action: Add a task to the new note" {
   when:
     Test has_succeeded NoteCreationSuccess
   then:
-    Terminal types "medi task add blog-idea-for-dsl-test 'Write the first draft'"
+    Terminal types "medi task add ${noteName} 'Write the first draft'"
     Terminal presses "Enter"
 }
 
@@ -47,7 +48,7 @@ rule "Assertion: Confirm task appears in list" {
   when:
     # This condition ensures we only start checking AFTER the list command has run.
     Test has_succeeded TasksListedForVerification
-    Terminal output_contains "Write the first draft (for note blog-idea-for-dsl-test)"
+    Terminal output_contains "Write the first draft (for note ${noteName})"
   then:
     Test succeeds TaskAddedToList
 }
@@ -59,14 +60,14 @@ rule "Cleanup: Delete the test note" {
     Test has_succeeded TaskAddedToList # Assuming you used this from the last step
   then:
     # Use --force to avoid the interactive confirmation prompt.
-    Terminal types "medi delete blog-idea-for-dsl-test --force"
+    Terminal types "medi delete ${noteName} --force"
     Terminal presses "Enter"
 }
 
 # Rule 7: Assert that the cleanup was successful.
 rule "Assertion: Confirm deletion message" {
   when:
-    Terminal output_contains "Successfully deleted note: 'blog-idea-for-dsl-test'"
+    Terminal output_contains "Successfully deleted note: '${noteName}'"
   then:
     Test succeeds CleanupSuccess
 }

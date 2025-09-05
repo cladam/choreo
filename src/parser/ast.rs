@@ -6,6 +6,7 @@ pub struct TestSuite {
 // All possible top-level statements in a .chor file.
 pub enum Statement {
     Setting(String, Value),
+    EnvDef(Vec<String>),
     ActorDef(Vec<String>),
     OutcomeDef(Vec<String>),
     Rule(Rule),
@@ -24,6 +25,7 @@ pub enum Condition {
     Time { op: String, time: f32 },
     OutputContains { actor: String, text: String },
     StateSucceeded { outcome: String },
+    OutputMatches { actor: String, regex: String, capture_as: Option<String> },
 }
 
 // All possible actions that can be executed.

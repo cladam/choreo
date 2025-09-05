@@ -95,13 +95,13 @@ impl TerminalBackend {
     }
 
     /// Executes a single action from the AST.
-    pub fn execute_action(&mut self, action: &crate::ast::Action) {
+    pub fn execute_action(&mut self, action: &crate::parser::ast::Action) {
         match action {
-            crate::ast::Action::Type { content, .. } => {
+            crate::parser::ast::Action::Type { content, .. } => {
                 self.writer.write_all(content.as_bytes()).unwrap();
                 self.writer.flush().unwrap();
             }
-            crate::ast::Action::Press { key, .. } if key == "Enter" => {
+            crate::parser::ast::Action::Press { key, .. } if key == "Enter" => {
                 self.writer.write_all(b"\n").unwrap();
             }
             // ... handle other actions

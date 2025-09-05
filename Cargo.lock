@@ -103,6 +103,7 @@ dependencies = [
  "pest_derive",
  "portable-pty",
  "predicates",
+ "regex",
  "serde",
  "serde_json",
  "strip-ansi-escapes",
