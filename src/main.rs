@@ -440,7 +440,7 @@ fn generate_better_report(
     }]);
 
     let json = serde_json::to_string_pretty(&report)?;
-    let mut json_file = File::create("report.json")?;
+    let mut json_file = File::create("better_report.json")?;
     json_file.write_all(json.as_bytes())?;
 
     if verbose {
