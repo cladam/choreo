@@ -1,0 +1,14 @@
+# This test verifies that cut can correctly extract a specific field from a delimited string provided via echo.
+feature: "Cut Utility"
+actors: Terminal
+
+scenario "Extract a field from a delimited string" {
+    test CutExtractsSecondField "cut extracts the second field from a comma-delimited string" {
+        given:
+            time >= 0s
+        when:
+            Terminal runs "echo 'field1,field2,field3' | cut -d ',' -f 2"
+        then:
+            Terminal output_contains "field2"
+    }
+}

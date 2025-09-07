@@ -1,0 +1,14 @@
+# This test ensures that the sort command correctly orders a series of lines piped to it.
+feature: "Sort Utility"
+actors: Terminal
+
+scenario "Sort a list of lines" {
+    test SortOrdersLinesAlphabetically "sort correctly orders lines" {
+        given:
+            time >= 0s
+        when:
+            Terminal runs "printf 'charlie\nalpha\nbravo' | sort"
+        then:
+            Terminal output_matches "alpha\nbravo\ncharlie"
+    }
+}

@@ -1,53 +1,29 @@
 [
   {
-    "uri": "examples/test_medi_env_workflow.chor",
+    "uri": "examples/sorting_lines.chor",
     "keyword": "Feature",
-    "name": "Note and Task Management",
+    "name": "Sort Utility",
     "elements": [
       {
         "keyword": "Scenario",
-        "name": "User can create a note, add a task, and clean up",
+        "name": "Sort a list of lines",
         "steps": [
           {
-            "keyword": "Given ",
-            "name": "Create a new note",
-            "result": {
-              "status": "passed",
-              "durationInMs": 574
-            }
-          },
-          {
-            "keyword": "When ",
-            "name": "Add a task to the new note",
-            "result": {
-              "status": "passed",
-              "durationInMs": 331
-            }
-          },
-          {
             "keyword": "Then ",
-            "name": "Confirm task appears in list",
+            "name": "sort correctly orders lines",
             "result": {
               "status": "passed",
-              "durationInMs": 224
+              "durationInMs": 56
             }
           }
         ],
-        "after": [
-          {
-            "name": "Cleanup the test note",
-            "result": {
-              "status": "passed",
-              "durationInMs": 114
-            }
-          }
-        ]
+        "after": []
       }
     ],
     "summary": {
-      "tests": 4,
+      "tests": 1,
       "failures": 0,
-      "totalTimeInSeconds": 1.5958986
+      "totalTimeInSeconds": 0.05665571
     }
   }
 ]

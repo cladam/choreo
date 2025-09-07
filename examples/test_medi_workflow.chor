@@ -1,73 +1,49 @@
 # test_medi_workflow.chor
 # A test suite for our 'medi' CLI tool.
 
-#env: EVAR
+feature: "Note and Task Management"
 actors: Terminal
+scenario "User can create a note, add a task, verify it, and clean up" {
+    # This scenario tests the full workflow of creating a note, adding a task,
+    # verifying the task appears in the list, and cleaning up by deleting the note.
 
-outcomes: NoteCreationSuccess, TasksListedForVerification, TaskAddedToList, CleanupSuccess
+    # Test 1: Verify that a note can be created and capture its name.
+    test NoteCreationSuccess "Create a new note" {
+        given:
+            time >= 1s
+        when:
+            Terminal runs "echo $EVAR | medi new blog-idea-for-dsl-test"
+        then:
+            Terminal output_contains "Successfully created note: 'blog-idea-for-dsl-test'"
+    }
 
-# Rule 1: Create a new note using a non-interactive flag.
-rule "Action: Create a new note" {
-  when:
-    time >= 1s
-  then:
-    Terminal types "medi new blog-idea-for-dsl-test -m 'Write a post about my new CLI tool'"
-    Terminal presses "Enter"
-}
+    # Test 2: Verify that a task can be added to the created note.
+    test TaskCanBeAdded "Add a task to the new note" {
+        given:
+            Test has_succeeded NoteCreationSuccess
+        when:
+            Terminal runs "medi task add blog-idea-for-dsl-test 'Write the first draft'"
+        then:
+            Terminal output_contains "Added new task with ID:"
+    }
 
-# Rule 2: Assert that the note was created successfully.
-rule "Assertion: Check for note creation message" {
-  when:
-    Terminal output_contains "Successfully created note: 'blog-idea-for-dsl-test'"
-  then:
-    Test succeeds NoteCreationSuccess
-}
+    # Test 3: Verify that the added task appears in the task list.
+    test TaskAppearsInList "Confirm task appears in list" {
+        given:
+            Test has_succeeded TaskCanBeAdded
+        when:
+            Terminal runs "medi task list"
+        then:
+            Terminal output_contains "Write the first draft (for note blog-idea-for-dsl-test)"
+    }
 
-# Rule 3: Add a task to the note we just created.
-rule "Action: Add a task to the new note" {
-  when:
-    Test has_succeeded NoteCreationSuccess
-  then:
-    Terminal types "medi task add blog-idea-for-dsl-test 'Write the first draft'"
-    Terminal presses "Enter"
-}
-
-# Rule 4: Add an outcome to the verify step
-rule "Verify: List tasks to confirm creation" {
-  when:
-    Terminal output_contains "Added new task with ID:"
-  then:
-    Terminal types "medi task list"
-    Terminal presses "Enter"
-    # Add this action to signal that the list command has been sent.
-    Test succeeds TasksListedForVerification
-}
-
-# Rule 5: Make the assertion dependent on the previous step
-rule "Assertion: Confirm task appears in list" {
-  when:
-    # This condition ensures we only start checking AFTER the list command has run.
-    Test has_succeeded TasksListedForVerification
-    Terminal output_contains "Write the first draft (for note blog-idea-for-dsl-test)"
-  then:
-    Test succeeds TaskAddedToList
-}
-
-# Rule 6: Cleanup the test data.
-rule "Cleanup: Delete the test note" {
-  when:
-    # This should wait for the final assertion to pass
-    Test has_succeeded TaskAddedToList # Assuming you used this from the last step
-  then:
-    # Use --force to avoid the interactive confirmation prompt.
-    Terminal types "medi delete blog-idea-for-dsl-test --force"
-    Terminal presses "Enter"
-}
-
-# Rule 7: Assert that the cleanup was successful.
-rule "Assertion: Confirm deletion message" {
-  when:
-    Terminal output_contains "Successfully deleted note: 'blog-idea-for-dsl-test'"
-  then:
-    Test succeeds CleanupSuccess
+    # Test 4: Verify that the note and its tasks can be deleted.
+    test CleanupSuccess "Cleanup the test note" {
+        given:
+            Test has_succeeded TaskAppearsInList
+        when:
+            Terminal runs "medi delete blog-idea-for-dsl-test --force"
+        then:
+            Terminal output_contains "Successfully deleted note: 'blog-idea-for-dsl-test'"
+    }
 }

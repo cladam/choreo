@@ -1,0 +1,14 @@
+# This test checks that tr can correctly translate a lowercase string to uppercase when piped from echo.
+feature: "Translate Utility"
+actors: Terminal
+
+scenario "Translate lowercase to uppercase" {
+    test TrTranslatesToUppercase "tr correctly converts lowercase to uppercase" {
+        given:
+            time >= 0s
+        when:
+            Terminal runs "echo 'hello world' | tr '[:lower:]' '[:upper:]'"
+        then:
+            Terminal output_contains "HELLO WORLD"
+    }
+}
