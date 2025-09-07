@@ -9,9 +9,20 @@ pub enum TestState {
     Running,
     Passed,
     Failed(String),
+    Skipped,
 }
 
-#[derive(Debug, Clone)]
+impl TestState {
+    pub fn is_done(&self) -> bool {
+        matches!(self, TestState::Passed | TestState::Failed(_))
+    }
+
+    pub fn is_failed(&self) -> bool {
+        matches!(self, TestState::Failed(_))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct TestCase {
     pub name: String,
     pub description: String,
@@ -25,20 +36,19 @@ pub enum Statement {
     Setting(String, Value),
     EnvDef(Vec<String>),
     ActorDef(Vec<String>),
-    OutcomeDef(Vec<String>),
-    Rule(Rule),
+    FeatureDef(String),
+    Scenario(Scenario),
     TestCase(TestCase),
 }
 
-// The core logic block.
-pub struct Rule {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Scenario {
     pub name: String,
-    pub when: Vec<Condition>,
-    pub then: Vec<Action>,
+    pub tests: Vec<TestCase>,
 }
 
 // All possible conditions that can trigger a rule.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Condition {
     Time {
         op: String,
@@ -59,7 +69,7 @@ pub enum Condition {
 }
 
 // All possible actions that can be executed.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Action {
     Type { actor: String, content: String },
     Press { actor: String, key: String },

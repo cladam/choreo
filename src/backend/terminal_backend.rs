@@ -106,7 +106,12 @@ impl TerminalBackend {
             crate::parser::ast::Action::Press { key, .. } if key == "Enter" => {
                 self.writer.write_all(b"\n").unwrap();
             }
-            // ... handle other actions
+            crate::parser::ast::Action::Run { command, .. } => {
+                // Append a newline to the command to execute it immediately.
+                let full_command = format!("{}\n", command);
+                self.writer.write_all(full_command.as_bytes()).unwrap();
+                self.writer.flush().unwrap();
+            }
             _ => {}
         }
     }

@@ -1,5 +1,4 @@
-use crate::parser::ast;
-use crate::parser::ast::{Action, Condition, Statement, TestCase, TestSuite, Value};
+use crate::parser::ast::{Action, Condition, Scenario, Statement, TestCase, TestSuite, Value};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
@@ -25,10 +24,10 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
         statements.push(match pair.as_rule() {
             // Now this will correctly match on the inner rule.
             Rule::actors_def => build_actors_def(pair),
-            Rule::rule => build_rule(pair),
             Rule::settings_def => build_setting(pair),
             Rule::env_def => build_env_def(pair),
-            Rule::test => build_test(pair),
+            Rule::feature_def => build_feature_def(pair),
+            Rule::scenario_def => build_scenario(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
         });
     }
@@ -46,32 +45,6 @@ fn build_actors_def(pair: Pair<Rule>) -> Statement {
     Statement::ActorDef(identifiers)
 }
 
-fn build_test(pair: Pair<Rule>) -> Statement {
-    let mut inner = pair.into_inner();
-    let name = inner.next().unwrap().as_str().to_string();
-    let description = inner
-        .next()
-        .unwrap()
-        .into_inner()
-        .next()
-        .unwrap()
-        .as_str()
-        .to_string();
-
-    let given_block = inner.next().unwrap();
-    let when_block = inner.next().unwrap();
-    let then_block = inner.next().unwrap();
-
-    let test_case = TestCase {
-        name,
-        description,
-        given: build_conditions(given_block.into_inner()),
-        when: build_actions(when_block.into_inner()),
-        then: build_conditions(then_block.into_inner()),
-    };
-    Statement::TestCase(test_case)
-}
-
 // Helper function for settings
 fn build_setting(pair: Pair<Rule>) -> Statement {
     // Extract setting name and value
@@ -84,6 +57,20 @@ fn build_setting(pair: Pair<Rule>) -> Statement {
         _ => unreachable!(),
     };
     Statement::Setting(name, value)
+}
+
+// Helper function for a feature definition.
+fn build_feature_def(pair: Pair<Rule>) -> Statement {
+    let name = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
+    Statement::FeatureDef(name)
 }
 
 fn build_env_def(pair: Pair<Rule>) -> Statement {
@@ -199,10 +186,8 @@ fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
         .collect()
 }
 
-// Make sure your build_rule function calls these new helpers:
-fn build_rule(pair: Pair<Rule>) -> Statement {
+fn build_scenario(pair: Pair<Rule>) -> Statement {
     let mut inner = pair.into_inner();
-
     let name = inner
         .next()
         .unwrap()
@@ -211,14 +196,35 @@ fn build_rule(pair: Pair<Rule>) -> Statement {
         .unwrap()
         .as_str()
         .to_string();
+    let mut tests = Vec::new();
+    for test_pair in inner {
+        // Corrected to check for the 'test' rule name from your grammar
+        if test_pair.as_rule() == Rule::test {
+            tests.push(build_test(test_pair));
+        }
+    }
+    Statement::Scenario(Scenario { name, tests })
+}
 
+fn build_test(pair: Pair<Rule>) -> TestCase {
+    let mut inner = pair.into_inner();
+    let name = inner.next().unwrap().as_str().to_string();
+    let description = inner
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
+    let given_block = inner.next().unwrap();
     let when_block = inner.next().unwrap();
     let then_block = inner.next().unwrap();
-
-    let rule = ast::Rule {
+    TestCase {
         name,
-        when: build_conditions(when_block.into_inner()), // Use the new function
-        then: build_actions(then_block.into_inner()),    // Use the new function
-    };
-    Statement::Rule(rule)
+        description,
+        given: build_conditions(given_block.into_inner()),
+        when: build_actions(when_block.into_inner()),
+        then: build_conditions(then_block.into_inner()),
+    }
 }

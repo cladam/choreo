@@ -1,17 +1,20 @@
 # test_ls.chor
+feature: "List Files in Directory"
 actors: Terminal
 
-test FilesListed "Verify that README.md is in the output" {
-    # GIVEN: The context or precondition for the test.
-    given:
-        time >= 1s
+scenario "Listing files in the current directory" {
 
-    # WHEN: The single, specific action you are testing.
-    when:
-        Terminal types "ls -l"
-        Terminal presses "Enter"
+    test FilesListed "Verify that README.md is in the output" {
+        # GIVEN: The context or precondition for the test.
+        given:
+            time >= 1s
 
-    # THEN: The expected outcome that defines success.
-    then:
-        Terminal output_contains "README.md"
+        # WHEN: The single, specific action you are testing.
+        when:
+            Terminal runs "ls -l"
+
+        # THEN: The expected outcome that defines success.
+        then:
+            Terminal output_contains "README.md"
+    }
 }

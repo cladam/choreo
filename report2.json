@@ -6,30 +6,30 @@
     "elements": [
       {
         "keyword": "Scenario",
-        "name": "User can create a note, add a task, and clean up",
+        "name": "User can create a note and add a task to it",
         "steps": [
           {
             "keyword": "Given ",
-            "name": "Create a new note",
+            "name": "the user creates a new note",
             "result": {
               "status": "passed",
-              "durationInMs": 574
+              "duration_in_ms": 271
             }
           },
           {
             "keyword": "When ",
-            "name": "Add a task to the new note",
+            "name": "the user adds a task to the new note",
             "result": {
               "status": "passed",
-              "durationInMs": 331
+              "duration_in_ms": 55
             }
           },
           {
             "keyword": "Then ",
-            "name": "Confirm task appears in list",
+            "name": "the user can confirm the task appears in the list",
             "result": {
               "status": "passed",
-              "durationInMs": 224
+              "duration_in_ms": 55
             }
           }
         ],
@@ -38,7 +38,7 @@
             "name": "Cleanup the test note",
             "result": {
               "status": "passed",
-              "durationInMs": 114
+              "duration_in_ms": 109
             }
           }
         ]
@@ -47,7 +47,7 @@
     "summary": {
       "tests": 4,
       "failures": 0,
-      "totalTimeInSeconds": 1.5958986
+      "total_time_in_seconds": 1.695
     }
   }
 ]

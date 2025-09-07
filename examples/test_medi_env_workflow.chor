@@ -1,52 +1,49 @@
+# test_medi_env_workflow.chor
 # A test suite for our 'medi' CLI tool, using the BDD `test` syntax.
-
+feature: "Note and Task Management"
 env: EVAR
 actors: Terminal
 
-# Test 1: Verify that a note can be created and capture its name.
-test NoteCreationSuccess "Create a new note" {
-    given:
-        time >= 1s
-    when:
-        Terminal types "echo $EVAR | medi new blog-idea-for-dsl-test"
-        Terminal presses "Enter"
-    then:
-        Terminal output_matches "Successfully created note: '([\w-]+)'" as noteName
-}
+# A scenario groups related tests into a single workflow.
+scenario "User can create a note, add a task, and clean up" {
 
-# Test 2: Verify that a task can be added to the created note.
-test TaskCanBeAdded "Add a task to the new note" {
-    given:
-        # This test depends on the first one succeeding.
-        Test has_succeeded NoteCreationSuccess
-    when:
-        Terminal types "medi task add ${noteName} 'Write the first draft'"
-        Terminal presses "Enter"
-    then:
-        # The assertion should be the direct result of the `when` action.
-        Terminal output_contains "Added new task with ID:"
-}
+    # Test 1: Verify that a note can be created and capture its name.
+    test NoteCreationSuccess "Create a new note" {
+        given:
+            time >= 1s
+        when:
+            Terminal runs "echo $EVAR | medi new blog-idea-for-dsl-test"
+        then:
+            Terminal output_matches "Successfully created note: '([\w-]+)'" as noteName
+    }
 
-# Test 3: Verify that the added task appears in the task list.
-test TaskAppearsInList "Confirm task appears in list" {
-    given:
-        # This test depends on the task being successfully added.
-        Test has_succeeded TaskCanBeAdded
-    when:
-        # The single action here is listing the tasks.
-        Terminal types "medi task list"
-        Terminal presses "Enter"
-    then:
-        Terminal output_contains "Write the first draft (for note ${noteName})"
-}
+    # Test 2: Verify that a task can be added to the created note.
+    test TaskCanBeAdded "Add a task to the new note" {
+        given:
+            Test has_succeeded NoteCreationSuccess
+        when:
+            Terminal runs "medi task add ${noteName} 'Write the first draft'"
+        then:
+            Terminal output_contains "Added new task with ID:"
+    }
 
-# Test 4: Verify that the note and its tasks can be deleted.
-test CleanupSuccess "Cleanup the test note" {
-    given:
-        Test has_succeeded TaskAppearsInList
-    when:
-        Terminal types "medi delete ${noteName} --force"
-        Terminal presses "Enter"
-    then:
-        Terminal output_contains "Successfully deleted note: '${noteName}'"
+    # Test 3: Verify that the added task appears in the task list.
+    test TaskAppearsInList "Confirm task appears in list" {
+        given:
+            Test has_succeeded TaskCanBeAdded
+        when:
+            Terminal runs "medi task list"
+        then:
+            Terminal output_contains "Write the first draft (for note ${noteName})"
+    }
+
+    # Test 4: Verify that the note and its tasks can be deleted.
+    test CleanupSuccess "Cleanup the test note" {
+        given:
+            Test has_succeeded TaskAppearsInList
+        when:
+            Terminal runs "medi delete ${noteName} --force"
+        then:
+            Terminal output_contains "Successfully deleted note: '${noteName}'"
+    }
 }

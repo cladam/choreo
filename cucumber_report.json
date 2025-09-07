@@ -13,7 +13,7 @@
             "name": "Create a new note",
             "result": {
               "status": "passed",
-              "durationInMs": 574
+              "durationInMs": 1018
             }
           },
           {
@@ -21,7 +21,7 @@
             "name": "Add a task to the new note",
             "result": {
               "status": "passed",
-              "durationInMs": 331
+              "durationInMs": 424
             }
           },
           {
@@ -29,7 +29,7 @@
             "name": "Confirm task appears in list",
             "result": {
               "status": "passed",
-              "durationInMs": 224
+              "durationInMs": 263
             }
           }
         ],
@@ -38,7 +38,7 @@
             "name": "Cleanup the test note",
             "result": {
               "status": "passed",
-              "durationInMs": 114
+              "durationInMs": 156
             }
           }
         ]
@@ -47,7 +47,7 @@
     "summary": {
       "tests": 4,
       "failures": 0,
-      "totalTimeInSeconds": 1.5958986
+      "totalTimeInSeconds": 1.9938881
     }
   }
 ]

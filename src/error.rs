@@ -10,6 +10,9 @@ pub enum AppError {
     #[error("Parsing error: {0}")]
     ParseError(String),
 
+    #[error("Failed to read environment variable: {0}")]
+    EnvVarNotFound(String),
+
     #[error("Failed to read file: {0}")]
     FileReadError(String),
 

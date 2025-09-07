@@ -7,14 +7,15 @@ COMMENT    = _{ "#" ~ (!NEWLINE ~ ANY)* }
 
 // The program is a series of statements.
 grammar = { SOI ~ statement* ~ EOI }
-statement = { settings_def | env_def | actors_def  | test }
+statement = { feature_def | settings_def | env_def | actors_def | scenario_def }
 
 // Setting up the test suite.
 settings_def = { "settings:" ~ setting+ }
 setting      = { identifier ~ value }
 env_def = { "env:" ~ identifier ~ ("," ~ identifier)* }
 actors_def   = { "actors:" ~ identifier ~ ("," ~ identifier)* }
-outcomes_def = { "outcomes:" ~ identifier ~ ("," ~ identifier)* }
+feature_def  = { "feature:" ~ string }
+scenario_def = { "scenario" ~ string ~ "{" ~ test* ~ "}" }
 
 // Defining a test case.
 test = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
@@ -41,10 +42,8 @@ state_condition          = { "Test" ~ "has_succeeded" ~ identifier }
 type_action  = { identifier ~ "types" ~ string }
 press_action = { identifier ~ "presses" ~ string }
 run_action   = { identifier ~ "runs" ~ string }
-test_action  = { "Test" ~ "succeeds" ~ identifier }
 
 // The basic building blocks of the language.
-//identifier    = @{('a'..'z' | 'A'..'Z' | "_" ) ~ ('a'..'z' | 'A'..'Z' | '0'..'9' | '_')* }
 identifier = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
 string = { "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
 // These are the parts your Rust parser will actually capture.
