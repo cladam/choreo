@@ -1,29 +1,37 @@
 [
   {
-    "uri": "examples/extracting_fields.chor",
+    "uri": "examples/redirecting_output_tee.chor",
     "keyword": "Feature",
-    "name": "Cut Utility",
+    "name": "Tee Utility",
     "elements": [
       {
         "keyword": "Scenario",
-        "name": "Extract a field from a delimited string",
+        "name": "tee writes to both stdout and a file",
         "steps": [
           {
             "keyword": "Then ",
-            "name": "cut extracts the second field from a comma-delimited string",
+            "name": "tee writes to both destinations",
             "result": {
               "status": "passed",
-              "durationInMs": 56
+              "durationInMs": 262
             }
           }
         ],
-        "after": []
+        "after": [
+          {
+            "name": "Cleanup the test note",
+            "result": {
+              "status": "passed",
+              "durationInMs": 50
+            }
+          }
+        ]
       }
     ],
     "summary": {
-      "tests": 1,
+      "tests": 2,
       "failures": 0,
-      "totalTimeInSeconds": 0.056176417
+      "totalTimeInSeconds": 0.26228485
     }
   }
 ]

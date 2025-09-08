@@ -1,6 +1,8 @@
+use crate::parser::ast::Action;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::io::Read;
 use std::io::Write;
+use std::path::PathBuf;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -20,10 +22,12 @@ pub struct TerminalBackend {
     // A handle to the reader thread.
     #[allow(dead_code)]
     reader_thread: Option<JoinHandle<()>>,
+
+    base_dir: PathBuf,
 }
 
 impl TerminalBackend {
-    pub fn new() -> Self {
+    pub fn new(base_dir: PathBuf) -> Self {
         // Get the size of the user's actual terminal.
         let term_size = terminal_size();
         let (cols, rows) = if let Some((Width(w), Height(h))) = term_size {
@@ -46,7 +50,8 @@ impl TerminalBackend {
             .expect("Failed to open pty");
 
         // Spawn the command in the PTY.
-        let cmd = CommandBuilder::new("zsh");
+        let mut cmd = CommandBuilder::new("zsh");
+        cmd.cwd(base_dir.clone());
         let child = pair
             .slave
             .spawn_command(cmd)
@@ -83,36 +88,59 @@ impl TerminalBackend {
             output_receiver: receiver,
             child,
             reader_thread: Some(reader_thread),
+            base_dir,
         }
     }
 
-    /// Checks for new output from the reader thread without blocking.
-    pub fn read_output(&mut self, output_buffer: &mut String, verbose: bool) {
+    /// Reads output and checks for special exit code markers.
+    pub fn read_output(&mut self, output_buffer: &mut String, last_exit_code: &mut Option<i32>) {
         for new_output in self.output_receiver.try_iter() {
-            if verbose {
-                print!("{}", new_output); // Echo to the real console for debugging
-            }
             output_buffer.push_str(&new_output);
         }
+
+        // Check for our special exit code line.
+        let exit_code_marker = "CHOREO_EXIT_CODE=";
+        if let Some(line_start) = output_buffer.find(exit_code_marker) {
+            if let Some(line_end) = output_buffer[line_start..].find('\n') {
+                let full_line_end = line_start + line_end;
+                let line = &output_buffer[line_start..full_line_end].to_string();
+
+                let code_str = line.trim_start_matches(exit_code_marker);
+                if let Ok(code) = code_str.trim().parse::<i32>() {
+                    *last_exit_code = Some(code);
+                    // Remove this line from the buffer so the test doesn't see it.
+                    output_buffer.replace_range(line_start..=full_line_end, "");
+                }
+            }
+        }
     }
 
-    /// Executes a single action from the AST.
-    pub fn execute_action(&mut self, action: &crate::parser::ast::Action) {
+    /// Executes a single action from the AST. Returns true if the action was handled.
+    pub fn execute_action(
+        &mut self,
+        action: &crate::parser::ast::Action,
+        _last_exit_code: &mut Option<i32>,
+    ) -> bool {
         match action {
-            crate::parser::ast::Action::Type { content, .. } => {
+            Action::Type { content, .. } => {
                 self.writer.write_all(content.as_bytes()).unwrap();
                 self.writer.flush().unwrap();
+                true
             }
-            crate::parser::ast::Action::Press { key, .. } if key == "Enter" => {
+            Action::Press { key, .. } if key == "Enter" => {
                 self.writer.write_all(b"\n").unwrap();
+                true
             }
-            crate::parser::ast::Action::Run { command, .. } => {
-                // Append a newline to the command to execute it immediately.
-                let full_command = format!("{}\n", command);
+            Action::Run { command, .. } => {
+                // Define a unique marker to find the exit code later.
+                let exit_code_marker = "CHOREO_EXIT_CODE";
+                // Chain the user's command with an echo of the exit code.
+                let full_command = format!("{}; echo \"{}=$?\"\n", command, exit_code_marker);
                 self.writer.write_all(full_command.as_bytes()).unwrap();
                 self.writer.flush().unwrap();
+                true
             }
-            _ => {}
+            _ => false, // Ignore actions not meant for this backend
         }
     }
 }

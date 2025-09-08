@@ -1,0 +1,28 @@
+ # This test verifies that tee correctly writes its input to both standard output and the specified file.
+ feature: "Tee Utility"
+ env: PWD
+ actors: Terminal, FileSystem
+
+scenario "tee writes to both stdout and a file" {
+    test TeeWritesToBothDests "tee writes to both destinations" {
+        given:
+            # Ensure a clean state before the test.
+            FileSystem delete_file "tee_output.txt"
+        when:
+            # Change to the project's working directory before running the command
+            # to ensure the file is created in the correct place.
+            Terminal runs "cd $PWD; echo 'hello tee' | tee tee_output.txt"
+        then:
+            Terminal output_contains "hello tee"
+            FileSystem file_exists "tee_output.txt"
+            FileSystem file_contains "tee_output.txt" "hello tee"
+    }
+    test CleanupSuccess "Cleanup the test note" {
+        given:
+            Test has_succeeded TeeWritesToBothDests
+        when:
+            Terminal runs "rm -f tee_output.txt"
+        then:
+            Terminal last_command exit_code_is 0
+    }
+}

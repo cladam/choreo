@@ -26,7 +26,7 @@ impl TestState {
 pub struct TestCase {
     pub name: String,
     pub description: String,
-    pub given: Vec<Condition>,
+    pub given: Vec<GivenStep>,
     pub when: Vec<Action>,
     pub then: Vec<Condition>,
 }
@@ -45,6 +45,12 @@ pub enum Statement {
 pub struct Scenario {
     pub name: String,
     pub tests: Vec<TestCase>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum GivenStep {
+    Action(Action),
+    Condition(Condition),
 }
 
 // All possible conditions that can trigger a rule.
@@ -66,6 +72,22 @@ pub enum Condition {
         regex: String,
         capture_as: Option<String>,
     },
+    LastCommandSucceeded,
+    LastCommandFailed,
+    LastCommandExitCodeIs(i32),
+    FileExists {
+        path: String,
+    },
+    FileDoesNotExist {
+        path: String,
+    },
+    DirExists {
+        path: String,
+    },
+    FileContains {
+        path: String,
+        content: String,
+    },
 }
 
 // All possible actions that can be executed.
@@ -74,6 +96,10 @@ pub enum Action {
     Type { actor: String, content: String },
     Press { actor: String, key: String },
     Run { actor: String, command: String },
+    CreateFile { path: String, content: String },
+    DeleteFile { path: String },
+    CreateDir { path: String },
+    DeleteDir { path: String },
 }
 
 // Primitive values.

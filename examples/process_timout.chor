@@ -1,0 +1,17 @@
+# This test checks that timeout correctly terminates a process (sleep) that exceeds the specified duration, and verifies it exits with the correct status code.
+feature: "Timeout Utility"
+actors: Terminal
+
+scenario "Terminate a long-running process" {
+    test TimeoutKillsProcess "timeout terminates a process that runs too long" {
+        given:
+            time >= 0s
+        when:
+            # This command will be killed after 1 second.
+            Terminal runs "timeout 1 sleep 5"
+        then:
+            Terminal last_command failed
+            # `timeout` returns 124 when it kills the child process.
+            Terminal last_command exit_code_is 124
+    }
+}

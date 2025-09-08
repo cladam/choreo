@@ -1,13 +1,14 @@
+use choreo::backend::filesystem_backend::FileSystemBackend;
 use choreo::backend::report::{
     AfterHook, Feature, Report, Result as StepResult, Scenario, Step, Summary, TestCaseReport,
-    TestStatus, TestSuiteReport,
+    TestStatus,
 };
 use choreo::backend::terminal_backend::TerminalBackend;
 use choreo::cli;
 use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
-use choreo::parser::ast::{Statement, TestCase, TestState};
+use choreo::parser::ast::{Action, GivenStep, Statement, TestCase, TestState};
 use choreo::parser::helpers::*;
 use choreo::parser::parser;
 use clap::Parser;
@@ -45,6 +46,11 @@ fn main() {
                     Err(e) => return Err(AppError::ParseError(e.to_string())),
                 };
 
+                let test_file_path = std::path::Path::new(&file);
+                let base_dir = test_file_path
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new(""));
+
                 // Find the FeatureDef statement to get the feature name.
                 let mut feature_name = "Choreo Test Feature".to_string(); // Default name
                 let mut env_vars: HashMap<String, String> = HashMap::new();
@@ -65,7 +71,13 @@ fn main() {
                     }
                 }
 
-                let mut terminal = TerminalBackend::new();
+                // --- Backend and State Initialisation ---
+                let mut terminal_backend = TerminalBackend::new(base_dir.to_path_buf());
+                let fs_backend = FileSystemBackend::new(base_dir.to_path_buf());
+                let output_buffer = String::new();
+                let mut last_exit_code: Option<i32> = None;
+                let test_states: HashMap<String, TestState> = HashMap::new();
+                let test_start_times: HashMap<String, Instant> = HashMap::new();
                 let mut output_buffer = String::new();
                 let mut test_states: HashMap<String, TestState> = HashMap::new();
                 let mut test_start_times: HashMap<String, Instant> = HashMap::new();
@@ -104,7 +116,7 @@ fn main() {
                 let suite_start_time = Instant::now();
                 let test_timeout = Duration::from_secs(30);
                 loop {
-                    terminal.read_output(&mut output_buffer, verbose);
+                    terminal_backend.read_output(&mut output_buffer, &mut last_exit_code);
                     let elapsed = suite_start_time.elapsed();
 
                     let mut tests_to_start = Vec::new();
@@ -116,16 +128,39 @@ fn main() {
                             let current_state = test_states.get(&test_case.name).unwrap();
 
                             if *current_state == TestState::Pending {
+                                // Separate actions from conditions in the given block
+                                let given_actions: Vec<_> = test_case
+                                    .given
+                                    .iter()
+                                    .filter_map(|s| match s {
+                                        GivenStep::Action(a) => Some(a.clone()),
+                                        _ => None,
+                                    })
+                                    .collect();
+                                let given_conditions: Vec<_> = test_case
+                                    .given
+                                    .iter()
+                                    .filter_map(|s| match s {
+                                        GivenStep::Condition(c) => Some(c.clone()),
+                                        _ => None,
+                                    })
+                                    .collect();
+
+                                // Check if all pre-conditions are met
                                 if check_all_conditions_met(
                                     "given",
-                                    &test_case.given,
+                                    &given_conditions,
                                     &test_states,
                                     &output_buffer,
                                     elapsed.as_secs_f32(),
                                     &mut env_vars,
+                                    &last_exit_code,
+                                    &fs_backend,
                                     verbose,
                                 ) {
-                                    tests_to_start.push(test_case.name.clone());
+                                    // If conditions are met, this test is ready to start.
+                                    // We pass along its setup actions.
+                                    tests_to_start.push((test_case.name.clone(), given_actions));
                                 }
                             } else if *current_state == TestState::Running {
                                 if check_all_conditions_met(
@@ -135,6 +170,8 @@ fn main() {
                                     &output_buffer,
                                     elapsed.as_secs_f32(),
                                     &mut env_vars,
+                                    &last_exit_code,
+                                    &fs_backend,
                                     verbose,
                                 ) {
                                     tests_to_pass.push(test_case.name.clone());
@@ -143,7 +180,7 @@ fn main() {
                         }
                     }
                     // --- Updating Phase (Mutable Borrows) ---
-                    for name in tests_to_start {
+                    for (name, setup_actions) in tests_to_start {
                         if let Some(state) = test_states.get_mut(&name) {
                             if *state == TestState::Pending {
                                 let test_case = scenarios
@@ -158,9 +195,29 @@ fn main() {
                                     ));
                                 }
                                 test_start_times.insert(name.clone(), Instant::now());
+
+                                // Execute setup actions from the 'given' block first.
+                                for action in setup_actions {
+                                    let substituted_a =
+                                        substitute_variables_in_action(&action, &env_vars);
+                                    execute_action(
+                                        &substituted_a,
+                                        &mut terminal_backend,
+                                        &fs_backend,
+                                        &mut last_exit_code,
+                                    );
+                                }
+
+                                // Execute the main actions from the 'when' block
                                 for action in &test_case.when {
-                                    let substituted_a = substitute_variables(action, &env_vars);
-                                    terminal.execute_action(&substituted_a);
+                                    let substituted_a =
+                                        substitute_variables_in_action(action, &env_vars);
+                                    execute_action(
+                                        &substituted_a,
+                                        &mut terminal_backend,
+                                        &fs_backend,
+                                        &mut last_exit_code,
+                                    );
                                 }
                                 *state = TestState::Running;
                             }
@@ -287,7 +344,6 @@ fn main() {
                     ));
                 }
 
-                generate_reports(&suite_name, suite_duration, final_reports, verbose)?;
                 generate_better_report(
                     &suite_name,
                     suite_start_time.elapsed(),
@@ -307,46 +363,21 @@ fn main() {
     }
 }
 
-/// Generates JSON and JUnit XML reports from the test results.
-fn generate_reports(
-    suite_name: &str,
-    suite_duration: Duration,
-    reports: Vec<TestCaseReport>,
-    verbose: bool,
-) -> Result<(), AppError> {
-    let test_suite_report = TestSuiteReport {
-        name: suite_name.to_string(),
-        tests: reports.len(),
-        failures: reports
-            .iter()
-            .filter(|r| r.status == TestStatus::Failed)
-            .count(),
-        time: suite_duration,
-        testcases: reports,
-    };
-
-    // Generate JSON Report
-    let json = serde_json::to_string_pretty(&test_suite_report)?;
-    let mut json_file = File::create("report.json")?;
-    json_file.write_all(json.as_bytes())?;
-    if verbose {
-        colours::info("JSON report content:");
-        println!("{}", json);
+/// Dispatches an action to the correct backend.
+fn execute_action(
+    action: &Action,
+    terminal: &mut TerminalBackend,
+    fs: &FileSystemBackend,
+    last_exit_code: &mut Option<i32>,
+) {
+    // Check if it's a terminal action
+    if terminal.execute_action(action, last_exit_code) {
+        return;
     }
-
-    // Generate JUnit XML Report
-    /*    let mut xml_buffer = Vec::new();
-        let mut writer = quick_xml::Writer::new_with_indent(&mut xml_buffer, b' ', 2);
-        let mut serializer = quick_xml::se::Serializer::new(&mut writer);
-        test_suite_report
-            .serialize(&mut serializer)
-            .map_err(|e| AppError::Io(io::Error::new(io::ErrorKind::Other, e.to_string())))?;
-
-        let mut xml_file = File::create("junit.xml")?;
-        xml_file.write_all(&xml_buffer)?;
-        colours::success("JUnit XML report generated at junit.xml");
-    */
-    Ok(())
+    // Check if it's a filesystem action
+    if fs.execute_action(action) {
+        return;
+    }
 }
 
 fn generate_better_report(

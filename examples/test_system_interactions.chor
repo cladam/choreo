@@ -1,0 +1,46 @@
+# test_system_interactions.chor
+# This file uses the new exit code and file system conditions.
+
+feature: "System Interaction Commands"
+
+# You would need to add FileSystem to your list of actors.
+actors: Terminal, FileSystem
+
+scenario "Testing exit codes and file system conditions" {
+
+    # Test 1: Successful command and file validation
+    test CommandSuccessAndFileChecks "handles successful commands and file conditions" {
+        given:
+            # Setup: Create a directory and a file for the test.
+            FileSystem create_dir "temp_test_dir"
+            FileSystem create_file "temp_test_dir/hello.txt" with_content "hello choreo"
+
+        when:
+            # Action: Run a simple command that will succeed (exit code 0).
+            Terminal runs "echo 'Test successful'"
+
+        then:
+            # Assertions using the new exit code and filesystem conditions.
+            Terminal last_command succeeded
+            FileSystem dir_exists "temp_test_dir"
+            FileSystem file_exists "temp_test_dir/hello.txt"
+            FileSystem file_contains "temp_test_dir/hello.txt" "hello choreo"
+    }
+
+    # Test 2: Failing command with a specific exit code
+    test CommandFailsWithExitCode "handles failing commands and specific exit codes" {
+        given:
+            # This test runs after the first one passes.
+            Test has_succeeded CommandSuccessAndFileChecks
+
+        when:
+            # Action: Run a command that is guaranteed to fail.
+            # `cat` on a non-existent file typically exits with code 1.
+            Terminal runs "cat non_existent_file.txt"
+
+        then:
+            # Assertions using the new exit code conditions.
+            Terminal last_command failed
+            Terminal last_command exit_code_is 1
+    }
+}

@@ -6,20 +6,20 @@ WHITESPACE = _{ " " | "\t" | NEWLINE }
 COMMENT    = _{ "#" ~ (!NEWLINE ~ ANY)* }
 
 // The program is a series of statements.
-grammar = { SOI ~ statement* ~ EOI }
+grammar   = { SOI ~ statement* ~ EOI }
 statement = { feature_def | settings_def | env_def | actors_def | scenario_def }
 
 // Setting up the test suite.
 settings_def = { "settings:" ~ setting+ }
 setting      = { identifier ~ value }
-env_def = { "env:" ~ identifier ~ ("," ~ identifier)* }
+env_def      = { "env:" ~ identifier ~ ("," ~ identifier)* }
 actors_def   = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 feature_def  = { "feature:" ~ string }
 scenario_def = { "scenario" ~ string ~ "{" ~ test* ~ "}" }
 
 // Defining a test case.
-test = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
-given_block = { "given:" ~ condition+ }
+test        = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
+given_block = { "given:" ~ (action | condition)+ }
 when_block  = { "when:"  ~ action+ }
 then_block  = { "then:"  ~ condition+ }
 
@@ -29,19 +29,23 @@ when_block_rule = { "when:" ~ condition+ }
 then_block_rule = { "then:" ~ action+ }
 
 // --- Conditions & Actions ---
-condition = { time_condition | output_contains_condition | output_matches_condition | state_condition }
-action    = { type_action | press_action | run_action }
+condition = { time_condition | last_command_cond | output_contains_condition | output_matches_condition | state_condition | filesystem_condition }
+action    = { type_action | press_action | run_action | filesystem_action }
 
 // Condition Types
-time_condition           = { "time" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ time_marker }
+time_condition             = { "time" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ time_marker }
 output_contains_condition  = { identifier ~ "output_contains" ~ string }
-output_matches_condition = { identifier ~ "output_matches" ~ string ~ ("as" ~ identifier)? }
-state_condition          = { "Test" ~ "has_succeeded" ~ identifier }
+output_matches_condition   = { identifier ~ "output_matches" ~ string ~ ("as" ~ identifier)? }
+state_condition            = { "Test" ~ "has_succeeded" ~ identifier }
+filesystem_condition       = { "FileSystem" ~ filesystem_cond_keyword ~ string ~ string? }
+last_command_cond          = { identifier ~ "last_command" ~ WHITESPACE+ ~ ( "succeeded" | "failed" | last_command_exit_code_is ) }
+last_command_exit_code_is  = { "exit_code_is" ~ WHITESPACE* ~ number }
 
 // Action Types
 type_action  = { identifier ~ "types" ~ string }
 press_action = { identifier ~ "presses" ~ string }
 run_action   = { identifier ~ "runs" ~ string }
+filesystem_action    = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
 
 // The basic building blocks of the language.
 identifier = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
@@ -49,7 +53,9 @@ string = { "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
 // These are the parts your Rust parser will actually capture.
 inner_double = @{ (!"\"" ~ ANY)* }
 inner_single = @{ (!"'" ~ ANY)* }
-number        = { ('0'..'9')+ }
+number       = @{ ASCII_DIGIT+ }
 time_marker   = @{ number ~ "s" }
 value         = { string | number }
 comparison_op = @{ ">=" | "<=" | "==" | ">" | "<" }
+filesystem_action_keyword = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }
+filesystem_cond_keyword = @{ "file_exists" | "dir_exists" | "file_contains" | "file_does_not_exist" }
