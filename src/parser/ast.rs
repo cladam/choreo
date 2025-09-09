@@ -64,12 +64,13 @@ pub enum Condition {
         op: String,
         time: f32,
     },
+    StateSucceeded {
+        outcome: String,
+    },
+    // --- Terminal Conditions ---
     OutputContains {
         actor: String,
         text: String,
-    },
-    StateSucceeded {
-        outcome: String,
     },
     OutputMatches {
         actor: String,
@@ -79,10 +80,13 @@ pub enum Condition {
     LastCommandSucceeded,
     LastCommandFailed,
     LastCommandExitCodeIs(i32),
+    StdoutIsEmpty,
+    StderrContains(String),
+    OutputStartsWith(String),
+    OutputEndsWith(String),
+    OutputEquals(String),
+    // --- Filesystem Conditions ---
     FileExists {
-        path: String,
-    },
-    FileDoesNotExist {
         path: String,
     },
     DirExists {
@@ -92,17 +96,22 @@ pub enum Condition {
         path: String,
         content: String,
     },
+    FileDoesNotExist {
+        path: String,
+    },
 }
 
 // All possible actions that can be executed.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
+    // --- Terminal Actions ---
     Type { actor: String, content: String },
     Press { actor: String, key: String },
     Run { actor: String, command: String },
+    // --- Filesystem Actions ---
     CreateFile { path: String, content: String },
-    DeleteFile { path: String },
     CreateDir { path: String },
+    DeleteFile { path: String },
     DeleteDir { path: String },
 }
 

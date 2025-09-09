@@ -260,6 +260,60 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                 _ => unreachable!(),
             }
         }
+        Rule::stdout_is_empty_condition => Condition::StdoutIsEmpty,
+        Rule::stderr_contains_condition => {
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            Condition::StderrContains(text)
+        }
+        Rule::output_starts_with_condition => {
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            println!("Building output_starts_with_condition '{}'", text);
+            Condition::OutputStartsWith(text)
+        }
+        Rule::output_ends_with_condition => {
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            Condition::OutputEndsWith(text)
+        }
+        Rule::output_equals_condition => {
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            Condition::OutputEquals(text)
+        }
         _ => unreachable!("Unhandled condition: {:?}", inner_cond.as_rule()),
     }
 }
@@ -362,5 +416,10 @@ fn build_value(pair: Pair<Rule>) -> Value {
 
 /// Unescapes a string captured by the parser.
 fn unescape_string(s: &str) -> String {
-    s.replace("\\\"", "\"").replace("\\'", "'")
+    s.replace("\\\"", "\"")
+        .replace("\\'", "'")
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\r", "\r")
+        .replace("\\\\", "\\")
 }

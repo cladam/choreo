@@ -3,27 +3,25 @@ use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::io::Read;
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::Command;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
+use std::thread;
 use std::thread::JoinHandle;
-use std::{env, fs, thread};
 use terminal_size::{terminal_size, Height, Width};
 
 pub struct TerminalBackend {
-    // The writer part of the pseudo-terminal.
-    writer: Box<dyn Write + Send>,
-
-    // The receiving end of the channel to get output from the reader thread.
-    output_receiver: Receiver<String>,
-
-    // A handle to the child process, used to terminate it.
+    // For interactive PTY sessions (`types`, `presses`)
+    pty_writer: Box<dyn Write + Send>,
+    pty_output_receiver: Receiver<String>,
     child: Box<dyn portable_pty::Child + Send + Sync>,
-
-    // A handle to the reader thread.
     #[allow(dead_code)]
     reader_thread: Option<JoinHandle<()>>,
 
-    #[allow(dead_code)]
+    // For non-interactive command execution (`runs`)
+    pub last_stdout: String,
+    pub last_stderr: String,
+
     base_dir: PathBuf,
 }
 
@@ -52,6 +50,7 @@ impl TerminalBackend {
 
         // Spawn the command in the PTY.
         let mut cmd = CommandBuilder::new("zsh");
+
         cmd.cwd(base_dir.clone());
         let child = pair
             .slave
@@ -65,10 +64,10 @@ impl TerminalBackend {
             .expect("Failed to clone reader");
         let writer = pair.master.take_writer().expect("Failed to take writer");
 
-        // 4. Create the channel for communication.
+        // Create the channel for communication.
         let (sender, receiver): (Sender<String>, Receiver<String>) = mpsc::channel();
 
-        // 5. Spawn the reader thread.
+        // Spawn the reader thread.
         let reader_thread = thread::spawn(move || {
             // This thread will block here, but it won't freeze the main program.
             for byte in reader.bytes() {
@@ -85,84 +84,59 @@ impl TerminalBackend {
         });
 
         Self {
-            writer,
-            output_receiver: receiver,
+            pty_writer: writer,
+            pty_output_receiver: receiver,
             child,
             reader_thread: Some(reader_thread),
+            last_stdout: String::new(),
+            last_stderr: String::new(),
             base_dir,
         }
     }
 
-    /// Reads output and checks for special exit code markers.
-    pub fn read_output(
-        &mut self,
-        output_buffer: &mut String,
-        last_exit_code: &mut Option<i32>,
-        verbose: bool,
-    ) {
-        for new_output in self.output_receiver.try_iter() {
-            output_buffer.push_str(&new_output);
+    /// Reads from the interactive PTY buffer. This is for `types` and `presses`.
+    pub fn read_pty_output(&mut self, pty_buffer: &mut String) {
+        for new_output in self.pty_output_receiver.try_iter() {
+            pty_buffer.push_str(&new_output);
         }
 
-        //println!("{}", output_buffer);
-
-        // Check for our special exit code line.
-        // Instead of parsing terminal output, read the exit code from a temp file.
-        let exit_code_file = env::temp_dir().join("choreo_exit_code.tmp");
-        if exit_code_file.exists() {
-            if let Ok(code_str) = fs::read_to_string(&exit_code_file) {
-                if verbose {
-                    println!("Detected exit code file with content: {}", code_str);
-                }
-                if let Ok(code) = code_str.trim().parse::<i32>() {
-                    *last_exit_code = Some(code);
-                }
-                // Clean up the file after reading.
-                fs::remove_file(exit_code_file).ok();
-            }
+        // Append the stdout from the last non-interactive `run` command, if any.
+        if !self.last_stdout.is_empty() {
+            pty_buffer.push_str(&self.last_stdout);
+            // Clear it so it's not appended again on the next check.
+            self.last_stdout.clear();
         }
     }
 
     /// Executes a single action from the AST. Returns true if the action was handled.
-    pub fn execute_action(
-        &mut self,
-        action: &crate::parser::ast::Action,
-        last_exit_code: &mut Option<i32>,
-    ) -> bool {
+    pub fn execute_action(&mut self, action: &Action, last_exit_code: &mut Option<i32>) -> bool {
         match action {
             Action::Type { content, .. } => {
-                self.writer.write_all(content.as_bytes()).unwrap();
-                self.writer.flush().unwrap();
+                self.pty_writer.write_all(content.as_bytes()).unwrap();
+                self.pty_writer.flush().unwrap();
                 true
             }
             Action::Press { key, .. } if key == "Enter" => {
-                self.writer.write_all(b"\n").unwrap();
+                self.pty_writer.write_all(b"\n").unwrap();
+                self.pty_writer.flush().unwrap();
                 true
             }
             Action::Run { command, .. } => {
-                // Reset the last exit code before running a new command.
+                // This is the new, robust implementation.
                 *last_exit_code = None;
+                self.last_stdout.clear();
+                self.last_stderr.clear();
 
-                // Define a temporary file to store the exit code.
-                let exit_code_file = env::temp_dir().join("choreo_exit_code.tmp");
+                let output = Command::new("sh")
+                    .arg("-c")
+                    .arg(command)
+                    .current_dir(&self.base_dir)
+                    .output()
+                    .expect("Failed to execute command");
 
-                // Use `sh -c` to execute the command and then write the exit code to the temp file.
-                // This is more robust than parsing PTY output.
-                let escaped_command = command.replace('\'', "'\\''");
-                let full_command = format!(
-                    "sh -c '{}; echo $? > {}'\n",
-                    escaped_command,
-                    exit_code_file.to_str().unwrap()
-                );
-                //println!("{}", full_command);
-
-                self.writer.write_all(full_command.as_bytes()).unwrap();
-                self.writer.flush().unwrap();
-
-                // Add a small delay to allow the PTY to process the output
-                // before the main loop checks conditions.
-                thread::sleep(std::time::Duration::from_millis(50));
-
+                *last_exit_code = output.status.code();
+                self.last_stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                self.last_stderr = String::from_utf8_lossy(&output.stderr).to_string();
                 true
             }
             _ => false, // Ignore actions not meant for this backend
@@ -172,8 +146,11 @@ impl TerminalBackend {
 
 impl Drop for TerminalBackend {
     fn drop(&mut self) {
-        // Kill the child process when the backend is no longer in use.
-        self.child.kill().ok();
-        //println!("\nTerminalBackend dropped and child process terminated.");
+        // Terminate the child process.
+        if let Err(e) = self.child.kill() {
+            eprintln!("Failed to kill child process: {}", e);
+        }
+        // Wait for the child process to exit.
+        let _ = self.child.wait();
     }
 }

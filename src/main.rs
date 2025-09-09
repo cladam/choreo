@@ -127,7 +127,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 let scenario_start_time = Instant::now();
 
                 loop {
-                    terminal_backend.read_output(&mut output_buffer, &mut last_exit_code, verbose);
+                    terminal_backend.read_pty_output(&mut output_buffer);
                     let elapsed = scenario_start_time.elapsed();
 
                     let mut tests_to_start = Vec::new();
@@ -160,6 +160,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                                 &given_conditions,
                                 &test_states,
                                 &output_buffer,
+                                &terminal_backend.last_stderr,
                                 elapsed.as_secs_f32(),
                                 &mut env_vars,
                                 &last_exit_code,
@@ -174,6 +175,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                                 &test_case.then,
                                 &test_states,
                                 &output_buffer,
+                                &terminal_backend.last_stderr,
                                 elapsed.as_secs_f32(),
                                 &mut env_vars,
                                 &last_exit_code,
@@ -209,6 +211,9 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                                         &mut last_exit_code,
                                     );
                                 }
+
+                                // Clear the buffer before executing the 'when' actions
+                                output_buffer.clear();
 
                                 for action in &test_case.when {
                                     let substituted_a =

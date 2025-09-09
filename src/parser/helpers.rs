@@ -10,6 +10,7 @@ pub fn check_all_conditions_met(
     conditions: &[Condition],
     test_states: &HashMap<String, TestState>,
     output_buffer: &str,
+    stderr_buffer: &str,
     current_time: f32,
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
@@ -22,6 +23,7 @@ pub fn check_all_conditions_met(
             &substituted_c,
             test_states,
             output_buffer,
+            stderr_buffer,
             current_time,
             env_vars,
             last_exit_code,
@@ -43,12 +45,15 @@ pub fn check_condition(
     condition: &Condition,
     test_states: &HashMap<String, TestState>,
     output_buffer: &str,
+    stderr_buffer: &str,
     current_time: f32,
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
     verbose: bool,
 ) -> bool {
+    let cleaned_buffer = strip(output_buffer);
+    let buffer = String::from_utf8_lossy(&cleaned_buffer);
     match condition {
         Condition::Time { op, time } => match op.as_str() {
             ">=" => current_time >= *time,
@@ -70,8 +75,6 @@ pub fn check_condition(
         Condition::OutputMatches {
             regex, capture_as, ..
         } => {
-            let cleaned_buffer = strip(output_buffer);
-            let buffer = String::from_utf8_lossy(&cleaned_buffer);
             let re = regex::Regex::new(regex).unwrap();
             if let (Some(captures), Some(var_name)) = (re.captures(&buffer), capture_as) {
                 if let Some(value) = captures.get(1) {
@@ -109,6 +112,45 @@ pub fn check_condition(
             &substitute_string(content, env_vars),
             verbose,
         ),
+        Condition::StdoutIsEmpty => {
+            let actual_output: Vec<&str> = buffer
+                .lines()
+                .map(|line| line.trim())
+                .filter(|line| !line.is_empty())
+                .filter(|line| {
+                    let is_prompt = line.contains('%') || line.contains('$') || line.contains('>');
+                    !is_prompt
+                })
+                .collect();
+            println!("{}", actual_output.join("\n"));
+            //println!("Actual output {}", actual_output);
+            actual_output.is_empty()
+        }
+        Condition::StderrContains(text) => {
+            // This is a simplification. A more robust implementation would need to
+            // separate stdout and stderr from the terminal backend.
+            // For now, we check the combined output buffer.
+            println!("  [DEBUG] Checking stderr contains '{}'", text);
+            println!("  [DEBUG] Stderr buffer: '{}'", stderr_buffer);
+            stderr_buffer.contains(text)
+        }
+        Condition::OutputStartsWith(text) => {
+            println!("  [DEBUG] Starting output starts with '{}'", text);
+            println!("  [DEBUG] Checking the buffer '{}'", buffer);
+            //buffer.trim_start().starts_with(text)
+            buffer.lines().any(|line| line.trim().starts_with(text))
+        }
+        Condition::OutputEndsWith(text) => {
+            println!("  [DEBUG] Checking output ends with '{}'", text);
+            println!("  [DEBUG] Checking the buffer '{}'", buffer);
+            buffer.lines().any(|line| line.trim().ends_with(text))
+        }
+        Condition::OutputEquals(text) => {
+            println!("  [DEBUG] Checking output equals '{}'", text);
+            println!("  [DEBUG] Checking the buffer '{}'", buffer);
+            //buffer.lines().any(|line| line.trim() == text.as_str()
+            buffer.lines().any(|line| line.trim() == text.trim())
+        }
     }
 }
 
@@ -182,6 +224,16 @@ pub fn substitute_variables_in_condition(
             path: substitute_string(path, state),
             content: substitute_string(content, state),
         },
+        Condition::StderrContains(text) => {
+            Condition::StderrContains(substitute_string(text, state))
+        }
+        Condition::OutputStartsWith(text) => {
+            Condition::OutputStartsWith(substitute_string(text, state))
+        }
+        Condition::OutputEndsWith(text) => {
+            Condition::OutputEndsWith(substitute_string(text, state))
+        }
+        Condition::OutputEquals(text) => Condition::OutputEquals(substitute_string(text, state)),
         _ => condition.clone(),
     }
 }
