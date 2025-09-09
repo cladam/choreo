@@ -22,21 +22,25 @@ Here is a simple `test_ls.chor` script that lists files and verifies the output:
 
 ```
 # test_ls.chor
+feature: "List Files in Directory"
 actors: Terminal
 
-test FilesListed "Verify that README.md is in the output" {
-    # GIVEN: The context or precondition for the test.
-    given:
-        time >= 1s
+scenario "Listing files in the current directory" {
 
-    # WHEN: The single, specific action you are testing.
-    when:
-        Terminal types "ls -l"
-        Terminal presses "Enter"
+    test FilesListed "Verify that README.md is in the output" {
+        # GIVEN: The context or precondition for the test.
+        given:
+            time >= 1s
 
-    # THEN: The expected outcome that defines success.
-    then:
-        Terminal output_contains "README.md"
+        # WHEN: The single, specific action you are testing.
+        when:
+            Terminal runs "ls -l"
+
+        # THEN: The expected outcome that defines success.
+        then:
+            Terminal output_contains "test_ls.chor" # This file should be listed
+            Terminal last_command exit_code_is 0
+    }
 }
 ```
 
