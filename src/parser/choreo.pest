@@ -1,5 +1,6 @@
 // choreo - A DSL for defining interactive test scenarios.
 // This grammar defines the DSL structure and syntax.
+// Human-readable documentation will be available in chromeo/README.md
 
 // Ignore whitespace and comments.
 WHITESPACE = _{ " " | "\t" | NEWLINE }
