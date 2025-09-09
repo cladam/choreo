@@ -11,15 +11,15 @@ grammar   = { SOI ~ statement* ~ EOI }
 statement = { feature_def | settings_def | env_def | vars_def | actors_def | scenario_def }
 
 // Setting up the test suite.
-settings_def = { "settings:" ~ setting+ }
-setting      = { identifier ~ value }
-env_def      = { "env:" ~ identifier ~ ("," ~ identifier)* }
-vars_def     = { "vars:" ~ var_assignment+ }
+settings_def   = { "settings:" ~ setting+ }
+setting        = { identifier ~ value }
+env_def        = { "env:" ~ identifier ~ ("," ~ identifier)* }
+vars_def       = { "vars:" ~ var_assignment+ }
 var_assignment = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ string }
-actors_def   = { "actors:" ~ identifier ~ ("," ~ identifier)* }
-feature_def  = { "feature:" ~ string }
-scenario_def = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
-after_block  = { "after" ~ "{" ~ action+ ~ "}" }
+actors_def     = { "actors:" ~ identifier ~ ("," ~ identifier)* }
+feature_def    = { "feature:" ~ string }
+scenario_def   = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
+after_block    = { "after" ~ "{" ~ action+ ~ "}" }
 
 // Defining a test case.
 test        = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
@@ -28,7 +28,7 @@ when_block  = { "when:"  ~ action+ }
 then_block  = { "then:"  ~ condition+ }
 
 // --- Generic Rule Block (for non-test logic) ---
-rule = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }
+rule            = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }
 when_block_rule = { "when:" ~ condition+ }
 then_block_rule = { "then:" ~ action+ }
 
@@ -50,31 +50,40 @@ terminal_condition         = { "Terminal" ~ (
     output_matches_condition |
     last_command_succeeded_cond |
     last_command_failed_cond |
-    last_command_exit_code_is_cond
+    last_command_exit_code_is_cond |
+    stdout_is_empty_condition |
+    stderr_contains_condition |
+    output_starts_with_condition |
+    output_ends_with_condition |
+    output_equals_condition
 ) }
 
 // Terminal-specific condition parts
-output_contains_condition  = { "output_contains" ~ string }
-output_matches_condition   = { "output_matches" ~ string ~ ("as" ~ identifier)? }
+output_contains_condition      = { "output_contains" ~ string }
+output_matches_condition       = { "output_matches" ~ string ~ ("as" ~ identifier)? }
 last_command_succeeded_cond    = { "last_command" ~ "succeeded" }
 last_command_failed_cond       = { "last_command" ~ "failed" }
 last_command_exit_code_is_cond = { "last_command" ~ "exit_code_is" ~ number }
+stdout_is_empty_condition      = { "stdout_is_empty" }
+stderr_contains_condition      = { "stderr_contains" ~ string }
+output_starts_with_condition   = { "output_starts_with" ~ string }
+output_ends_with_condition     = { "output_ends_with" ~ string }
+output_equals_condition        = { "output_equals" ~ string }
 
 // Action Types
-type_action  = { identifier ~ "types" ~ string }
-press_action = { identifier ~ "presses" ~ string }
-run_action   = { identifier ~ "runs" ~ string }
-filesystem_action    = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
+type_action        = { identifier ~ "types" ~ string }
+press_action       = { identifier ~ "presses" ~ string }
+run_action         = { identifier ~ "runs" ~ string }
+filesystem_action  = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
 
-// The basic building blocks of the language.
-identifier = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
-string = { "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
-// These are the parts your Rust parser will actually capture.
-inner_double = @{ (!"\"" ~ ANY)* }
-inner_single = @{ (!"'" ~ ANY)* }
-number       = @{ ASCII_DIGIT+ }
-time_marker   = @{ number ~ "s" }
-value         = { string | number }
-comparison_op = @{ ">=" | "<=" | "==" | ">" | "<" }
-filesystem_action_keyword = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }
-filesystem_cond_keyword = @{ "file_exists" | "dir_exists" | "file_contains" | "file_does_not_exist" }
+// The basic building blocks of the choreo language.
+identifier                 = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
+string                     = { "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
+inner_double               = @{ (!"\"" ~ ANY)* }
+inner_single               = @{ (!"'" ~ ANY)* }
+number                     = @{ ASCII_DIGIT+ }
+time_marker                = @{ number ~ "s" }
+value                      = { string | number }
+comparison_op              = @{ ">=" | "<=" | "==" | ">" | "<" }
+filesystem_action_keyword  = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }
+filesystem_cond_keyword    = @{ "file_exists" | "dir_exists" | "file_contains" | "file_does_not_exist" }
