@@ -43,7 +43,12 @@ fn main() {
                         }
                         suite
                     }
-                    Err(e) => return Err(AppError::ParseError(e.to_string())),
+                    Err(e) => {
+                        if verbose {
+                            colours::error("Failed to parse test suite.");
+                        }
+                        return Err(AppError::ParseError(e.to_string()));
+                    }
                 };
 
                 let test_file_path = std::path::Path::new(&file);
