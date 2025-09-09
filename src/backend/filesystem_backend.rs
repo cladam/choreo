@@ -66,30 +66,38 @@ impl FileSystemBackend {
 
     // --- Condition Checking Methods ---
 
-    pub fn file_exists(&self, path: &str) -> bool {
+    pub fn file_exists(&self, path: &str, verbose: bool) -> bool {
         let resolved_path = self.resolve_path(path);
-        println!("Checking if file exists: {}", resolved_path.display());
+        if verbose {
+            println!("Checking if file exists: {}", resolved_path.display());
+        }
         resolved_path.exists()
     }
 
-    pub fn file_does_not_exist(&self, path: &str) -> bool {
+    pub fn file_does_not_exist(&self, path: &str, verbose: bool) -> bool {
         let resolved_path = self.resolve_path(path);
-        println!(
-            "Checking if file does not exist: {}",
-            resolved_path.display()
-        );
+        if verbose {
+            println!(
+                "Checking if file does not exist: {}",
+                resolved_path.display()
+            );
+        }
         !resolved_path.exists()
     }
 
-    pub fn dir_exists(&self, path: &str) -> bool {
+    pub fn dir_exists(&self, path: &str, verbose: bool) -> bool {
         let resolved_path = self.resolve_path(path);
-        println!("Checking if dir exists: {}", resolved_path.display());
+        if verbose {
+            println!("Checking if dir exists: {}", resolved_path.display());
+        }
         resolved_path.is_dir()
     }
 
-    pub fn file_contains(&self, path: &str, content: &str) -> bool {
+    pub fn file_contains(&self, path: &str, content: &str, verbose: bool) -> bool {
         if let Ok(file_content) = fs::read_to_string(self.resolve_path(path)) {
-            println!("Checking if file contains: {}", content);
+            if verbose {
+                println!("File content: {}", file_content);
+            }
             file_content.contains(content)
         } else {
             false

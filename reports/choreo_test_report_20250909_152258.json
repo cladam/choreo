@@ -9,19 +9,11 @@
         "name": "Using file-defined variables",
         "steps": [
           {
-            "keyword": "Given ",
+            "keyword": "Then ",
             "name": "it uses variables defined in the test file",
             "result": {
               "status": "passed",
-              "durationInMs": 219
-            }
-          },
-          {
-            "keyword": "Then ",
-            "name": "it cleans up the created file",
-            "result": {
-              "status": "passed",
-              "durationInMs": 56
+              "durationInMs": 209
             }
           }
         ],
@@ -29,9 +21,9 @@
       }
     ],
     "summary": {
-      "tests": 2,
+      "tests": 1,
       "failures": 0,
-      "totalTimeInSeconds": 0.21985497
+      "totalTimeInSeconds": 0.20961462
     }
   }
 ]

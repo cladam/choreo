@@ -1,7 +1,6 @@
-# Test case demonstrating variable substitution in Choreo
+# examples/variable_substitution.chor
 feature: "Variable Substitution"
 
-# Define variables directly in the file.
 vars:
   FILENAME = "my_test_output.txt"
   GREETING = "Hello from a defined variable!"
@@ -20,12 +19,8 @@ scenario "Using file-defined variables" {
             FileSystem file_contains "${FILENAME}" "${GREETING}"
     }
 
-    test CleanupFile "it cleans up the created file" {
-        given:
-            Test has_succeeded UseFileVars
-        when:
-            FileSystem delete_file "${FILENAME}"
-        then:
-            FileSystem file_does_not_exist "${FILENAME}"
+    after {
+        # This block runs after the 'UseFileVars' test, ensuring cleanup.
+        FileSystem delete_file "${FILENAME}"
     }
 }

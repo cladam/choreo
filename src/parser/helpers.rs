@@ -96,83 +96,20 @@ pub fn check_condition(
             last_exit_code.map_or(false, |code| code == *expected_code)
         }
         Condition::FileExists { path } => {
-            fs_backend.file_exists(&substitute_string(path, env_vars))
+            fs_backend.file_exists(&substitute_string(path, env_vars), verbose)
         }
         Condition::FileDoesNotExist { path } => {
-            fs_backend.file_does_not_exist(&substitute_string(path, env_vars))
+            fs_backend.file_does_not_exist(&substitute_string(path, env_vars), verbose)
         }
-        Condition::DirExists { path } => fs_backend.dir_exists(&substitute_string(path, env_vars)),
+        Condition::DirExists { path } => {
+            fs_backend.dir_exists(&substitute_string(path, env_vars), verbose)
+        }
         Condition::FileContains { path, content } => fs_backend.file_contains(
             &substitute_string(path, env_vars),
             &substitute_string(content, env_vars),
+            verbose,
         ),
     }
-}
-
-/// Checks a single condition by delegating to the correct backend.
-fn check_conditionXXX(
-    condition: &Condition,
-    test_states: &HashMap<String, TestState>,
-    output_buffer: &str,
-    current_time: f32,
-    env_vars: &mut HashMap<String, String>,
-    last_exit_code: &Option<i32>,
-    fs_backend: &FileSystemBackend,
-) -> bool {
-    // First, check for conditions that don't belong to a specific backend.
-    match condition {
-        Condition::Time { op, time } => {
-            return match op.as_str() {
-                ">=" => current_time >= *time,
-                "<=" => current_time <= *time,
-                ">" => current_time > *time,
-                "<" => current_time < *time,
-                "==" => (current_time - *time).abs() < f32::EPSILON,
-                _ => false,
-            }
-        }
-        Condition::StateSucceeded { outcome } => {
-            return test_states
-                .get(outcome)
-                .map_or(false, |s| *s == TestState::Passed)
-        }
-        _ => {} // Fall through to backend-specific conditions
-    }
-
-    // Check terminal-related conditions.
-    match condition {
-        Condition::OutputContains { text, .. } => {
-            let cleaned_buffer = strip(output_buffer);
-            let buffer = String::from_utf8_lossy(&cleaned_buffer);
-            let predicate = predicate::str::contains(text.as_str());
-            return predicate.eval(buffer.as_ref());
-        }
-        Condition::OutputMatches {
-            regex, capture_as, ..
-        } => {
-            let cleaned_buffer = strip(output_buffer);
-            let buffer = String::from_utf8_lossy(&cleaned_buffer);
-            let re = regex::Regex::new(regex).unwrap();
-
-            if let (Some(captures), Some(var_name)) = (re.captures(&buffer), capture_as) {
-                if let Some(value) = captures.get(1) {
-                    env_vars.insert(var_name.clone(), value.as_str().to_string());
-                }
-            }
-            return re.is_match(&buffer);
-        }
-        Condition::LastCommandSucceeded => return *last_exit_code == Some(0),
-        Condition::LastCommandFailed => return *last_exit_code != Some(0),
-        Condition::LastCommandExitCodeIs(code) => return *last_exit_code == Some(*code),
-        _ => {}
-    }
-
-    // Check filesystem conditions by delegating to the backend.
-    if fs_backend.check_condition(condition) {
-        return true;
-    }
-
-    false // Default to false if no condition matched
 }
 
 /// Creates a new Action with its string values substituted from the state map.

@@ -23,6 +23,7 @@ pub struct TerminalBackend {
     #[allow(dead_code)]
     reader_thread: Option<JoinHandle<()>>,
 
+    #[allow(dead_code)]
     base_dir: PathBuf,
 }
 
@@ -93,19 +94,26 @@ impl TerminalBackend {
     }
 
     /// Reads output and checks for special exit code markers.
-    pub fn read_output(&mut self, output_buffer: &mut String, last_exit_code: &mut Option<i32>) {
+    pub fn read_output(
+        &mut self,
+        output_buffer: &mut String,
+        last_exit_code: &mut Option<i32>,
+        verbose: bool,
+    ) {
         for new_output in self.output_receiver.try_iter() {
             output_buffer.push_str(&new_output);
         }
 
-        println!("{}", output_buffer);
+        //println!("{}", output_buffer);
 
         // Check for our special exit code line.
         // Instead of parsing terminal output, read the exit code from a temp file.
         let exit_code_file = env::temp_dir().join("choreo_exit_code.tmp");
         if exit_code_file.exists() {
             if let Ok(code_str) = fs::read_to_string(&exit_code_file) {
-                println!("{}", code_str);
+                if verbose {
+                    println!("Detected exit code file with content: {}", code_str);
+                }
                 if let Ok(code) = code_str.trim().parse::<i32>() {
                     *last_exit_code = Some(code);
                 }
@@ -146,7 +154,7 @@ impl TerminalBackend {
                     escaped_command,
                     exit_code_file.to_str().unwrap()
                 );
-                println!("{}", full_command);
+                //println!("{}", full_command);
 
                 self.writer.write_all(full_command.as_bytes()).unwrap();
                 self.writer.flush().unwrap();

@@ -48,6 +48,7 @@ pub enum Statement {
 pub struct Scenario {
     pub name: String,
     pub tests: Vec<TestCase>,
+    pub after: Vec<Action>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

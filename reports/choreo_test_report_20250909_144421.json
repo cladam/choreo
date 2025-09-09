@@ -13,7 +13,7 @@
             "name": "it uses variables defined in the test file",
             "result": {
               "status": "passed",
-              "durationInMs": 219
+              "durationInMs": 217
             }
           },
           {
@@ -21,7 +21,7 @@
             "name": "it cleans up the created file",
             "result": {
               "status": "passed",
-              "durationInMs": 56
+              "durationInMs": 55
             }
           }
         ],
@@ -31,7 +31,7 @@
     "summary": {
       "tests": 2,
       "failures": 0,
-      "totalTimeInSeconds": 0.21985497
+      "totalTimeInSeconds": 0.21752979
     }
   }
 ]

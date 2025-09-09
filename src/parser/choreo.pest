@@ -17,7 +17,8 @@ vars_def     = { "vars:" ~ var_assignment+ }
 var_assignment = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ string }
 actors_def   = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 feature_def  = { "feature:" ~ string }
-scenario_def = { "scenario" ~ string ~ "{" ~ test* ~ "}" }
+scenario_def = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
+after_block  = { "after" ~ "{" ~ action+ ~ "}" }
 
 // Defining a test case.
 test        = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }

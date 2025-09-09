@@ -20,11 +20,11 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
         if statement_pair.as_rule() == Rule::EOI {
             break;
         }
-        println!("Parsed statement: {:?}", statement_pair);
+        //println!("Parsed statement: {:?}", statement_pair);
 
         // This opens the "statement" container to get the content.
         let pair = statement_pair.into_inner().next().unwrap();
-        println!("Parsed pair: {:?}", pair);
+        //println!("Parsed pair: {:?}", pair);
 
         statements.push(match pair.as_rule() {
             // Now this will correctly match on the inner rule.
@@ -93,19 +93,6 @@ fn build_env_def(pair: Pair<Rule>) -> Statement {
     Statement::EnvDef(identifiers)
 }
 
-fn build_vars_def(pair: Pair<Rule>) -> Statement {
-    let mut vars = HashMap::new();
-    for assignment in pair.into_inner() {
-        if assignment.as_rule() == Rule::var_assignment {
-            let mut inner = assignment.into_inner();
-            let key = inner.next().unwrap().as_str().to_string();
-            let value = build_value(inner.next().unwrap());
-            vars.insert(key, value);
-        }
-    }
-    Statement::VarsDef(vars)
-}
-
 // This is the other key function to implement.
 fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
     pairs
@@ -128,13 +115,17 @@ fn build_scenario(pair: Pair<Rule>) -> Statement {
         .as_str()
         .to_string();
     let mut tests = Vec::new();
-    for test_pair in inner {
-        // Corrected to check for the 'test' rule name from your grammar
-        if test_pair.as_rule() == Rule::test {
-            tests.push(build_test_case(test_pair));
+    let mut after = Vec::new();
+    for item in inner {
+        match item.as_rule() {
+            Rule::test => tests.push(build_test_case(item)),
+            Rule::after_block => {
+                after = build_actions(item.into_inner());
+            }
+            _ => {}
         }
     }
-    Statement::Scenario(Scenario { name, tests })
+    Statement::Scenario(Scenario { name, tests, after })
 }
 
 /// Builds a TestCase from a parsed Pair.
@@ -184,7 +175,7 @@ pub fn build_given_steps(pairs: Pairs<Rule>) -> Vec<GivenStep> {
 /// Builds a single Condition from a specific, inner condition rule Pair.
 /// This is a helper to avoid unwrapping the 'condition' rule multiple times.
 pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
-    println!("Building condition from specific: {:?}", inner_cond);
+    //println!("Building condition from specific: {:?}", inner_cond);
     match inner_cond.as_rule() {
         Rule::time_condition => {
             let mut inner = inner_cond.into_inner();
@@ -290,7 +281,7 @@ fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
 /// Builds a single Action from a parsed Pair.
 /// Builds a single Action from a parsed Pair.
 pub fn build_action(inner_action: Pair<Rule>) -> Action {
-    println!("Building action for inner_action: {:?}", inner_action);
+    //println!("Building action for inner_action: {:?}", inner_action);
     match inner_action.as_rule() {
         Rule::type_action => {
             let mut inner = inner_action.into_inner();
