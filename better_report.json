@@ -13,7 +13,7 @@
             "name": "tee writes to both destinations",
             "result": {
               "status": "passed",
-              "durationInMs": 262
+              "durationInMs": 160
             }
           }
         ],
@@ -22,7 +22,7 @@
             "name": "Cleanup the test note",
             "result": {
               "status": "passed",
-              "durationInMs": 50
+              "durationInMs": 54
             }
           }
         ]
@@ -31,7 +31,7 @@
     "summary": {
       "tests": 2,
       "failures": 0,
-      "totalTimeInSeconds": 0.26228485
+      "totalTimeInSeconds": 0.16142966
     }
   }
 ]

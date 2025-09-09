@@ -31,33 +31,36 @@ then_block_rule = { "then:" ~ action+ }
 // --- Conditions & Actions ---
 condition = {
     time_condition |
-    last_command_succeeded_cond |
-    last_command_failed_cond |
-    last_command_exit_code_is_cond |
-    output_contains_condition |
-    output_matches_condition |
     state_condition |
-    filesystem_condition
+    filesystem_condition |
+    terminal_condition
 }
 action    = { type_action | press_action | run_action | filesystem_action }
 
 // Condition Types
 time_condition             = { "time" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ time_marker }
-output_contains_condition  = { identifier ~ "output_contains" ~ string }
-output_matches_condition   = { identifier ~ "output_matches" ~ string ~ ("as" ~ identifier)? }
 state_condition            = { "Test" ~ "has_succeeded" ~ identifier }
-filesystem_condition       = { identifier ~ filesystem_cond_keyword ~ string ~ string? }
+filesystem_condition       = { "FileSystem" ~ filesystem_cond_keyword ~ string ~ string? }
+terminal_condition         = { "Terminal" ~ (
+    output_contains_condition |
+    output_matches_condition |
+    last_command_succeeded_cond |
+    last_command_failed_cond |
+    last_command_exit_code_is_cond
+) }
 
-// Last command conditions are now separate rules
-last_command_succeeded_cond    = { identifier ~ "last_command" ~ "succeeded" }
-last_command_failed_cond       = { identifier ~ "last_command" ~ "failed" }
-last_command_exit_code_is_cond = { identifier ~ "last_command" ~ "exit_code_is" ~ number }
+// Terminal-specific condition parts
+output_contains_condition  = { "output_contains" ~ string }
+output_matches_condition   = { "output_matches" ~ string ~ ("as" ~ identifier)? }
+last_command_succeeded_cond    = { "last_command" ~ "succeeded" }
+last_command_failed_cond       = { "last_command" ~ "failed" }
+last_command_exit_code_is_cond = { "last_command" ~ "exit_code_is" ~ number }
 
 // Action Types
 type_action  = { identifier ~ "types" ~ string }
 press_action = { identifier ~ "presses" ~ string }
 run_action   = { identifier ~ "runs" ~ string }
-filesystem_action    = { identifier ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
+filesystem_action    = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
 
 // The basic building blocks of the language.
 identifier = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }

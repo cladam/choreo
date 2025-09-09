@@ -82,155 +82,6 @@ fn build_env_def(pair: Pair<Rule>) -> Statement {
     Statement::EnvDef(identifiers)
 }
 
-pub fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
-    pairs.map(build_condition).collect()
-}
-
-/// Builds a single Condition from a parsed Pair.
-pub fn build_condition(inner_cond: Pair<Rule>) -> Condition {
-    match inner_cond.as_rule() {
-        Rule::time_condition => {
-            let mut inner = inner_cond.into_inner();
-            let op = inner.next().unwrap().as_str().to_string();
-            let time_str = inner.next().unwrap().as_str();
-            let time: f32 = time_str[..time_str.len() - 1].parse().unwrap();
-            Condition::Time { op, time }
-        }
-        Rule::output_contains_condition => {
-            let mut inner = inner_cond.into_inner();
-            let text = inner
-                .next()
-                .unwrap()
-                .into_inner()
-                .next()
-                .unwrap()
-                .as_str()
-                .to_string();
-            Condition::OutputContains {
-                actor: "Terminal".to_string(),
-                text,
-            }
-        }
-        Rule::state_condition => {
-            let mut inner = inner_cond.into_inner();
-            let outcome = inner.next().unwrap().as_str().to_string();
-            Condition::StateSucceeded { outcome }
-        }
-        Rule::output_matches_condition => {
-            let mut inner = inner_cond.into_inner();
-            let regex = inner
-                .next()
-                .unwrap()
-                .into_inner()
-                .next()
-                .unwrap()
-                .as_str()
-                .to_string();
-            let capture_as = inner.next().map(|p| p.as_str().to_string());
-            Condition::OutputMatches {
-                actor: "Terminal".to_string(),
-                regex,
-                capture_as,
-            }
-        }
-        Rule::last_command_succeeded_cond => Condition::LastCommandSucceeded,
-        Rule::last_command_failed_cond => Condition::LastCommandFailed,
-        Rule::last_command_exit_code_is_cond => {
-            let mut inner = inner_cond.into_inner();
-            let code_str = inner.next().unwrap().as_str();
-            let code: i32 = code_str.parse().unwrap();
-            Condition::LastCommandExitCodeIs(code)
-        }
-        Rule::filesystem_condition => {
-            let mut inner = inner_cond.into_inner();
-            let keyword = inner.next().unwrap().as_str();
-            let path = inner
-                .next()
-                .unwrap()
-                .into_inner()
-                .next()
-                .unwrap()
-                .as_str()
-                .to_string();
-
-            match keyword {
-                "file_exists" => Condition::FileExists { path },
-                "file_does_not_exist" => Condition::FileDoesNotExist { path },
-                "dir_exists" => Condition::DirExists { path },
-                "file_contains" => {
-                    let content = if let Some(content_pair) = inner.next() {
-                        content_pair
-                            .into_inner()
-                            .next()
-                            .unwrap()
-                            .as_str()
-                            .to_string()
-                    } else {
-                        String::new()
-                    };
-                    Condition::FileContains { path, content }
-                }
-                _ => unreachable!(),
-            }
-        }
-        _ => unreachable!("Unhandled condition: {:?}", inner_cond.as_rule()),
-    }
-}
-
-// This is the other key function to implement.
-fn build_actionsX(pairs: Pairs<Rule>) -> Vec<Action> {
-    pairs
-        .map(|pair| {
-            let inner_action = pair.into_inner().next().unwrap();
-            match inner_action.as_rule() {
-                Rule::type_action => {
-                    let mut inner = inner_action.into_inner();
-                    let actor = inner.next().unwrap().as_str().to_string();
-                    let content = inner
-                        .next()
-                        .unwrap()
-                        .into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .to_string();
-                    Action::Type { actor, content }
-                }
-                Rule::press_action => {
-                    let mut inner = inner_action.into_inner();
-                    let actor = inner.next().unwrap().as_str().to_string();
-                    let key = inner
-                        .next()
-                        .unwrap()
-                        .into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .to_string();
-                    Action::Press { actor, key }
-                }
-                Rule::run_action => {
-                    let mut inner = inner_action.into_inner();
-                    let actor = inner.next().unwrap().as_str().to_string();
-                    println!("Building run action for actor: {}", actor);
-                    // need to bring the command out of its inner pair
-                    println!("Inner action details: {:?}", inner);
-                    let command = inner
-                        .next()
-                        .unwrap()
-                        .into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .to_string();
-                    Action::Run { actor, command }
-                }
-                _ => unreachable!(),
-            }
-        })
-        .collect()
-}
-
 // This is the other key function to implement.
 fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
     pairs
@@ -275,10 +126,6 @@ pub fn build_test_case(pair: Pair<Rule>) -> TestCase {
         .as_str()
         .to_string();
 
-    // let given_block = inner.next().unwrap();
-    // let when_block = inner.next().unwrap();
-    // let then_block = inner.next().unwrap();
-
     let given_block = inner.next().expect("Missing given block in test case");
     let when_block = inner.next().expect("Missing when block in test case");
     let then_block = inner.next().expect("Missing then block in test case");
@@ -286,24 +133,132 @@ pub fn build_test_case(pair: Pair<Rule>) -> TestCase {
     TestCase {
         name,
         description,
-        // Use the new helper function to correctly build the `given` block.
         given: build_given_steps(given_block.into_inner()),
         when: build_actions(when_block.into_inner()),
         then: build_conditions(then_block.into_inner()),
     }
 }
 
-/// Builds a vector of GivenSteps, which can be either an Action or a Condition.
+// Builds a vector of GivenSteps, which can be either an Action or a Condition.
 pub fn build_given_steps(pairs: Pairs<Rule>) -> Vec<GivenStep> {
     pairs
-        .map(|pair| match pair.as_rule() {
-            Rule::action => GivenStep::Action(build_action(pair.into_inner().next().unwrap())),
-            Rule::condition => {
-                GivenStep::Condition(build_condition(pair.into_inner().next().unwrap()))
+        .map(|pair| {
+            // The pair will be either an 'action' or a 'condition'.
+            match pair.as_rule() {
+                Rule::action => {
+                    // The 'action' rule contains one of the specific action types.
+                    let specific_action = pair.into_inner().next().unwrap();
+                    GivenStep::Action(build_action(specific_action))
+                }
+                Rule::condition => GivenStep::Condition(build_condition(pair)),
+                _ => unreachable!("Unexpected rule in given block: {:?}", pair.as_rule()),
             }
-            _ => unreachable!("Invalid rule inside given block"),
         })
         .collect()
+}
+
+/// Builds a single Condition from a specific, inner condition rule Pair.
+/// This is a helper to avoid unwrapping the 'condition' rule multiple times.
+pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
+    println!("Building condition from specific: {:?}", inner_cond);
+    match inner_cond.as_rule() {
+        Rule::time_condition => {
+            let mut inner = inner_cond.into_inner();
+            let op = inner.next().unwrap().as_str().to_string();
+            let time_str = inner.next().unwrap().as_str();
+            let time: f32 = time_str[..time_str.len() - 1].parse().unwrap();
+            Condition::Time { op, time }
+        }
+        Rule::terminal_condition => {
+            // A terminal_condition contains one of the specific terminal condition types.
+            let specific_terminal_cond = inner_cond.into_inner().next().unwrap();
+            build_condition_from_specific(specific_terminal_cond)
+        }
+        Rule::output_contains_condition => {
+            let mut inner = inner_cond.into_inner();
+            //let actor = inner.next().unwrap().as_str().to_string();
+            let actor = "Terminal".to_string(); // Default actor for terminal conditions
+            let text = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            Condition::OutputContains { actor, text }
+        }
+        Rule::state_condition => {
+            let outcome = inner_cond.into_inner().next().unwrap().as_str().to_string();
+            Condition::StateSucceeded { outcome }
+        }
+        Rule::output_matches_condition => {
+            let mut inner = inner_cond.into_inner();
+            //let actor = inner.next().unwrap().as_str().to_string();
+            let regex = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            let capture_as = inner.next().map(|p| p.as_str().to_string());
+            Condition::OutputMatches {
+                actor: "Terminal".to_string(),
+                regex,
+                capture_as,
+            }
+        }
+        Rule::last_command_succeeded_cond => Condition::LastCommandSucceeded,
+        Rule::last_command_failed_cond => Condition::LastCommandFailed,
+        Rule::last_command_exit_code_is_cond => {
+            let mut inner = inner_cond.into_inner();
+            let code_str = inner.next().unwrap().as_str();
+            let code: i32 = code_str.parse().unwrap();
+            Condition::LastCommandExitCodeIs(code)
+        }
+        Rule::filesystem_condition => {
+            let mut inner = inner_cond.into_inner();
+            //let _actor = inner.next().unwrap().as_str(); // Consume the actor identifier
+            let keyword = inner.next().unwrap().as_str();
+            let path = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .map_or(String::new(), |p| p.as_str().to_string());
+
+            match keyword {
+                "file_exists" => Condition::FileExists { path },
+                "file_does_not_exist" => Condition::FileDoesNotExist { path },
+                "dir_exists" => Condition::DirExists { path },
+                "file_contains" => {
+                    let content = inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .map_or(String::new(), |p| p.as_str().to_string());
+                    Condition::FileContains { path, content }
+                }
+                _ => unreachable!(),
+            }
+        }
+        _ => unreachable!("Unhandled condition: {:?}", inner_cond.as_rule()),
+    }
+}
+
+/// Builds a single Condition from a parsed Pair.
+pub fn build_condition(pair: Pair<Rule>) -> Condition {
+    // A 'condition' pair from the grammar contains one of the specific condition types.
+    let inner_cond = pair.into_inner().next().unwrap();
+    build_condition_from_specific(inner_cond)
+}
+
+/// Builds a vector of Conditions from parsed Pairs.
+fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
+    pairs.map(build_condition).collect()
 }
 
 // --- Single Item Build Functions ---
@@ -311,6 +266,7 @@ pub fn build_given_steps(pairs: Pairs<Rule>) -> Vec<GivenStep> {
 /// Builds a single Action from a parsed Pair.
 /// Builds a single Action from a parsed Pair.
 pub fn build_action(inner_action: Pair<Rule>) -> Action {
+    println!("Building action for inner_action: {:?}", inner_action);
     match inner_action.as_rule() {
         Rule::type_action => {
             let mut inner = inner_action.into_inner();
@@ -347,6 +303,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
         }
         Rule::filesystem_action => {
             let mut inner = inner_action.into_inner();
+            //let _actor = inner.next().unwrap().as_str(); // Consume the actor identifier
             let keyword = inner.next().unwrap().as_str();
             let path = inner
                 .next()

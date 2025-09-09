@@ -5,8 +5,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use std::thread;
 use std::thread::JoinHandle;
+use std::{env, fs, thread};
 use terminal_size::{terminal_size, Height, Width};
 
 pub struct TerminalBackend {
@@ -99,18 +99,16 @@ impl TerminalBackend {
         }
 
         // Check for our special exit code line.
-        let exit_code_marker = "CHOREO_EXIT_CODE=";
-        if let Some(line_start) = output_buffer.find(exit_code_marker) {
-            if let Some(line_end) = output_buffer[line_start..].find('\n') {
-                let full_line_end = line_start + line_end;
-                let line = &output_buffer[line_start..full_line_end].to_string();
-
-                let code_str = line.trim_start_matches(exit_code_marker);
+        // Instead of parsing terminal output, read the exit code from a temp file.
+        let exit_code_file = env::temp_dir().join("choreo_exit_code.tmp");
+        if exit_code_file.exists() {
+            if let Ok(code_str) = fs::read_to_string(&exit_code_file) {
+                println!("{}", code_str);
                 if let Ok(code) = code_str.trim().parse::<i32>() {
                     *last_exit_code = Some(code);
-                    // Remove this line from the buffer so the test doesn't see it.
-                    output_buffer.replace_range(line_start..=full_line_end, "");
                 }
+                // Clean up the file after reading.
+                fs::remove_file(exit_code_file).ok();
             }
         }
     }
@@ -119,7 +117,7 @@ impl TerminalBackend {
     pub fn execute_action(
         &mut self,
         action: &crate::parser::ast::Action,
-        _last_exit_code: &mut Option<i32>,
+        last_exit_code: &mut Option<i32>,
     ) -> bool {
         match action {
             Action::Type { content, .. } => {
@@ -132,10 +130,22 @@ impl TerminalBackend {
                 true
             }
             Action::Run { command, .. } => {
-                // Define a unique marker to find the exit code later.
-                let exit_code_marker = "CHOREO_EXIT_CODE";
-                // Chain the user's command with an echo of the exit code.
-                let full_command = format!("{}; echo \"{}=$?\"\n", command, exit_code_marker);
+                // Reset the last exit code before running a new command.
+                *last_exit_code = None;
+
+                // Define a temporary file to store the exit code.
+                let exit_code_file = env::temp_dir().join("choreo_exit_code.tmp");
+
+                // Use `sh -c` to execute the command and then write the exit code to the temp file.
+                // This is more robust than parsing PTY output.
+                let escaped_command = command.replace('\'', "'\\''");
+                let full_command = format!(
+                    "sh -c '{}; echo $? > {}'\n",
+                    escaped_command,
+                    exit_code_file.to_str().unwrap()
+                );
+                println!("{}", full_command);
+
                 self.writer.write_all(full_command.as_bytes()).unwrap();
                 self.writer.flush().unwrap();
                 true
