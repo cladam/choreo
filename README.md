@@ -70,14 +70,16 @@ using [medi](https://github.com/cladam/medi) as the tools to test
 
 Choreo is built on a simple but powerful pipeline:
 
-1. Parse: A pest-based parser reads the .chor script and transforms it into an Abstract Syntax Tree (AST).
-2. Run: A reactive runner loops through the tests in a scenario. It continuously checks given conditions against the
+1. **Parse:** A `pest`-based parser reads the `.chor` script and transforms it into an Abstract Syntax Tree (AST).
+2. Run: A reactive runner loops through the tests in a scenario. It continuously checks `given` conditions against the
    current system state (terminal output, file system, etc.).
-3. Execute: Once a test's given conditions are met, its when actions are dispatched to the appropriate backend (e.g.,
-   TerminalBackend, FileSystemBackend).
-4. Assert: The runner then checks the then conditions to determine if the test passed. This loop continues until all
+3. **Execute:** Once a test's `given` conditions are met, its `when` actions are dispatched to the appropriate backend (
+   e.g.,
+   `TerminalBackend`, `FileSystemBackend`).
+4. **Assert:** The runner then checks the then conditions to determine if the `test` passed. This loop continues until
+   all
    tests in the scenario are complete or a timeout is reached.
-5. Report: After execution, a detailed JSON report is generated.
+5. **Report:** After execution, a detailed JSON report is generated.
 
 ### Getting Started
 
@@ -93,8 +95,7 @@ cargo build --release
 
 #### Run a script
 
-Currently, the path to the script is hardcoded in `src/main.rs`. In the future, this will be handled by a command-line
-argument.
+Use the `run` command to execute a `.chor` file. Use the `--verbose` flag for detailed debug output.
 
 ```bash
 # Run a test script
@@ -110,10 +111,8 @@ Choreo is currently in the **alpha stage**. The core engine is functional, but i
 
 The journey ahead includes:
 
-* [x] **CLI Arguments**: Implement proper command-line argument parsing with clap to specify the test file and other
-  options.
 * [ ] **More Actors**:
-    * WebActor for making and asserting against HTTP API calls.
+    * `WebActor` for making and asserting against HTTP API calls.
 * [ ] **Richer Assertions**: Add more conditions, like regex matching without capturing (`output_matches_pattern`) and
   checking command exit codes.
 * [ ] **Improved Reporting**: Generate JUnit XML reports for better CI/CD integration.
