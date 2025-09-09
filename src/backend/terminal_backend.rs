@@ -148,6 +148,11 @@ impl TerminalBackend {
 
                 self.writer.write_all(full_command.as_bytes()).unwrap();
                 self.writer.flush().unwrap();
+
+                // Add a small delay to allow the PTY to process the output
+                // before the main loop checks conditions.
+                thread::sleep(std::time::Duration::from_millis(50));
+
                 true
             }
             _ => false, // Ignore actions not meant for this backend
