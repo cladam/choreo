@@ -122,9 +122,8 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             let test_timeout = Duration::from_secs(30); // Timeout per scenario
 
             for scenario in &scenarios {
-                if verbose {
-                    colours::info(&format!("\nRunning scenario: '{}'", scenario.name));
-                }
+                // Always print the current scenario
+                colours::info(&format!("\nRunning scenario: '{}'", scenario.name));
                 let scenario_start_time = Instant::now();
 
                 loop {
@@ -323,12 +322,11 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                     suite_duration.as_secs_f32()
                 ));
             }
+
             for report in &final_reports {
                 match &report.status {
                     TestStatus::Passed => {
-                        if verbose {
-                            colours::success(&format!("  ✅ PASSED: {}", report.name));
-                        }
+                        colours::success(&format!("  ✅ PASSED: {}", report.name));
                     }
                     TestStatus::Failed => {
                         colours::error(&format!("  ❌ FAILED: {}", report.name));
@@ -337,9 +335,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                         }
                     }
                     TestStatus::Skipped => {
-                        if verbose {
-                            colours::warn(&format!("  ➖ SKIPPED: {}", report.name));
-                        }
+                        colours::warn(&format!("  ➖ SKIPPED: {}", report.name));
                     }
                     TestStatus::Running => {
                         // This state should not be possible here
@@ -347,18 +343,17 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                     }
                 }
             }
-            if verbose {
-                colours::info(&format!(
-                    "Test suite '{}' summary: {} tests, {} failures, total time {:.2}s",
-                    suite_name,
-                    final_reports.len(),
-                    final_reports
-                        .iter()
-                        .filter(|r| r.status == TestStatus::Failed)
-                        .count(),
-                    suite_duration.as_secs_f32()
-                ));
-            }
+
+            colours::info(&format!(
+                "Test suite '{}' summary: {} tests, {} failures, total time {:.2}s",
+                suite_name,
+                final_reports.len(),
+                final_reports
+                    .iter()
+                    .filter(|r| r.status == TestStatus::Failed)
+                    .count(),
+                suite_duration.as_secs_f32()
+            ));
 
             generate_choreo_report(
                 &suite_name,
