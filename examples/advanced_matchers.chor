@@ -1,0 +1,47 @@
+# This example demonstrates advanced terminal output matchers in choreo.
+
+feature: "Advanced Terminal Matchers"
+
+actors: Terminal
+
+scenario "Verifying precise terminal output" {
+
+    test StartsWith "output_starts_with matches the beginning of the output" {
+        given:
+            time >= 1s
+        when:
+            Terminal runs "echo 'Hello Choreo World'"
+        then:
+            Terminal output_starts_with "Hello"
+    }
+
+    test EndsWith "output_ends_with matches the end of the output" {
+        given:
+            Test has_succeeded StartsWith
+        when:
+            Terminal runs "echo 'Hello Choreo World'"
+        then:
+            Terminal output_ends_with "World"
+    }
+
+    test Equals "output_equals performs an exact match" {
+        given:
+            Test has_succeeded EndsWith
+        when:
+            Terminal runs "echo 'exact-match'"
+        then:
+            # Note: The output will have a trailing newline, which we must match.
+            Terminal output_equals "exact-match\n"
+    }
+
+    test Stderr "stderr_contains checks the standard error stream" {
+        given:
+            Test has_succeeded Equals
+        when:
+            # This command writes "ERROR" to stderr.
+            Terminal runs "echo 'ERROR' >&2"
+        then:
+            Terminal stdout_is_empty
+            Terminal stderr_contains "ERROR"
+    }
+}
