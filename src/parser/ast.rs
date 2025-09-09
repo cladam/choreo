@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 // Represents the entire parsed test file.
 pub struct TestSuite {
     pub statements: Vec<Statement>,
@@ -35,6 +37,7 @@ pub struct TestCase {
 pub enum Statement {
     Setting(String, Value),
     EnvDef(Vec<String>),
+    VarsDef(HashMap<String, Value>),
     ActorDef(Vec<String>),
     FeatureDef(String),
     Scenario(Scenario),
@@ -107,4 +110,13 @@ pub enum Action {
 pub enum Value {
     String(String),
     Number(i32),
+}
+
+impl Value {
+    pub fn as_string(&self) -> String {
+        match self {
+            Value::String(s) => s.clone(),
+            Value::Number(n) => n.to_string(),
+        }
+    }
 }

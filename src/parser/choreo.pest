@@ -7,12 +7,14 @@ COMMENT    = _{ "#" ~ (!NEWLINE ~ ANY)* }
 
 // The program is a series of statements.
 grammar   = { SOI ~ statement* ~ EOI }
-statement = { feature_def | settings_def | env_def | actors_def | scenario_def }
+statement = { feature_def | settings_def | env_def | vars_def | actors_def | scenario_def }
 
 // Setting up the test suite.
 settings_def = { "settings:" ~ setting+ }
 setting      = { identifier ~ value }
 env_def      = { "env:" ~ identifier ~ ("," ~ identifier)* }
+vars_def     = { "vars:" ~ var_assignment+ }
+var_assignment = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ string }
 actors_def   = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 feature_def  = { "feature:" ~ string }
 scenario_def = { "scenario" ~ string ~ "{" ~ test* ~ "}" }

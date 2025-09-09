@@ -12,7 +12,7 @@ scenario "User can create a note, add a task, verify it, and clean up" {
         given:
             time >= 1s
         when:
-            Terminal runs "echo $EVAR | medi new blog-idea-for-dsl-test"
+            Terminal runs "medi new blog-idea-for-dsl-test -m '# My medi note'"
         then:
             Terminal output_contains "Successfully created note: 'blog-idea-for-dsl-test'"
     }

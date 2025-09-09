@@ -59,6 +59,7 @@ fn main() {
                 // Find the FeatureDef statement to get the feature name.
                 let mut feature_name = "Choreo Test Feature".to_string(); // Default name
                 let mut env_vars: HashMap<String, String> = HashMap::new();
+                let mut variables: HashMap<String, String> = HashMap::new();
                 let mut scenarios: Vec<choreo::parser::ast::Scenario> = Vec::new();
 
                 for s in &test_suite.statements {
@@ -68,6 +69,11 @@ fn main() {
                                 let value = env::var(var_name)
                                     .map_err(|_| AppError::EnvVarNotFound(var_name.clone()))?;
                                 env_vars.insert(var_name.clone(), value);
+                            }
+                        }
+                        Statement::VarsDef(vars) => {
+                            for (key, value) in vars {
+                                env_vars.insert(key.clone(), value.as_string());
                             }
                         }
                         Statement::FeatureDef(name) => feature_name = name.clone(),

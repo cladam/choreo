@@ -5,6 +5,7 @@ use crate::parser::ast::{
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
+use std::collections::HashMap;
 
 #[derive(Parser, Debug)]
 #[grammar = "parser/choreo.pest"]
@@ -30,6 +31,16 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
             Rule::actors_def => build_actors_def(pair),
             Rule::settings_def => build_setting(pair),
             Rule::env_def => build_env_def(pair),
+            Rule::vars_def => {
+                let mut vars = HashMap::new();
+                for assignment in pair.into_inner() {
+                    let mut inner = assignment.into_inner();
+                    let key = inner.next().unwrap().as_str().to_string();
+                    let value = build_value(inner.next().unwrap());
+                    vars.insert(key, value);
+                }
+                Statement::VarsDef(vars)
+            }
             Rule::feature_def => build_feature_def(pair),
             Rule::scenario_def => build_scenario(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
@@ -80,6 +91,19 @@ fn build_feature_def(pair: Pair<Rule>) -> Statement {
 fn build_env_def(pair: Pair<Rule>) -> Statement {
     let identifiers: Vec<String> = pair.into_inner().map(|p| p.as_str().to_string()).collect();
     Statement::EnvDef(identifiers)
+}
+
+fn build_vars_def(pair: Pair<Rule>) -> Statement {
+    let mut vars = HashMap::new();
+    for assignment in pair.into_inner() {
+        if assignment.as_rule() == Rule::var_assignment {
+            let mut inner = assignment.into_inner();
+            let key = inner.next().unwrap().as_str().to_string();
+            let value = build_value(inner.next().unwrap());
+            vars.insert(key, value);
+        }
+    }
+    Statement::VarsDef(vars)
 }
 
 // This is the other key function to implement.
@@ -332,4 +356,20 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
         }
         _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),
     }
+}
+
+fn build_value(pair: Pair<Rule>) -> Value {
+    match pair.as_rule() {
+        Rule::string => {
+            let inner = pair.into_inner().next().unwrap();
+            Value::String(unescape_string(inner.as_str()))
+        }
+        Rule::number => Value::Number(pair.as_str().parse().unwrap()),
+        _ => unreachable!(),
+    }
+}
+
+/// Unescapes a string captured by the parser.
+fn unescape_string(s: &str) -> String {
+    s.replace("\\\"", "\"").replace("\\'", "'")
 }

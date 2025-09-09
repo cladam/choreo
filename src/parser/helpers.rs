@@ -62,6 +62,9 @@ pub fn check_condition(
             let cleaned_buffer = strip(output_buffer);
             let buffer = String::from_utf8_lossy(&cleaned_buffer);
             let predicate = predicate::str::contains(text.as_str());
+            if verbose {
+                println!("  [DEBUG] Checking output contains: '{}'", text);
+            }
             predicate.eval(buffer.as_ref())
         }
         Condition::OutputMatches {

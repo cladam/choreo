@@ -1,0 +1,31 @@
+# Test case demonstrating variable substitution in Choreo
+feature: "Variable Substitution"
+
+# Define variables directly in the file.
+vars:
+  FILENAME = "my_test_output.txt"
+  GREETING = "Hello from a defined variable!"
+
+actors: Terminal, FileSystem
+
+scenario "Using file-defined variables" {
+    test UseFileVars "it uses variables defined in the test file" {
+        given:
+            FileSystem delete_file "${FILENAME}"
+        when:
+            Terminal runs "echo '${GREETING}' > ${FILENAME}"
+        then:
+            Terminal last_command succeeded
+            FileSystem file_exists "${FILENAME}"
+            FileSystem file_contains "${FILENAME}" "${GREETING}"
+    }
+
+    test CleanupFile "it cleans up the created file" {
+        given:
+            Test has_succeeded UseFileVars
+        when:
+            FileSystem delete_file "${FILENAME}"
+        then:
+            FileSystem file_does_not_exist "${FILENAME}"
+    }
+}

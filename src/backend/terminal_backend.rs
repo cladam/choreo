@@ -98,6 +98,8 @@ impl TerminalBackend {
             output_buffer.push_str(&new_output);
         }
 
+        println!("{}", output_buffer);
+
         // Check for our special exit code line.
         // Instead of parsing terminal output, read the exit code from a temp file.
         let exit_code_file = env::temp_dir().join("choreo_exit_code.tmp");
