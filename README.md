@@ -10,36 +10,55 @@ Think of it as **Cucumber for the command line**, with the reactive power of a r
 
 ### **Key Features**
 
-* **Declarative DSL**: Write tests in a simple, human-readable `.chor` format.
-* **Reactive rules engine**: Define rules that fire based on time, application output, or the success of previous steps.
-* **Dynamic state**: Capture values from terminal output (like IDs or filenames) and reuse them in subsequent commands.
-* **Environment integration**: Pull in configuration and secrets from environment variables to make your tests portable.
-* **Extensible**: Built with a pluggable "Actor" model in mind, starting with the Terminal actor.
+* **Declarative BDD Syntax**: Write tests in a simple, human-readable `.chor` format using `feature`, `scenario`, and
+  `test` blocks.
+* **Reactive Test Execution**: Define `given` conditions that must be met before a test runs, and `then` conditions that
+  validate the outcome. Choreo's engine continuously checks these conditions.
+* **Multi-Actor System**: Choreograph interactions between different parts of your system.
+    * `Terminal`: Spawns a pseudo-terminal (PTY) to run commands, type input, and read output just like a real user.
+    * `FileSystem`: Create, delete, and verify files and directories to set up preconditions and assert outcomes.
+* **Dynamic State Management**:
+    * **Capture & Reuse**: Capture values from terminal output using regex and reuse them in subsequent steps.
+    * **Variables**: Define static variables and pull in secrets or configuration from environment variables.
+* **Rich Assertions**: A comprehensive set of conditions to validate system state:
+    * Terminal output (`output_contains`, `output_matches`).
+    * Command success and exit codes (`last_command succeeded`, `exit_code_is`).
+    * File system state (`file_exists`, `file_contains`, `dir_exists`).
+    * Test dependencies (`Test has_succeeded ...`).
+* **Scenario Cleanup**: Use the `after` block to run cleanup commands, ensuring a clean state between scenario runs.
+* **JSON Reporting**: Generates a detailed JSON report compatible with modern test reporting tools.
 
 ### **Example Usage**
 
 Here is a simple `test_ls.chor` script that lists files and verifies the output:
 
-```
-# test_ls.chor
-feature: "List Files in Directory"
-actors: Terminal
+```bash
+# feature: "Tee Utility"
+# This test verifies that tee correctly writes its input to both
+# standard output and the specified file.
 
-scenario "Listing files in the current directory" {
+feature: "Tee Utility"
+env: PWD
+actors: Terminal, FileSystem
 
-    test FilesListed "Verify that README.md is in the output" {
-        # GIVEN: The context or precondition for the test.
+scenario "tee writes to both stdout and a file" {
+    test TeeWritesToBothDests "tee writes to both destinations" {
         given:
-            time >= 1s
-
-        # WHEN: The single, specific action you are testing.
+            # Ensure a clean state before the test.
+            FileSystem delete_file "tee_output.txt"
         when:
-            Terminal runs "ls -l"
-
-        # THEN: The expected outcome that defines success.
+            # Use an env var to ensure the file is created in the correct place.
+            Terminal runs "cd $PWD; echo 'hello tee' | tee tee_output.txt"
         then:
-            Terminal output_contains "test_ls.chor" # This file should be listed
-            Terminal last_command exit_code_is 0
+            # Check both the terminal output and the file system.
+            Terminal output_contains "hello tee"
+            FileSystem file_exists "tee_output.txt"
+            FileSystem file_contains "tee_output.txt" "hello tee"
+    }
+
+    # This block runs after all tests in the scenario are complete.
+    after {
+        FileSystem delete_file "tee_output.txt"
     }
 }
 ```
@@ -51,11 +70,14 @@ using [medi](https://github.com/cladam/medi) as the tools to test
 
 Choreo is built on a simple but powerful pipeline:
 
-1. **Parser**: A `pest`-based parser reads thr `.chor` script and validates its syntax.
-2. **AST**: The script is transformed into a structured in-memory representation called an Abstract Syntax Tree.
-3. **Runner**: A simulation loop ticks forward, checking the conditions of all rules against the current state.
-4. **Backend**: When a rule's actions are executed, they are sent to an "Actor" backend. The `TerminalBackend` spawns a
-   pseudo-terminal (PTY) and interacts with it programmatically, just like a real user.
+1. Parse: A pest-based parser reads the .chor script and transforms it into an Abstract Syntax Tree (AST).
+2. Run: A reactive runner loops through the tests in a scenario. It continuously checks given conditions against the
+   current system state (terminal output, file system, etc.).
+3. Execute: Once a test's given conditions are met, its when actions are dispatched to the appropriate backend (e.g.,
+   TerminalBackend, FileSystemBackend).
+4. Assert: The runner then checks the then conditions to determine if the test passed. This loop continues until all
+   tests in the scenario are complete or a timeout is reached.
+5. Report: After execution, a detailed JSON report is generated.
 
 ### Getting Started
 
@@ -75,8 +97,11 @@ Currently, the path to the script is hardcoded in `src/main.rs`. In the future, 
 argument.
 
 ```bash
-# (After updating main.rs with the path to your .chor file)  
-cargo run -- run --file "/path/to/your_script.chor"
+# Run a test script
+cargo run -- run --file "examples/redirecting_output_tee.chor"
+
+# Run with verbose logging
+cargo run -- run --file "examples/redirecting_output_tee.chor" --verbose
 ```
 
 ### Status & Roadmap
@@ -89,10 +114,9 @@ The journey ahead includes:
   options.
 * [ ] **More Actors**:
     * WebActor for making and asserting against HTTP API calls.
-    * FileSystemActor for checking file existence, content, etc.
-* [ ] **Richer Assertions**: Add more conditions, like regex matching without capturing (output_matches_pattern) and
+* [ ] **Richer Assertions**: Add more conditions, like regex matching without capturing (`output_matches_pattern`) and
   checking command exit codes.
-* [ ] **Test Reporting**: Generate JUnit XML reports for better CI/CD integration.
+* [ ] **Improved Reporting**: Generate JUnit XML reports for better CI/CD integration.
 * [ ] **GIF Generation**: Revisit the vhs inspiration by adding an option to record the terminal session as a GIF.
 * [ ] **Publish**: Publish the crate to crates.io.
 
