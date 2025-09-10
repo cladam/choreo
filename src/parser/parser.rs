@@ -180,8 +180,18 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
         Rule::time_condition => {
             let mut inner = inner_cond.into_inner();
             let op = inner.next().unwrap().as_str().to_string();
-            let time_str = inner.next().unwrap().as_str();
-            let time: f32 = time_str[..time_str.len() - 1].parse().unwrap();
+            let time_marker_str = inner.next().unwrap().as_str();
+
+            let time = if time_marker_str.ends_with("ms") {
+                let value_str = &time_marker_str[..time_marker_str.len() - 2];
+                value_str.parse::<f32>().unwrap() / 1000.0
+            } else if time_marker_str.ends_with('s') {
+                let value_str = &time_marker_str[..time_marker_str.len() - 1];
+                value_str.parse::<f32>().unwrap()
+            } else {
+                // This case should not be reached if the grammar is correct
+                0.0
+            };
             Condition::Time { op, time }
         }
         Rule::terminal_condition => {

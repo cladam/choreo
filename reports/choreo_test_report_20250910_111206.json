@@ -1,0 +1,53 @@
+[
+  {
+    "uri": "examples/advanced_matchers.chor",
+    "keyword": "Feature",
+    "name": "Advanced Terminal Matchers",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "Verifying precise terminal output",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "output_starts_with matches the beginning of the output",
+            "result": {
+              "status": "passed",
+              "durationInMs": 427
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "output_ends_with matches the end of the output",
+            "result": {
+              "status": "passed",
+              "durationInMs": 304
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "output_equals performs an exact match",
+            "result": {
+              "status": "passed",
+              "durationInMs": 175
+            }
+          },
+          {
+            "keyword": "Then ",
+            "name": "stderr_contains checks the standard error stream",
+            "result": {
+              "status": "passed",
+              "durationInMs": 58
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 4,
+      "failures": 0,
+      "totalTimeInSeconds": 1.4289988
+    }
+  }
+]

@@ -82,7 +82,9 @@ string                            = { "\"" ~ inner_double ~ "\"" | "'" ~ inner_s
 inner_double                      = @{ (!"\"" ~ ANY)* }
 inner_single                      = @{ (!"'" ~ ANY)* }
 number                            = @{ ASCII_DIGIT+ }
-time_marker                       = @{ number ~ "s" }
+float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+time_unit                         = @{ "s" | "ms" }
+time_marker                       = @{ float ~ time_unit }
 value                             = { string | number }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
 filesystem_action_keyword         = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }

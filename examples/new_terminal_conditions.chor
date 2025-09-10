@@ -1,0 +1,59 @@
+# examples/new_terminal_conditions.chor
+feature: "Advanced Terminal Conditions"
+actors: Terminal
+
+scenario "Demonstrate new terminal output assertions" {
+    test StartsWith "output starts with a specific string" {
+        given:
+            time >= 500ms
+        when:
+            Terminal runs "echo 'hello world'"
+        then:
+            Terminal output_starts_with "hello"
+    }
+
+    test EndsWith "output ends with a specific string" {
+        given:
+            Test has_succeeded StartsWith
+        when:
+            Terminal runs "echo 'another line here'"
+        then:
+            Terminal output_ends_with "here"
+    }
+
+    test Equals "output equals an exact string" {
+        given:
+            Test has_succeeded EndsWith
+        when:
+            Terminal runs "echo 'exact match'"
+        then:
+            # The output will have a trailing newline, which we must match.
+            Terminal output_equals "exact match\n"
+    }
+
+    test Stderr "stderr contains a specific string" {
+        given:
+            Test has_succeeded Equals
+        when:
+            # This command will fail and write to stderr
+            Terminal runs "ls non_existent_directory"
+        then:
+            Terminal last_command failed
+            Terminal stderr_contains "No such file or directory"
+    }
+
+    test StdoutEmpty "stdout is empty for a command" {
+        given:
+            Test has_succeeded Stderr
+        when:
+            # mkdir does not produce stdout on success
+            Terminal runs "mkdir test_dir_deleteme"
+        then:
+            Terminal last_command succeeded
+            Terminal stdout_is_empty
+    }
+
+    after {
+        Terminal runs "rmdir test_dir_deleteme"
+    }
+}

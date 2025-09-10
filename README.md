@@ -21,7 +21,8 @@ Think of it as **Cucumber for the command line**, with the reactive power of a r
     * **Capture & Reuse**: Capture values from terminal output using regex and reuse them in subsequent steps.
     * **Variables**: Define static variables and pull in secrets or configuration from environment variables.
 * **Rich Assertions**: A comprehensive set of conditions to validate system state:
-    * Terminal output (`output_contains`, `output_matches`).
+    * Terminal output (`output_contains`, `output_matches`, `output_starts_with`, `output_ends_with`, `output_equals`,
+      `stderr_contains`, `stdout_is_empty`).
     * Command success and exit codes (`last_command succeeded`, `exit_code_is`).
     * File system state (`file_exists`, `file_contains`, `dir_exists`).
     * Test dependencies (`Test has_succeeded ...`).
