@@ -5,7 +5,7 @@ actors: Terminal
 scenario "Sort a list of lines" {
     test SortOrdersLinesAlphabetically "sort correctly orders lines" {
         given:
-            time >= 0s
+            wait >= 50ms
         when:
             Terminal runs "printf 'charlie\nalpha\nbravo' | sort"
         then:

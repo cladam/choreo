@@ -5,7 +5,7 @@ actors: Terminal
 scenario "Terminate a long-running process" {
     test TimeoutKillsProcess "timeout terminates a process that runs too long" {
         given:
-            time >= 0s
+            wait >= 0s
         when:
             # This command will be killed after 1 second.
             Terminal runs "timeout 1 sleep 5"

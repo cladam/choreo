@@ -11,7 +11,7 @@ pub fn check_all_conditions_met(
     test_states: &HashMap<String, TestState>,
     output_buffer: &str,
     stderr_buffer: &str,
-    current_time: f32,
+    current_wait: f32,
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
@@ -24,7 +24,7 @@ pub fn check_all_conditions_met(
             test_states,
             output_buffer,
             stderr_buffer,
-            current_time,
+            current_wait,
             env_vars,
             last_exit_code,
             fs_backend,
@@ -46,7 +46,7 @@ pub fn check_condition(
     test_states: &HashMap<String, TestState>,
     output_buffer: &str,
     stderr_buffer: &str,
-    current_time: f32,
+    current_wait: f32,
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
@@ -55,12 +55,12 @@ pub fn check_condition(
     let cleaned_buffer = strip(output_buffer);
     let buffer = String::from_utf8_lossy(&cleaned_buffer);
     match condition {
-        Condition::Time { op, time } => match op.as_str() {
-            ">=" => current_time >= *time,
-            "<=" => current_time <= *time,
-            ">" => current_time > *time,
-            "<" => current_time < *time,
-            "==" => (current_time - *time).abs() < f32::EPSILON,
+        Condition::Wait { op, wait } => match op.as_str() {
+            ">=" => current_wait >= *wait,
+            "<=" => current_wait <= *wait,
+            ">" => current_wait > *wait,
+            "<" => current_wait < *wait,
+            "==" => (current_wait - *wait).abs() < f32::EPSILON,
             _ => false,
         },
         Condition::OutputContains { text, .. } => {

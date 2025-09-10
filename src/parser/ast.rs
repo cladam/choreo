@@ -60,9 +60,9 @@ pub enum GivenStep {
 // All possible conditions that can trigger a rule.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Condition {
-    Time {
+    Wait {
         op: String,
-        time: f32,
+        wait: f32,
     },
     StateSucceeded {
         outcome: String,

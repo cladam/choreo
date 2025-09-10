@@ -10,7 +10,7 @@ scenario "User can create a note, add a task, verify it, and clean up" {
     # Test 1: Verify that a note can be created and capture its name.
     test NoteCreationSuccess "Create a new note" {
         given:
-            time >= 1s
+            wait >= 1s
         when:
             Terminal runs "medi new blog-idea-for-dsl-test -m '# My medi note'"
         then:

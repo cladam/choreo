@@ -225,6 +225,9 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                                         &mut last_exit_code,
                                     );
                                 }
+                                // Add a small delay to allow the PTY to process the command
+                                // and for the output to be available in the buffer.
+                                thread::sleep(Duration::from_millis(100));
                                 *state = TestState::Running;
                             }
                         }
@@ -276,23 +279,24 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 }
 
                 // --- After Hooks (Cleanup) Execution ---
-                if !scenario.after.is_empty() {
+                for action in &scenario.after {
+                    let substituted_action = substitute_variables_in_action(action, &env_vars);
                     if verbose {
-                        colours::info(&format!(
-                            "\nRunning cleanup for scenario: '{}'...",
-                            scenario.name
-                        ));
+                        println!("  [DEBUG] Executing after action: {:?}", substituted_action);
                     }
-                    for action in &scenario.after {
-                        let substituted_a = substitute_variables_in_action(action, &env_vars);
-                        execute_action(
-                            &substituted_a,
-                            &mut terminal_backend,
-                            &fs_backend,
-                            &mut last_exit_code,
-                        );
-                    }
-                    thread::sleep(Duration::from_millis(100));
+                    execute_action(
+                        &substituted_action,
+                        &mut terminal_backend,
+                        &fs_backend,
+                        &mut last_exit_code,
+                    );
+                }
+                if verbose {
+                    colours::info(&format!(
+                        "Scenario '{}' completed in {:.2}s",
+                        scenario.name,
+                        scenario_start_time.elapsed().as_secs_f32()
+                    ));
                 }
             }
 
@@ -367,6 +371,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 &scenarios,
                 &test_states,
                 &test_start_times,
+                &env_vars,
                 verbose,
             )?;
 
@@ -402,6 +407,7 @@ fn generate_choreo_report(
     scenarios: &[choreo::parser::ast::Scenario],
     test_states: &HashMap<String, TestState>,
     test_start_times: &HashMap<String, Instant>,
+    env_vars: &HashMap<String, String>,
     verbose: bool,
 ) -> Result<(), AppError> {
     let mut report_scenarios = Vec::new();
@@ -442,8 +448,10 @@ fn generate_choreo_report(
 
         // After hooks
         for action in &scenario.after {
+            // Substitute variables before formatting for the report
+            let substituted_action = substitute_variables_in_action(action, env_vars);
             after_hooks.push(AfterHook {
-                name: format_action_for_report(action),
+                name: format_action_for_report(&substituted_action),
                 result: StepResult {
                     status: "passed".to_string(),
                     duration_in_ms: 0,

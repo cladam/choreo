@@ -34,7 +34,7 @@ then_block_rule                   = { "then:" ~ action+ }
 
 // --- Conditions & Actions ---
 condition = {
-    time_condition |
+    wait_condition |
     state_condition |
     filesystem_condition |
     terminal_condition
@@ -42,7 +42,7 @@ condition = {
 action                            = { type_action | press_action | run_action | filesystem_action }
 
 // Condition Types
-time_condition                    = { "time" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ time_marker }
+wait_condition                    = { "wait" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ wait_marker }
 state_condition                   = { "Test" ~ "has_succeeded" ~ identifier }
 filesystem_condition              = { "FileSystem" ~ filesystem_cond_keyword ~ string ~ string? }
 terminal_condition                = { "Terminal" ~ (
@@ -78,13 +78,13 @@ filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~
 
 // The basic building blocks of the choreo language.
 identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
-string                            = { "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
+string                            = ${ "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
 inner_double                      = @{ (!"\"" ~ ANY)* }
 inner_single                      = @{ (!"'" ~ ANY)* }
 number                            = @{ ASCII_DIGIT+ }
 float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
-time_unit                         = @{ "s" | "ms" }
-time_marker                       = @{ float ~ time_unit }
+wait_unit                         = @{ "s" | "ms" }
+wait_marker                       = @{ float ~ wait_unit }
 value                             = { string | number }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
 filesystem_action_keyword         = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }

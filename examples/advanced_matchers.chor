@@ -8,7 +8,7 @@ scenario "Verifying precise terminal output" {
 
     test StartsWith "output_starts_with matches the beginning of the output" {
         given:
-            time >= 1s
+            wait >= 1s
         when:
             Terminal runs "echo 'Hello Choreo World'"
         then:

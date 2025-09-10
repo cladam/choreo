@@ -5,7 +5,7 @@ actors: Terminal
 scenario "Demonstrate new terminal output assertions" {
     test StartsWith "output starts with a specific string" {
         given:
-            time >= 500ms
+            wait >= 50ms
         when:
             Terminal runs "echo 'hello world'"
         then:

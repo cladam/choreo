@@ -6,7 +6,7 @@ actors: Terminal
 scenario "Verify user information" {
     test IdContainsCurrentUser "id output contains the current user's name" {
         given:
-            time >= 0s
+            wait >= 0s
         when:
             Terminal runs "id -un" # -u gets user ID, -n gets the name
         then:

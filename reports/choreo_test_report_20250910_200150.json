@@ -1,0 +1,29 @@
+[
+  {
+    "uri": "examples/test_ls.chor",
+    "keyword": "Feature",
+    "name": "List Files in Directory",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "Listing files in the current directory",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "Verify that README.md is in the output",
+            "result": {
+              "status": "passed",
+              "durationInMs": 183
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 1,
+      "failures": 0,
+      "totalTimeInSeconds": 1.2114671
+    }
+  }
+]

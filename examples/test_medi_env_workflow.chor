@@ -1,18 +1,20 @@
 # test_medi_env_workflow.chor
 # A test suite for our 'medi' CLI tool, using the BDD `test` syntax.
 feature: "Note and Task Management"
-env: EVAR
+
+vars:
+  EVAR = "## My medi note from an environment variable"
+
 actors: Terminal
 
 # A scenario groups related tests into a single workflow.
 scenario "User can create a note, add a task, and clean up" {
-
     # Test 1: Verify that a note can be created and capture its name.
     test NoteCreationSuccess "Create a new note" {
         given:
-            time >= 1s
+            wait >= 1s
         when:
-            Terminal runs "echo $EVAR | medi new blog-idea-for-dsl-test"
+            Terminal runs "echo '$EVAR' | medi new blog-idea-for-dsl-test"
         then:
             Terminal output_matches "Successfully created note: '([\w-]+)'" as noteName
     }
@@ -37,13 +39,9 @@ scenario "User can create a note, add a task, and clean up" {
             Terminal output_contains "Write the first draft (for note ${noteName})"
     }
 
-    # Test 4: Verify that the note and its tasks can be deleted.
-    test CleanupSuccess "Cleanup the test note" {
-        given:
-            Test has_succeeded TaskAppearsInList
-        when:
-            Terminal runs "medi delete ${noteName} --force"
-        then:
-            Terminal output_contains "Successfully deleted note: '${noteName}'"
+    # This block runs after all tests in the scenario are complete.
+    after {
+        # Use the captured 'noteName' variable to delete the created note.
+        Terminal runs "medi delete ${noteName} --force"
     }
 }
