@@ -1,11 +1,11 @@
 // parser.rs
 use crate::parser::ast::{
-    Action, Condition, GivenStep, Scenario, Statement, TestCase, TestSuite, Value,
+    Action, Condition, GivenStep, ReportFormat, Scenario, Statement, TestCase, TestSuite,
+    TestSuiteSettings, Value,
 };
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
-use std::collections::HashMap;
 
 #[derive(Parser, Debug)]
 #[grammar = "parser/choreo.pest"]
@@ -29,18 +29,9 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
         statements.push(match pair.as_rule() {
             // Now this will correctly match on the inner rule.
             Rule::actors_def => build_actors_def(pair),
-            Rule::settings_def => build_setting(pair),
+            Rule::settings_def => build_settings_def(pair),
             Rule::env_def => build_env_def(pair),
-            Rule::vars_def => {
-                let mut vars = HashMap::new();
-                for assignment in pair.into_inner() {
-                    let mut inner = assignment.into_inner();
-                    let key = inner.next().unwrap().as_str().to_string();
-                    let value = build_value(inner.next().unwrap());
-                    vars.insert(key, value);
-                }
-                Statement::VarsDef(vars)
-            }
+            Rule::vars_def => build_vars_def(pair),
             Rule::feature_def => build_feature_def(pair),
             Rule::scenario_def => build_scenario(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
@@ -61,17 +52,59 @@ fn build_actors_def(pair: Pair<Rule>) -> Statement {
 }
 
 // Helper function for settings
-fn build_setting(pair: Pair<Rule>) -> Statement {
-    // Extract setting name and value
-    let mut inner_rules = pair.into_inner();
-    let name = inner_rules.next().unwrap().as_str().to_string();
-    let value_pair = inner_rules.next().unwrap();
-    let value = match value_pair.as_rule() {
-        Rule::string => Value::String(value_pair.as_str().to_string()),
-        Rule::number => Value::Number(value_pair.as_str().parse().unwrap()),
-        _ => unreachable!(),
-    };
-    Statement::Setting(name, value)
+fn build_settings_def(pair: Pair<Rule>) -> Statement {
+    let mut settings = TestSuiteSettings::default();
+    for setting_pair in pair.into_inner() {
+        let mut inner = setting_pair.into_inner();
+        let key = inner.next().unwrap().as_str();
+        let value_pair = inner.next().unwrap();
+        let value = build_value(value_pair);
+
+        match key {
+            "timeout_seconds" => {
+                if let Value::Number(n) = value {
+                    settings.timeout_seconds = n as u64;
+                } else {
+                    // You might want to return a proper parse error here
+                    panic!("'timeout_seconds' setting must be a number");
+                }
+            }
+            "report_path" => {
+                if let Value::String(s) = value {
+                    settings.report_path = s;
+                } else {
+                    panic!("'report_path' setting must be a string");
+                }
+            }
+            "report_format" => {
+                if let Value::String(s) = value {
+                    settings.report_format = match s.as_str() {
+                        "json" => ReportFormat::Json,
+                        "junit" => ReportFormat::Junit,
+                        _ => panic!("Invalid 'report_format': must be 'json' or 'junit'"),
+                    };
+                } else {
+                    panic!("'report_format' setting must be a string");
+                }
+            }
+            _ => { /* Ignore unknown settings */ }
+        }
+    }
+    Statement::SettingsDef(settings)
+}
+
+fn build_vars_def(pair: Pair<Rule>) -> Statement {
+    let vars = pair
+        .into_inner()
+        .map(|var_pair| {
+            let mut inner = var_pair.into_inner();
+            let key = inner.next().unwrap().as_str().to_string();
+            let value_pair = inner.next().unwrap(); // This is a `string` rule
+            let value_str = value_pair.into_inner().next().unwrap().as_str();
+            (key, Value::String(unescape_string(value_str)))
+        })
+        .collect();
+    Statement::VarsDef(vars)
 }
 
 // Helper function for a feature definition.
@@ -195,9 +228,9 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             Condition::Wait { op, wait }
         }
         Rule::terminal_condition => {
-            // A terminal_condition contains one of the specific terminal condition types.
-            let specific_terminal_cond = inner_cond.into_inner().next().unwrap();
-            build_condition_from_specific(specific_terminal_cond)
+            let mut inner = inner_cond.into_inner();
+            let terminal_cond = inner.next().unwrap();
+            build_condition_from_specific(terminal_cond)
         }
         Rule::output_contains_condition => {
             let mut inner = inner_cond.into_inner();
@@ -414,13 +447,15 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
 }
 
 fn build_value(pair: Pair<Rule>) -> Value {
-    match pair.as_rule() {
+    // The `value` rule is silent, so we need to inspect its inner pair.
+    let inner_pair = pair.into_inner().next().unwrap();
+    match inner_pair.as_rule() {
         Rule::string => {
-            let inner = pair.into_inner().next().unwrap();
+            let inner = inner_pair.into_inner().next().unwrap();
             Value::String(unescape_string(inner.as_str()))
         }
-        Rule::number => Value::Number(pair.as_str().parse().unwrap()),
-        _ => unreachable!(),
+        Rule::number => Value::Number(inner_pair.as_str().parse().unwrap()),
+        _ => unreachable!("Unexpected value rule: {:?}", inner_pair.as_rule()),
     }
 }
 

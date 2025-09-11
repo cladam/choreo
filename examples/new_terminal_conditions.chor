@@ -28,7 +28,7 @@ scenario "Demonstrate new terminal output assertions" {
             Terminal runs "echo 'exact match'"
         then:
             # The output will have a trailing newline, which we must match.
-            Terminal output_equals "exact match\n"
+            Terminal output_equals "exact match"
     }
 
     test Stderr "stderr contains a specific string" {

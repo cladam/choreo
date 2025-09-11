@@ -12,7 +12,7 @@ statement                         = { feature_def | settings_def | env_def | var
 
 // Setting up the test suite.
 settings_def                      = { "settings:" ~ setting+ }
-setting                           = { identifier ~ value }
+setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
 env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
 vars_def                          = { "vars:" ~ var_assignment+ }
 var_assignment                    = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ string }

@@ -1,0 +1,23 @@
+# This test file demonstrates how to use the `settings` block.
+
+feature: "Choreo Configuration"
+
+settings:
+  # Set a custom timeout for this test suite.
+  timeout_seconds = 10
+  # Specify the output directory for reports.
+  report_path = "test_results/"
+  # (report_format defaults to "json" if not specified)
+
+actors: Terminal
+
+scenario "A simple test to confirm settings are used" {
+    test QuickTest "it runs a quick command" {
+        given:
+            wait >= 1s
+        when:
+            Terminal runs "echo 'Settings are working!'"
+        then:
+            Terminal output_contains "Settings are working!"
+    }
+}

@@ -25,6 +25,29 @@ impl TestState {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ReportFormat {
+    Json,
+    Junit,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TestSuiteSettings {
+    pub timeout_seconds: u64,
+    pub report_format: ReportFormat,
+    pub report_path: String,
+}
+
+impl Default for TestSuiteSettings {
+    fn default() -> Self {
+        Self {
+            timeout_seconds: 30,
+            report_format: ReportFormat::Json,
+            report_path: "reports/".to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct TestCase {
     pub name: String,
     pub description: String,
@@ -35,7 +58,7 @@ pub struct TestCase {
 
 // All possible top-level statements in a .chor file.
 pub enum Statement {
-    Setting(String, Value),
+    SettingsDef(TestSuiteSettings),
     EnvDef(Vec<String>),
     VarsDef(HashMap<String, Value>),
     ActorDef(Vec<String>),

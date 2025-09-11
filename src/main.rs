@@ -9,7 +9,9 @@ use choreo::cli;
 use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
-use choreo::parser::ast::{Action, GivenStep, Statement, TestCase, TestState};
+use choreo::parser::ast::{
+    Action, GivenStep, ReportFormat, Statement, TestCase, TestState, TestSuiteSettings,
+};
 use choreo::parser::helpers::*;
 use choreo::parser::parser;
 use clap::Parser;
@@ -62,9 +64,13 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             let mut feature_name = "Choreo Test Feature".to_string(); // Default name
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut scenarios: Vec<choreo::parser::ast::Scenario> = Vec::new();
+            let mut settings = TestSuiteSettings::default();
 
             for s in &test_suite.statements {
                 match s {
+                    Statement::SettingsDef(parsed_settings) => {
+                        settings = parsed_settings.clone();
+                    }
                     Statement::EnvDef(vars) => {
                         for var_name in vars {
                             let value = env::var(var_name)
@@ -119,7 +125,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             // --- Main Test Execution ---
             let suite_start_time = Instant::now();
-            let test_timeout = Duration::from_secs(30); // Timeout per scenario
+            let test_timeout = Duration::from_secs(settings.timeout_seconds); // Timeout per scenario
 
             for scenario in &scenarios {
                 // Always print the current scenario
@@ -372,6 +378,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 &test_states,
                 &test_start_times,
                 &env_vars,
+                &settings,
                 verbose,
             )?;
 
@@ -408,6 +415,7 @@ fn generate_choreo_report(
     test_states: &HashMap<String, TestState>,
     test_start_times: &HashMap<String, Instant>,
     env_vars: &HashMap<String, String>,
+    settings: &TestSuiteSettings,
     verbose: bool,
 ) -> Result<(), AppError> {
     let mut report_scenarios = Vec::new();
@@ -468,6 +476,13 @@ fn generate_choreo_report(
         });
     }
 
+    if settings.report_format == ReportFormat::Junit {
+        if verbose {
+            colours::warn("JUnit report format is not yet supported. Skipping report generation.");
+        }
+        return Ok(());
+    }
+
     let report = Report(vec![Feature {
         uri: suite_name.to_string(),
         keyword: "Feature".to_string(),
@@ -482,8 +497,9 @@ fn generate_choreo_report(
 
     let json = serde_json::to_string_pretty(&report)?;
     let date = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    fs::create_dir_all("reports")?;
-    let mut json_file = File::create(format!("reports/choreo_test_report_{}.json", date))?;
+    fs::create_dir_all(&settings.report_path)?;
+    let report_file_path = format!("{}choreo_test_report_{}.json", settings.report_path, date);
+    let mut json_file = File::create(&report_file_path)?;
     json_file.write_all(json.as_bytes())?;
 
     if verbose {

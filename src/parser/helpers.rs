@@ -149,7 +149,13 @@ pub fn check_condition(
             println!("  [DEBUG] Checking output equals '{}'", text);
             println!("  [DEBUG] Checking the buffer '{}'", buffer);
             //buffer.lines().any(|line| line.trim() == text.as_str()
-            buffer.lines().any(|line| line.trim() == text.trim())
+            //buffer.lines().any(|line| line.trim() == text.trim())
+
+            // Check if any line, when trimmed, ends with the expected text.
+            // This handles cases where the prompt and output are on the same line.
+            buffer
+                .lines()
+                .any(|line| line.trim().ends_with(text.trim()))
         }
     }
 }

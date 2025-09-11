@@ -1,0 +1,27 @@
+feature: "Simulating Mocks"
+actors: Terminal, FileSystem
+
+vars:
+  MOCK_SCRIPT = "my_mock_command.sh"
+
+scenario "Testing a script that calls another command" {
+
+    test CallMock "it calls a mock function" {
+        given:
+            # Setup: Create a temporary shell script that acts as our mock.
+            # This script will be on the PATH in the test's CWD.
+            FileSystem create_file "${MOCK_SCRIPT}" with_content "echo 'mocked output'"
+            # Make the script executable.
+            Terminal runs "chmod +x ${MOCK_SCRIPT}"
+        when:
+            # Action: Execute our mock script.
+            Terminal runs "./${MOCK_SCRIPT}"
+        then:
+            Terminal last_command succeeded
+            Terminal output_equals "mocked output"
+    }
+
+    after {
+        FileSystem delete_file "${MOCK_SCRIPT}"
+    }
+}
