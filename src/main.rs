@@ -10,16 +10,17 @@ use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
 use choreo::parser::ast::{
-    Action, GivenStep, ReportFormat, Statement, TestCase, TestState, TestSuiteSettings,
+    Action, Condition, GivenStep, ReportFormat, Statement, TestCase, TestState, TestSuiteSettings,
 };
 use choreo::parser::helpers::*;
 use choreo::parser::parser;
 use clap::Parser;
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::time::{Duration, Instant};
-use std::{env, fs, thread};
+use std::{env, fs};
 
 fn main() {
     let cli = cli::Cli::parse();
@@ -43,7 +44,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             let test_suite = match parser::parse(&source) {
                 Ok(suite) => {
                     if verbose {
-                        colours::info("Parsed test file successfully.");
+                        colours::success("Test suite parsed successfully.");
                     }
                     suite
                 }
@@ -86,7 +87,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             // --- Backend and State Initialisation ---
             let mut terminal_backend =
-                TerminalBackend::new(base_dir.to_path_buf(), settings.shell_path.clone());
+                TerminalBackend::new(base_dir.to_path_buf(), settings.clone());
             let fs_backend = FileSystemBackend::new(base_dir.to_path_buf());
             let mut last_exit_code: Option<i32> = None;
             let mut output_buffer = String::new();
@@ -119,201 +120,294 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 })
                 .collect();
 
-            // --- Main Test Execution ---
+            // --- Main Test Loop ---
             let suite_start_time = Instant::now();
-            let test_timeout = Duration::from_secs(settings.timeout_seconds); // Timeout per test
+            let test_timeout = Duration::from_secs(settings.timeout_seconds);
 
             'scenario_loop: for scenario in &scenarios {
-                // Always print the current scenario
                 colours::info(&format!("\nRunning scenario: '{}'", scenario.name));
                 let scenario_start_time = Instant::now();
 
                 loop {
-                    terminal_backend.read_pty_output(&mut output_buffer);
+                    //terminal_backend.read_pty_output(&mut output_buffer);
                     let elapsed_since_scenario_start = scenario_start_time.elapsed();
 
-                    let mut tests_to_start = Vec::new();
+                    let mut tests_to_start: Vec<(String, Vec<Action>)> = Vec::new();
                     let mut tests_to_pass = Vec::new();
+                    let mut immediate_failures = Vec::new();
 
                     // --- Checking Phase (Immutable Borrows) ---
-                    for test_case in &scenario.tests {
-                        let current_state = test_states.get(&test_case.name).unwrap();
+                    {
+                        let tests_to_check: Vec<TestCase> = scenario
+                            .tests
+                            .iter()
+                            .filter(|tc| !test_states.get(&tc.name).unwrap().is_done())
+                            .cloned()
+                            .collect();
 
-                        match current_state {
-                            TestState::Pending => {
-                                let given_conditions: Vec<_> = test_case
-                                    .given
-                                    .iter()
-                                    .filter_map(|s| match s {
-                                        GivenStep::Condition(c) => Some(c.clone()),
-                                        _ => None,
-                                    })
-                                    .collect();
+                        for test_case in &tests_to_check {
+                            let current_state = test_states.get(&test_case.name).unwrap();
 
-                                if check_all_conditions_met(
-                                    "given",
-                                    &given_conditions,
-                                    &test_states,
-                                    &output_buffer,
-                                    &terminal_backend.last_stderr,
-                                    elapsed_since_scenario_start.as_secs_f32(),
-                                    &mut env_vars,
-                                    &last_exit_code,
-                                    &fs_backend,
-                                    verbose,
-                                ) {
-                                    tests_to_start.push(test_case.name.clone());
+                            match current_state {
+                                TestState::Pending => {
+                                    let (given_conditions, given_actions): (
+                                        Vec<Condition>,
+                                        Vec<Action>,
+                                    ) = test_case.given.iter().partition_map(|step| match step {
+                                        GivenStep::Condition(c) => {
+                                            itertools::Either::Left(c.clone())
+                                        }
+                                        GivenStep::Action(a) => itertools::Either::Right(a.clone()),
+                                    });
+
+                                    // For synchronous tests, don't read the buffer during given checks
+                                    // as they manage their own buffer lifecycle
+                                    let sync_test = is_synchronous(test_case);
+                                    if !sync_test {
+                                        terminal_backend.read_pty_output(&mut output_buffer);
+                                    }
+
+                                    if check_all_conditions_met(
+                                        "given",
+                                        &given_conditions,
+                                        &test_states,
+                                        &output_buffer,
+                                        &terminal_backend.last_stderr,
+                                        elapsed_since_scenario_start.as_secs_f32(),
+                                        &mut env_vars,
+                                        &last_exit_code,
+                                        &fs_backend,
+                                        verbose,
+                                    ) {
+                                        tests_to_start
+                                            .push((test_case.name.clone(), given_actions));
+                                    }
                                 }
+                                TestState::Running => {
+                                    // Only read output for ASYNC tests
+                                    let test_case_for_running = scenario
+                                        .tests
+                                        .iter()
+                                        .find(|tc| tc.name == test_case.name)
+                                        .unwrap();
+
+                                    if !is_synchronous(test_case_for_running) {
+                                        terminal_backend.read_pty_output(&mut output_buffer);
+                                    }
+
+                                    if check_all_conditions_met(
+                                        "then",
+                                        &test_case.then,
+                                        &test_states,
+                                        &output_buffer,
+                                        &terminal_backend.last_stderr,
+                                        test_start_times
+                                            .get(&test_case.name)
+                                            .map_or(0.0, |start| start.elapsed().as_secs_f32()),
+                                        &mut env_vars,
+                                        &last_exit_code,
+                                        &fs_backend,
+                                        verbose,
+                                    ) {
+                                        tests_to_pass.push(test_case.name.clone());
+                                    } else if test_start_times
+                                        .get(&test_case.name)
+                                        .map_or(false, |start| start.elapsed() > test_timeout)
+                                    {
+                                        immediate_failures.push((
+                                            test_case.name.clone(),
+                                            format!(
+                                                "Test timed out after {} seconds",
+                                                settings.timeout_seconds
+                                            ),
+                                        ));
+                                    }
+                                }
+                                _ => {}
                             }
-                            TestState::Running => {
-                                if check_all_conditions_met(
+                        }
+                    } // End of checking phase scope
+
+                    // --- Updating Phase (Mutable Borrows) ---
+                    if !tests_to_start.is_empty() {
+                        for (name, given_actions) in tests_to_start {
+                            let test_case =
+                                scenario.tests.iter().find(|tc| tc.name == name).unwrap();
+                            let sync_test = is_synchronous(test_case);
+
+                            if is_synchronous(test_case) {
+                                println!(" ▶️ Starting SYNC test: {}", name);
+                                test_states.insert(name.clone(), TestState::Running); // Mark as running immediately
+                                test_start_times.insert(name.clone(), Instant::now());
+                                // Execute given actions
+                                for given_action in &given_actions {
+                                    let substituted_action =
+                                        substitute_variables_in_action(given_action, &env_vars);
+                                    execute_action(
+                                        &substituted_action,
+                                        &mut terminal_backend,
+                                        &fs_backend,
+                                        &mut last_exit_code,
+                                        settings.timeout_seconds,
+                                    );
+                                    // Capture output after each action
+                                    terminal_backend.read_pty_output(&mut output_buffer);
+                                }
+
+                                // Clear buffer, run actions, get output
+                                output_buffer.clear();
+
+                                for action in &test_case.when {
+                                    let substituted_action =
+                                        substitute_variables_in_action(action, &env_vars);
+                                    execute_action(
+                                        &substituted_action,
+                                        &mut terminal_backend,
+                                        &fs_backend,
+                                        &mut last_exit_code,
+                                        settings.timeout_seconds,
+                                    );
+                                }
+
+                                // Capture output immediately after the action
+                                terminal_backend.read_pty_output(&mut output_buffer);
+
+                                // Check if the action itself timed out
+                                if let Some(137) = last_exit_code {
+                                    break; // Exit the action loop on timeout
+                                }
+
+                                let passed = check_all_conditions_met(
                                     "then",
                                     &test_case.then,
                                     &test_states,
                                     &output_buffer,
                                     &terminal_backend.last_stderr,
-                                    elapsed_since_scenario_start.as_secs_f32(),
+                                    test_start_times
+                                        .get(&name)
+                                        .map_or(0.0, |start| start.elapsed().as_secs_f32()),
                                     &mut env_vars,
                                     &last_exit_code,
                                     &fs_backend,
                                     verbose,
-                                ) {
-                                    tests_to_pass.push(test_case.name.clone());
-                                } else {
-                                    // Check for individual test timeout
-                                    if let Some(start_time) = test_start_times.get(&test_case.name)
-                                    {
-                                        if start_time.elapsed() > test_timeout {
-                                            if let Some(state) =
-                                                test_states.get_mut(&test_case.name)
-                                            {
-                                                *state = TestState::Failed(format!(
-                                                    "Test timed out after {}s waiting for 'then' conditions",
-                                                    test_timeout.as_secs()
-                                                ));
-                                            }
-                                        }
+                                );
+
+                                // Now, get a mutable borrow to update the state
+                                if let Some(state) = test_states.get_mut(&name) {
+                                    if passed {
+                                        *state = TestState::Passed;
+                                        colours::success(&format!(" 🟢 Test Passed: {}", name));
+                                    } else {
+                                        let error_msg =
+                                            "Synchronous test conditions not met".to_string();
+                                        *state = TestState::Failed(error_msg.clone());
+                                        colours::error(&format!(
+                                            " 🔴 Test Failed: {} - {}",
+                                            name, error_msg
+                                        ));
+                                    }
+                                }
+                            } else {
+                                // Handle ASYNC tests as before
+                                if let Some(state) = test_states.get_mut(&name) {
+                                    println!(" ▶  Starting ASYNC test: {}", name);
+                                    *state = TestState::Running;
+                                    test_start_times.insert(name.clone(), Instant::now());
+                                    // Execute given actions
+                                    for given_action in &given_actions {
+                                        let substituted_action =
+                                            substitute_variables_in_action(given_action, &env_vars);
+                                        execute_action(
+                                            &substituted_action,
+                                            &mut terminal_backend,
+                                            &fs_backend,
+                                            &mut last_exit_code,
+                                            settings.timeout_seconds,
+                                        );
+                                    }
+                                    // Execute when actions
+                                    for action in &test_case.when {
+                                        let substituted_action =
+                                            substitute_variables_in_action(action, &env_vars);
+                                        execute_action(
+                                            &substituted_action,
+                                            &mut terminal_backend,
+                                            &fs_backend,
+                                            &mut last_exit_code,
+                                            settings.timeout_seconds,
+                                        );
                                     }
                                 }
                             }
-                            _ => {} // Test is Done (Passed, Failed, Skipped)
                         }
                     }
-
-                    // --- Updating Phase (Mutable Borrows) ---
-                    for name in tests_to_start {
-                        if let Some(state) = test_states.get_mut(&name) {
-                            if *state == TestState::Pending {
-                                let test_case =
-                                    scenario.tests.iter().find(|t| t.name == name).unwrap();
-                                if verbose {
-                                    colours::info(&format!(
-                                        "Starting choreo test: {}",
-                                        test_case.description
-                                    ));
-                                }
-                                test_start_times.insert(name.clone(), Instant::now());
-
-                                let given_actions: Vec<_> = test_case
-                                    .given
-                                    .iter()
-                                    .filter_map(|s| match s {
-                                        GivenStep::Action(a) => Some(a),
-                                        _ => None,
-                                    })
-                                    .collect();
-
-                                for action in given_actions {
-                                    let substituted_a =
-                                        substitute_variables_in_action(action, &env_vars);
-                                    execute_action(
-                                        &substituted_a,
-                                        &mut terminal_backend,
-                                        &fs_backend,
-                                        &mut last_exit_code,
-                                    );
-                                }
-
-                                // Clear the buffer before executing the 'when' actions
-                                output_buffer.clear();
-
-                                for action in &test_case.when {
-                                    let substituted_a =
-                                        substitute_variables_in_action(action, &env_vars);
-                                    execute_action(
-                                        &substituted_a,
-                                        &mut terminal_backend,
-                                        &fs_backend,
-                                        &mut last_exit_code,
-                                    );
-                                }
-                                // Add a small delay to allow the PTY to process the command
-                                // and for the output to be available in the buffer.
-                                thread::sleep(Duration::from_millis(100));
-                                *state = TestState::Running;
-                            }
-                        }
-                    }
-
                     for name in tests_to_pass {
                         if let Some(state) = test_states.get_mut(&name) {
-                            if *state == TestState::Running {
-                                let test_case =
-                                    scenario.tests.iter().find(|t| t.name == name).unwrap();
-                                if verbose {
-                                    colours::success(&format!(
-                                        "✅ Test Passed: {}",
-                                        test_case.description
-                                    ));
-                                }
+                            if !state.is_done() {
                                 *state = TestState::Passed;
+                                colours::success(&format!(" 🟢  Test Passed: {}", name));
                             }
                         }
                     }
 
-                    // --- Check for Scenario Completion ---
-                    let all_scenario_tests_done = scenario
+                    for (name, error_msg) in immediate_failures {
+                        if let Some(state) = test_states.get_mut(&name) {
+                            if !state.is_done() {
+                                *state = TestState::Failed(error_msg.clone());
+                                colours::error(&format!(
+                                    " 🔴  Test Failed: {} - {}",
+                                    name, error_msg
+                                ));
+                            }
+                        }
+                    }
+
+                    // Check if all tests in this scenario are done
+                    let all_done = scenario
                         .tests
                         .iter()
-                        .all(|tc| test_states.get(&tc.name).unwrap().is_done());
+                        .all(|t| test_states.get(&t.name).unwrap().is_done());
 
-                    if all_scenario_tests_done {
-                        break; // All tests in this scenario are done, exit inner loop
-                    }
+                    // Also check if there are any tests that are still pending. If so, we are not done.
+                    let any_pending = scenario
+                        .tests
+                        .iter()
+                        .any(|t| matches!(test_states.get(&t.name).unwrap(), TestState::Pending));
 
-                    // Check if we should stop on failure
-                    let has_failures = test_states.values().any(|s| s.is_failed());
-                    if settings.stop_on_failure && has_failures {
-                        if verbose {
-                            colours::warn(
-                                "Stopping test run due to failure (stop_on_failure is set to true).",
-                            );
+                    if all_done && !any_pending {
+                        // Execute after block if it exists
+                        if !scenario.after.is_empty() {
+                            colours::info("\nRunning after block...");
+                            for action in &scenario.after {
+                                let substituted_action =
+                                    substitute_variables_in_action(action, &env_vars);
+                                execute_action(
+                                    &substituted_action,
+                                    &mut terminal_backend,
+                                    &fs_backend,
+                                    &mut last_exit_code,
+                                    settings.timeout_seconds,
+                                );
+                            }
                         }
-                        break 'scenario_loop; // Exit the entire suite loop
+                        break;
                     }
 
-                    thread::sleep(Duration::from_millis(50));
-                }
-
-                // --- After Hooks (Cleanup) Execution ---
-                for action in &scenario.after {
-                    let substituted_action = substitute_variables_in_action(action, &env_vars);
-                    if verbose {
-                        println!("  [DEBUG] Executing after action: {:?}", substituted_action);
+                    // Check for stop_on_failure
+                    if settings.stop_on_failure && test_states.values().any(|s| s.is_failed()) {
+                        // Mark all pending tests as skipped
+                        for (_name, state) in test_states.iter_mut() {
+                            if matches!(*state, TestState::Pending) {
+                                *state = TestState::Skipped;
+                            }
+                        }
+                        colours::error(
+                            "\nStopping test run due to failure (stop_on_failure is true).",
+                        );
+                        break 'scenario_loop;
                     }
-                    execute_action(
-                        &substituted_action,
-                        &mut terminal_backend,
-                        &fs_backend,
-                        &mut last_exit_code,
-                    );
-                }
-                if verbose {
-                    colours::info(&format!(
-                        "Scenario '{}' completed in {:.2}s",
-                        scenario.name,
-                        scenario_start_time.elapsed().as_secs_f32()
-                    ));
+
+                    //thread::sleep(Duration::from_millis(100));
                 }
             }
 
@@ -353,23 +447,23 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 match &report.status {
                     TestStatus::Pending => {
                         // This state should not be possible here
-                        colours::error(&format!("  ❓ UNKNOWN: {}", report.name));
+                        colours::error(&format!(" ❓ UNKNOWN: {}", report.name));
                     }
                     TestStatus::Passed => {
-                        colours::success(&format!("  ✅ PASSED: {}", report.name));
+                        colours::success(&format!(" 🟢  PASSED: {}", report.name));
                     }
                     TestStatus::Failed => {
-                        colours::error(&format!("  ❌ FAILED: {}", report.name));
+                        colours::error(&format!(" 🔴  FAILED: {}", report.name));
                         if let Some(msg) = &report.failure_message {
                             colours::error(&format!("      Reason: {}", msg));
                         }
                     }
                     TestStatus::Skipped => {
-                        colours::warn(&format!("  ➖ SKIPPED: {}", report.name));
+                        colours::warn(&format!(" ➖ SKIPPED: {}", report.name));
                     }
                     TestStatus::Running => {
                         // This state should not be possible here
-                        colours::error(&format!("  ❓ UNKNOWN: {}", report.name));
+                        colours::error(&format!(" ❓ UNKNOWN: {}", report.name));
                     }
                 }
             }
@@ -411,9 +505,14 @@ fn execute_action(
     terminal: &mut TerminalBackend,
     fs: &FileSystemBackend,
     last_exit_code: &mut Option<i32>,
+    timeout_seconds: u64,
 ) {
     // Check if it's a terminal action
-    if terminal.execute_action(action, last_exit_code) {
+    if terminal.execute_action(
+        action,
+        last_exit_code,
+        Some(Duration::from_secs(timeout_seconds)),
+    ) {
         return;
     }
     // Check if it's a filesystem action

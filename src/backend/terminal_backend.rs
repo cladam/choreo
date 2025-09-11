@@ -1,4 +1,4 @@
-use crate::parser::ast::Action;
+use crate::parser::ast::{Action, TestSuiteSettings};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::io::Read;
 use std::io::Write;
@@ -8,6 +8,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
+use std::time::Duration;
 use terminal_size::{terminal_size, Height, Width};
 
 pub struct TerminalBackend {
@@ -29,7 +30,7 @@ impl TerminalBackend {
     /// Creates a new backend with a PTY session.
     /// - `base_dir`: The directory where the shell process should start.
     /// - `shell_path`: An optional path to a specific shell executable.
-    pub fn new(base_dir: PathBuf, shell_path: Option<String>) -> Self {
+    pub fn new(base_dir: PathBuf, settings: TestSuiteSettings) -> Self {
         // Get the size of the user's actual terminal.
         let term_size = terminal_size();
         let (cols, rows) = if let Some((Width(w), Height(h))) = term_size {
@@ -52,8 +53,7 @@ impl TerminalBackend {
             .expect("Failed to open pty");
 
         // Use the provided shell path, or default to "zsh".
-        let shell = shell_path.unwrap();
-        println!("Shell path: {}", shell);
+        let shell = settings.shell_path.unwrap();
         // Spawn the shell process.
         let mut cmd = CommandBuilder::new(shell);
         cmd.cwd(base_dir.clone());
@@ -114,7 +114,12 @@ impl TerminalBackend {
     }
 
     /// Executes a single action from the AST. Returns true if the action was handled.
-    pub fn execute_action(&mut self, action: &Action, last_exit_code: &mut Option<i32>) -> bool {
+    pub fn execute_action(
+        &mut self,
+        action: &Action,
+        last_exit_code: &mut Option<i32>,
+        timeout: Option<Duration>,
+    ) -> bool {
         match action {
             Action::Type { content, .. } => {
                 self.pty_writer.write_all(content.as_bytes()).unwrap();
@@ -132,16 +137,40 @@ impl TerminalBackend {
                 self.last_stdout.clear();
                 self.last_stderr.clear();
 
-                let output = Command::new("sh")
+                let mut child = Command::new("sh")
                     .arg("-c")
                     .arg(command)
                     .current_dir(&self.base_dir)
-                    .output()
-                    .expect("Failed to execute command");
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::piped())
+                    .spawn()
+                    .expect("Failed to spawn command");
 
-                *last_exit_code = output.status.code();
-                self.last_stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                self.last_stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                if let Some(t) = timeout {
+                    // This is a crude way to poll for completion with a timeout.
+                    // A more robust solution might use `wait_timeout`.
+                    let start = std::time::Instant::now();
+                    while start.elapsed() < t {
+                        if let Ok(Some(status)) = child.try_wait() {
+                            let output = child.wait_with_output().expect("Failed to get output");
+                            *last_exit_code = status.code();
+                            self.last_stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                            self.last_stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                            return true;
+                        }
+                        thread::sleep(Duration::from_millis(50));
+                    }
+                    // If we get here, the process timed out.
+                    child.kill().expect("Failed to kill timed-out process");
+                    *last_exit_code = Some(137); // Convention for timeout
+                    self.last_stderr = "Command timed out".to_string();
+                } else {
+                    // No timeout, wait indefinitely.
+                    let output = child.wait_with_output().expect("Failed to execute command");
+                    *last_exit_code = output.status.code();
+                    self.last_stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                    self.last_stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                }
                 true
             }
             _ => false, // Ignore actions not meant for this backend

@@ -1,0 +1,29 @@
+[
+  {
+    "uri": "examples/checking_userid.chor",
+    "keyword": "Feature",
+    "name": "User ID Utility",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "Verify user information",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "id output contains the current user's name",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 1,
+      "failures": 0,
+      "totalTimeInSeconds": 0.06669171
+    }
+  }
+]

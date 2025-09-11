@@ -1,0 +1,59 @@
+[
+  {
+    "uri": "examples/setting_demo.chor",
+    "keyword": "Feature",
+    "name": "Choreo Configuration",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "A simple test to confirm settings are used",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "it runs a quick command",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "A scenario with a failing test",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "it should fail and stop the run",
+            "result": {
+              "status": "skipped",
+              "durationInMs": 0
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "A second scenario that should not run",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "this test should be skipped",
+            "result": {
+              "status": "skipped",
+              "durationInMs": 0
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 3,
+      "failures": 0,
+      "totalTimeInSeconds": 1.0101881
+    }
+  }
+]

@@ -4,7 +4,7 @@ feature: "Choreo Configuration"
 
 settings:
   # Set a custom timeout for this test suite.
-  timeout_seconds = 10
+  timeout_seconds = 5
   # Specify the output directory for reports.
   report_path = "test_results/"
   # (report_format defaults to "json" if not specified)
@@ -21,6 +21,8 @@ scenario "A simple test to confirm settings are used" {
             wait >= 1s
         when:
             Terminal runs "echo 'Settings are working!'"
+            # Uncomment below to see the timeout in action.
+            #Terminal runs "sleep 6"
         then:
             Terminal output_contains "Settings are working!"
     }

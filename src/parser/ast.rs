@@ -42,11 +42,11 @@ pub struct TestSuiteSettings {
 impl Default for TestSuiteSettings {
     fn default() -> Self {
         Self {
-            timeout_seconds: 30,
+            timeout_seconds: 60,
             report_format: ReportFormat::Json,
             report_path: "reports/".to_string(),
             stop_on_failure: false,
-            shell_path: Option::from("/bin/bash".to_string()),
+            shell_path: Option::from("zsh".to_string()),
         }
     }
 }

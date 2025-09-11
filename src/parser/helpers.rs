@@ -1,5 +1,5 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
-use crate::parser::ast::{Action, Condition, TestState};
+use crate::parser::ast::{Action, Condition, TestCase, TestState};
 use predicates::prelude::*;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
@@ -54,6 +54,7 @@ pub fn check_condition(
 ) -> bool {
     let cleaned_buffer = strip(output_buffer);
     let buffer = String::from_utf8_lossy(&cleaned_buffer);
+
     match condition {
         Condition::Wait { op, wait } => match op.as_str() {
             ">=" => current_wait >= *wait,
@@ -64,31 +65,55 @@ pub fn check_condition(
             _ => false,
         },
         Condition::OutputContains { text, .. } => {
-            let cleaned_buffer = strip(output_buffer);
-            let buffer = String::from_utf8_lossy(&cleaned_buffer);
-            let predicate = predicate::str::contains(text.as_str());
             if verbose {
-                println!("  [DEBUG] Checking output contains: '{}'", text);
+                println!(
+                    "  [DEBUG](OutputContains) Checking output contains: '{}'",
+                    text
+                );
+                println!("  [DEBUG](OutputContains) Raw buffer: '{}'", buffer);
             }
-            predicate.eval(buffer.as_ref())
+            let actual_output: Vec<&str> =
+                buffer.lines().filter_map(extract_command_output).collect();
+
+            let filtered_output = actual_output.join("\n");
+            if verbose {
+                println!("  [DEBUG] Filtered output: '{}'", filtered_output);
+            }
+            filtered_output.contains(text)
         }
         Condition::OutputMatches {
             regex, capture_as, ..
         } => {
-            let re = regex::Regex::new(regex).unwrap();
-            if let (Some(captures), Some(var_name)) = (re.captures(&buffer), capture_as) {
-                if let Some(value) = captures.get(1) {
-                    if verbose {
-                        println!(
-                            "  [CAPTURE] Captured '{}' into variable '{}'",
-                            value.as_str(),
-                            var_name
-                        );
+            let actual_output: Vec<&str> =
+                buffer.lines().filter_map(extract_command_output).collect();
+            let filtered_output = actual_output.join("\n");
+
+            if filtered_output.is_empty() {
+                println!("  [DEBUG] No command output detected after filtering");
+                return false;
+            }
+
+            match regex::Regex::new(regex) {
+                Ok(re) => {
+                    if let Some(captures) = re.captures(&filtered_output) {
+                        if let Some(var_name) = capture_as {
+                            // The first capture group (index 1) is the one we want.
+                            if let Some(capture) = captures.get(1) {
+                                let value = capture.as_str().to_string();
+                                env_vars.insert(var_name.clone(), value);
+                            }
+                        }
+                        true
+                    } else {
+                        println!("  [DEBUG] Regex did not match the filtered output");
+                        false
                     }
-                    env_vars.insert(var_name.clone(), value.as_str().to_string());
+                }
+                Err(e) => {
+                    println!("  [DEBUG] Invalid regex: {}", e);
+                    false
                 }
             }
-            re.is_match(&buffer)
         }
         Condition::StateSucceeded { outcome } => test_states
             .get(outcome)
@@ -126,37 +151,63 @@ pub fn check_condition(
             //println!("Actual output {}", actual_output);
             actual_output.is_empty()
         }
-        Condition::StderrContains(text) => {
-            // This is a simplification. A more robust implementation would need to
-            // separate stdout and stderr from the terminal backend.
-            // For now, we check the combined output buffer.
-            println!("  [DEBUG] Checking stderr contains '{}'", text);
-            println!("  [DEBUG] Stderr buffer: '{}'", stderr_buffer);
-            stderr_buffer.contains(text)
-        }
+        Condition::StderrContains(text) => stderr_buffer.contains(text),
         Condition::OutputStartsWith(text) => {
-            println!("  [DEBUG] Starting output starts with '{}'", text);
-            println!("  [DEBUG] Checking the buffer '{}'", buffer);
-            //buffer.trim_start().starts_with(text)
-            buffer.lines().any(|line| line.trim().starts_with(text))
+            let actual_output: Vec<&str> =
+                buffer.lines().filter_map(extract_command_output).collect();
+            let filtered_output = actual_output.join("\n");
+            filtered_output.starts_with(text)
         }
         Condition::OutputEndsWith(text) => {
-            println!("  [DEBUG] Checking output ends with '{}'", text);
-            println!("  [DEBUG] Checking the buffer '{}'", buffer);
-            buffer.lines().any(|line| line.trim().ends_with(text))
+            let actual_output: Vec<&str> =
+                buffer.lines().filter_map(extract_command_output).collect();
+            let filtered_output = actual_output.join("\n");
+            filtered_output.ends_with(text)
         }
         Condition::OutputEquals(text) => {
-            println!("  [DEBUG] Checking output equals '{}'", text);
-            println!("  [DEBUG] Checking the buffer '{}'", buffer);
-            //buffer.lines().any(|line| line.trim() == text.as_str()
-            //buffer.lines().any(|line| line.trim() == text.trim())
+            let actual_output: Vec<&str> =
+                buffer.lines().filter_map(extract_command_output).collect();
+            let filtered_output = actual_output.join("\n");
 
-            // Check if any line, when trimmed, ends with the expected text.
-            // This handles cases where the prompt and output are on the same line.
-            buffer
-                .lines()
-                .any(|line| line.trim().ends_with(text.trim()))
+            actual_output.iter().any(|line| *line == text.trim())
         }
+    }
+}
+
+// Helper to extract actual command output from a buffer line
+fn extract_command_output(line: &str) -> Option<&str> {
+    // Common prompt patterns: "$", "%", ">"
+    let prompt_patterns = ["$", "%", ">"];
+    let mut last_prompt_idx = None;
+
+    for pat in &prompt_patterns {
+        if let Some(idx) = line.rfind(pat) {
+            // Check if it's a plausible prompt ending
+            if idx + pat.len() == line.len() || line[idx + pat.len()..].starts_with(' ') {
+                if last_prompt_idx.map_or(true, |(i, _)| idx > i) {
+                    last_prompt_idx = Some((idx, pat.len()));
+                }
+            }
+        }
+    }
+
+    if let Some((idx, pat_len)) = last_prompt_idx {
+        // A prompt was found. Return only what comes after it.
+        let after = &line[idx + pat_len..].trim();
+        return if !after.is_empty() {
+            Some(after)
+        } else {
+            // Prompt was found, but nothing followed it. Filter this line out.
+            None
+        };
+    }
+
+    // No prompt was found. Return the whole line if it's not empty.
+    let trimmed_line = line.trim();
+    if !trimmed_line.is_empty() {
+        Some(trimmed_line)
+    } else {
+        None
     }
 }
 
@@ -270,4 +321,16 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
         },
         _ => action.clone(),
     }
+}
+
+/// Determines if a test case contains only synchronous actions.
+pub fn is_synchronous(test_case: &TestCase) -> bool {
+    test_case.when.iter().all(|action| match action {
+        Action::Run { .. } => true,
+        Action::CreateFile { .. }
+        | Action::CreateDir { .. }
+        | Action::DeleteFile { .. }
+        | Action::DeleteDir { .. } => true,
+        _ => false,
+    })
 }
