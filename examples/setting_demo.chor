@@ -8,6 +8,10 @@ settings:
   # Specify the output directory for reports.
   report_path = "test_results/"
   # (report_format defaults to "json" if not specified)
+  # Stop the entire run as soon as one test fails.
+  stop_on_failure = true
+  # Specify the shell to use for the Terminal actor, defaults to bash.
+  shell_path = "/bin/bash"
 
 actors: Terminal
 
@@ -19,5 +23,28 @@ scenario "A simple test to confirm settings are used" {
             Terminal runs "echo 'Settings are working!'"
         then:
             Terminal output_contains "Settings are working!"
+    }
+}
+
+scenario "A scenario with a failing test" {
+    test FailingTest "it should fail and stop the run" {
+        given:
+            wait >= 1s
+        when:
+            Terminal runs "echo 'This test will fail'"
+        then:
+            # This condition will not be met.
+            Terminal output_contains "This is not the output"
+    }
+}
+
+scenario "A second scenario that should not run" {
+    test SkippedTest "this test should be skipped" {
+        given:
+            wait >= 1s
+        when:
+            Terminal runs "echo 'This should not be printed'"
+        then:
+            Terminal output_contains "This should not be printed"
     }
 }

@@ -11,6 +11,7 @@ where
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
 pub enum TestStatus {
+    Pending,
     Passed,
     Failed,
     Skipped,

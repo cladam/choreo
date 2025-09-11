@@ -48,7 +48,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                     suite
                 }
                 Err(e) => {
-                    return Err(AppError::ParseError(e.to_string()));
+                    return Err(AppError::PestError(e));
                 }
             };
 
@@ -65,12 +65,12 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             for s in &test_suite.statements {
                 match s {
-                    Statement::SettingsDef(s) => settings = s.clone(),
+                    Statement::FeatureDef(name) => feature_name = name.clone(),
                     Statement::EnvDef(vars) => {
                         for var in vars {
-                            let value =
-                                env::var(var).map_err(|_| AppError::EnvVarNotFound(var.clone()))?;
-                            env_vars.insert(var.clone(), value);
+                            if let Ok(val) = env::var(var) {
+                                env_vars.insert(var.clone(), val);
+                            }
                         }
                     }
                     Statement::VarsDef(vars) => {
@@ -78,9 +78,9 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                             env_vars.insert(key.clone(), value.as_string());
                         }
                     }
-                    Statement::FeatureDef(name) => feature_name = name.clone(),
                     Statement::Scenario(scenario) => scenarios.push(scenario.clone()),
-                    _ => {} // Ignore other statement types
+                    Statement::SettingsDef(s) => settings = s.clone(),
+                    _ => {}
                 }
             }
 
@@ -111,9 +111,9 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                         tc.name.clone(),
                         TestCaseReport {
                             name: tc.name.clone(),
-                            time: Duration::default(),
                             status: TestStatus::Pending,
-                            failure_message: None,
+                            duration: 0.0,
+                            error_message: None,
                         },
                     )
                 })
@@ -126,180 +126,123 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             'scenario_loop: for scenario in &scenarios {
                 // Always print the current scenario
                 colours::info(&format!("\nRunning scenario: '{}'", scenario.name));
-                let scenario_start_time = Instant::now();
 
-                loop {
-                    terminal_backend.read_pty_output(&mut output_buffer);
-                    let elapsed_since_scenario_start = scenario_start_time.elapsed();
+                for test in &scenario.tests {
+                    let test_start_time = Instant::now();
+                    test_start_times.insert(test.name.clone(), test_start_time);
+                    test_states.insert(test.name.clone(), TestState::Running);
+                    colours::info(&format!("Starting choreo test: {}", test.description));
 
-                    let mut tests_to_start = Vec::new();
-                    let mut tests_to_pass = Vec::new();
-
-                    // --- Checking Phase (Immutable Borrows) ---
-                    for test_case in &scenario.tests {
-                        let current_state = test_states.get(&test_case.name).unwrap();
-
-                        match current_state {
-                            TestState::Pending => {
-                                let given_conditions: Vec<_> = test_case
-                                    .given
-                                    .iter()
-                                    .filter_map(|s| match s {
-                                        GivenStep::Condition(c) => Some(c.clone()),
-                                        _ => None,
-                                    })
-                                    .collect();
-
-                                if check_all_conditions_met(
-                                    "given",
-                                    &given_conditions,
-                                    &test_states,
-                                    &output_buffer,
-                                    &terminal_backend.last_stderr,
-                                    elapsed_since_scenario_start.as_secs_f32(),
-                                    &mut env_vars,
-                                    &last_exit_code,
+                    // --- GIVEN ---
+                    for step in &test.given {
+                        match step {
+                            GivenStep::Action(action) => {
+                                let substituted_action =
+                                    substitute_variables_in_action(action, &env_vars);
+                                execute_action(
+                                    &substituted_action,
+                                    &mut terminal_backend,
                                     &fs_backend,
-                                    verbose,
-                                ) {
-                                    tests_to_start.push(test_case.name.clone());
-                                }
+                                    &mut last_exit_code,
+                                );
                             }
-                            TestState::Running => {
-                                if check_all_conditions_met(
-                                    "then",
-                                    &test_case.then,
+                            GivenStep::Condition(condition) => {
+                                // Wait until condition is met, with a timeout
+                                let wait_start = Instant::now();
+                                while !check_condition(
+                                    condition,
                                     &test_states,
-                                    &output_buffer,
-                                    &terminal_backend.last_stderr,
-                                    elapsed_since_scenario_start.as_secs_f32(),
+                                    &terminal_backend.get_output(),
+                                    &terminal_backend.get_stderr(),
+                                    wait_start.elapsed().as_secs_f32(),
                                     &mut env_vars,
                                     &last_exit_code,
                                     &fs_backend,
                                     verbose,
                                 ) {
-                                    tests_to_pass.push(test_case.name.clone());
-                                } else {
-                                    // Check for individual test timeout
-                                    if let Some(start_time) = test_start_times.get(&test_case.name)
-                                    {
-                                        if start_time.elapsed() > test_timeout {
-                                            if let Some(state) =
-                                                test_states.get_mut(&test_case.name)
-                                            {
-                                                *state = TestState::Failed(format!(
-                                                    "Test timed out after {}s waiting for 'then' conditions",
-                                                    test_timeout.as_secs()
-                                                ));
-                                            }
-                                        }
+                                    if wait_start.elapsed() > test_timeout {
+                                        let msg =
+                                            format!("'given' condition timed out: {:?}", condition);
+                                        test_states.insert(
+                                            test.name.clone(),
+                                            TestState::Failed(msg.clone()),
+                                        );
+                                        colours::error(&msg);
+                                        break;
                                     }
+                                    thread::sleep(Duration::from_millis(100));
                                 }
                             }
-                            _ => {} // Test is Done (Passed, Failed, Skipped)
+                        }
+                        if test_states.get(&test.name).unwrap().is_failed() {
+                            break;
                         }
                     }
 
-                    // --- Updating Phase (Mutable Borrows) ---
-                    for name in tests_to_start {
-                        if let Some(state) = test_states.get_mut(&name) {
-                            if *state == TestState::Pending {
-                                let test_case =
-                                    scenario.tests.iter().find(|t| t.name == name).unwrap();
-                                if verbose {
-                                    colours::info(&format!(
-                                        "Starting choreo test: {}",
-                                        test_case.description
-                                    ));
-                                }
-                                test_start_times.insert(name.clone(), Instant::now());
-
-                                let given_actions: Vec<_> = test_case
-                                    .given
-                                    .iter()
-                                    .filter_map(|s| match s {
-                                        GivenStep::Action(a) => Some(a),
-                                        _ => None,
-                                    })
-                                    .collect();
-
-                                for action in given_actions {
-                                    let substituted_a =
-                                        substitute_variables_in_action(action, &env_vars);
-                                    execute_action(
-                                        &substituted_a,
-                                        &mut terminal_backend,
-                                        &fs_backend,
-                                        &mut last_exit_code,
-                                    );
-                                }
-
-                                // Clear the buffer before executing the 'when' actions
-                                output_buffer.clear();
-
-                                for action in &test_case.when {
-                                    let substituted_a =
-                                        substitute_variables_in_action(action, &env_vars);
-                                    execute_action(
-                                        &substituted_a,
-                                        &mut terminal_backend,
-                                        &fs_backend,
-                                        &mut last_exit_code,
-                                    );
-                                }
-                                // Add a small delay to allow the PTY to process the command
-                                // and for the output to be available in the buffer.
-                                thread::sleep(Duration::from_millis(100));
-                                *state = TestState::Running;
-                            }
+                    if test_states.get(&test.name).unwrap().is_failed() {
+                        if settings.stop_on_failure {
+                            break 'scenario_loop;
                         }
+                        continue; // next test in scenario
                     }
 
-                    for name in tests_to_pass {
-                        if let Some(state) = test_states.get_mut(&name) {
-                            if *state == TestState::Running {
-                                let test_case =
-                                    scenario.tests.iter().find(|t| t.name == name).unwrap();
-                                if verbose {
-                                    colours::success(&format!(
-                                        "✅ Test Passed: {}",
-                                        test_case.description
-                                    ));
-                                }
-                                *state = TestState::Passed;
-                            }
+                    // --- WHEN ---
+                    for action in &test.when {
+                        let substituted_action = substitute_variables_in_action(action, &env_vars);
+                        execute_action(
+                            &substituted_action,
+                            &mut terminal_backend,
+                            &fs_backend,
+                            &mut last_exit_code,
+                        );
+                    }
+
+                    // --- THEN ---
+                    let then_start_time = Instant::now();
+                    loop {
+                        output_buffer = terminal_backend.get_output().to_string();
+                        let all_then_met = check_all_conditions_met(
+                            "then",
+                            &test.then,
+                            &test_states,
+                            &output_buffer,
+                            &terminal_backend.get_stderr(),
+                            then_start_time.elapsed().as_secs_f32(),
+                            &mut env_vars,
+                            &last_exit_code,
+                            &fs_backend,
+                            verbose,
+                        );
+
+                        if all_then_met {
+                            test_states.insert(test.name.clone(), TestState::Passed);
+                            break;
                         }
-                    }
 
-                    // --- Check for Scenario Completion ---
-                    let all_scenario_tests_done = scenario
-                        .tests
-                        .iter()
-                        .all(|tc| test_states.get(&tc.name).unwrap().is_done());
-
-                    if all_scenario_tests_done {
-                        break; // All tests in this scenario are done, exit inner loop
-                    }
-
-                    // Check if we should stop on failure
-                    let has_failures = test_states.values().any(|s| s.is_failed());
-                    if settings.stop_on_failure && has_failures {
-                        if verbose {
-                            colours::warn(
-                                "Stopping test run due to failure (stop_on_failure is set to true).",
-                            );
+                        if then_start_time.elapsed() > test_timeout {
+                            let msg = format!("Test timed out after {}s", test_timeout.as_secs());
+                            test_states.insert(test.name.clone(), TestState::Failed(msg));
+                            break;
                         }
-                        break 'scenario_loop; // Exit the entire suite loop
+
+                        thread::sleep(Duration::from_millis(200)); // Polling interval
                     }
 
-                    thread::sleep(Duration::from_millis(50));
+                    // After test completion, check for stop_on_failure
+                    if settings.stop_on_failure && test_states.get(&test.name).unwrap().is_failed()
+                    {
+                        break 'scenario_loop;
+                    }
                 }
 
                 // --- After Hooks (Cleanup) Execution ---
                 for action in &scenario.after {
                     let substituted_action = substitute_variables_in_action(action, &env_vars);
                     if verbose {
-                        println!("  [DEBUG] Executing after action: {:?}", substituted_action);
+                        colours::info(&format!(
+                            "Running after hook: {}",
+                            format_action_for_report(&substituted_action)
+                        ));
                     }
                     execute_action(
                         &substituted_action,
@@ -308,13 +251,6 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                         &mut last_exit_code,
                     );
                 }
-                if verbose {
-                    colours::info(&format!(
-                        "Scenario '{}' completed in {:.2}s",
-                        scenario.name,
-                        scenario_start_time.elapsed().as_secs_f32()
-                    ));
-                }
             }
 
             let suite_duration = suite_start_time.elapsed();
@@ -322,16 +258,12 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             // Update reports with final states and times
             for (name, state) in &test_states {
                 if let Some(report) = test_reports.get_mut(name) {
-                    report.status = match state {
-                        TestState::Passed => TestStatus::Passed,
-                        TestState::Failed(_) => TestStatus::Failed,
-                        _ => TestStatus::Skipped,
-                    };
-                    if let TestState::Failed(reason) = state {
-                        report.failure_message = Some(reason.clone());
-                    }
+                    report.status = state.clone().into();
                     if let Some(start_time) = test_start_times.get(name) {
-                        report.time = start_time.elapsed();
+                        report.duration = start_time.elapsed().as_secs_f32();
+                    }
+                    if let TestState::Failed(reason) = state {
+                        report.error_message = Some(reason.clone());
                     }
                 }
             }
@@ -342,35 +274,20 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 .collect();
 
             if verbose {
-                colours::info(&format!(
-                    "\nTest suite '{}' completed in {:.2}s",
-                    suite_name,
-                    suite_duration.as_secs_f32()
-                ));
+                colours::info("\n--- Test Results ---");
             }
 
             for report in &final_reports {
                 match &report.status {
-                    TestStatus::Pending => {
-                        // This state should not be possible here
-                        colours::error(&format!("  ❓ UNKNOWN: {}", report.name));
-                    }
-                    TestStatus::Passed => {
-                        colours::success(&format!("  ✅ PASSED: {}", report.name));
-                    }
-                    TestStatus::Failed => {
-                        colours::error(&format!("  ❌ FAILED: {}", report.name));
-                        if let Some(msg) = &report.failure_message {
-                            colours::error(&format!("      Reason: {}", msg));
-                        }
-                    }
-                    TestStatus::Skipped => {
-                        colours::warn(&format!("  ➖ SKIPPED: {}", report.name));
-                    }
-                    TestStatus::Running => {
-                        // This state should not be possible here
-                        colours::error(&format!("  ❓ UNKNOWN: {}", report.name));
-                    }
+                    TestStatus::Passed => colours::success(&format!(
+                        "  ✓ {} (took {:.2}s)",
+                        report.name, report.duration
+                    )),
+                    TestStatus::Failed => colours::error(&format!(
+                        "  ✗ {} (failed after {:.2}s)",
+                        report.name, report.duration
+                    )),
+                    _ => colours::warn(&format!("  - {} (skipped)", report.name)),
                 }
             }
 
@@ -449,21 +366,21 @@ fn generate_choreo_report(
             }
 
             let (status, error_message) = match test_states.get(&tc.name) {
-                Some(TestState::Passed) => ("passed".to_string(), None),
-                Some(TestState::Failed(reason)) => ("failed".to_string(), Some(reason.clone())),
-                _ => ("skipped".to_string(), None),
+                Some(state) => (state.clone().into(), state.clone().get_error_message()),
+                None => (TestStatus::Skipped, None),
             };
 
             let duration = test_start_times
                 .get(&tc.name)
-                .map_or(Duration::default(), |s| s.elapsed());
+                .map(|start| start.elapsed().as_nanos() as u64)
+                .unwrap_or(0);
 
             steps.push(Step {
-                keyword: format!("{} ", keyword),
+                keyword: keyword.to_string(),
                 name: tc.description.clone(),
                 result: StepResult {
                     status,
-                    duration_in_ms: duration.as_millis(),
+                    duration,
                     error_message,
                 },
             });
@@ -474,12 +391,12 @@ fn generate_choreo_report(
             // Substitute variables before formatting for the report
             let substituted_action = substitute_variables_in_action(action, env_vars);
             after_hooks.push(AfterHook {
-                name: format_action_for_report(&substituted_action),
                 result: StepResult {
-                    status: "passed".to_string(),
-                    duration_in_ms: 0,
+                    status: TestStatus::Passed, // After hooks don't have a fail state currently
+                    duration: 0,
                     error_message: None,
                 },
+                action: format_action_for_report(&substituted_action),
             });
         }
 

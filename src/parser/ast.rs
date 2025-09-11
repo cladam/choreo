@@ -35,6 +35,8 @@ pub struct TestSuiteSettings {
     pub timeout_seconds: u64,
     pub report_format: ReportFormat,
     pub report_path: String,
+    pub stop_on_failure: bool,
+    pub shell_path: Option<String>,
 }
 
 impl Default for TestSuiteSettings {
@@ -43,6 +45,8 @@ impl Default for TestSuiteSettings {
             timeout_seconds: 30,
             report_format: ReportFormat::Json,
             report_path: "reports/".to_string(),
+            stop_on_failure: false,
+            shell_path: Option::from("/bin/bash".to_string()),
         }
     }
 }

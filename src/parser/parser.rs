@@ -58,26 +58,24 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
         let mut inner = setting_pair.into_inner();
         let key = inner.next().unwrap().as_str();
         let value_pair = inner.next().unwrap();
-        let value = build_value(value_pair);
 
         match key {
             "timeout_seconds" => {
-                if let Value::Number(n) = value {
+                if let Value::Number(n) = build_value(value_pair) {
                     settings.timeout_seconds = n as u64;
                 } else {
-                    // You might want to return a proper parse error here
                     panic!("'timeout_seconds' setting must be a number");
                 }
             }
             "report_path" => {
-                if let Value::String(s) = value {
+                if let Value::String(s) = build_value(value_pair) {
                     settings.report_path = s;
                 } else {
                     panic!("'report_path' setting must be a string");
                 }
             }
             "report_format" => {
-                if let Value::String(s) = value {
+                if let Value::String(s) = build_value(value_pair) {
                     settings.report_format = match s.as_str() {
                         "json" => ReportFormat::Json,
                         "junit" => ReportFormat::Junit,
@@ -85,6 +83,20 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                     };
                 } else {
                     panic!("'report_format' setting must be a string");
+                }
+            }
+            "stop_on_failure" => {
+                if value_pair.as_rule() == Rule::binary_op {
+                    settings.stop_on_failure = value_pair.as_str().parse().unwrap();
+                } else {
+                    panic!("'stop_on_failure' setting must be a boolean (true/false)");
+                }
+            }
+            "shell_path" => {
+                if let Value::String(s) = build_value(value_pair) {
+                    settings.shell_path = Option::from(s);
+                } else {
+                    panic!("'shell_path' setting must be a string");
                 }
             }
             _ => { /* Ignore unknown settings */ }

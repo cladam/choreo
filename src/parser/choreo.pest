@@ -12,7 +12,7 @@ statement                         = { feature_def | settings_def | env_def | var
 
 // Setting up the test suite.
 settings_def                      = { "settings:" ~ setting+ }
-setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
+setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ (value | binary_op) }
 env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
 vars_def                          = { "vars:" ~ var_assignment+ }
 var_assignment                    = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ string }
@@ -87,5 +87,6 @@ wait_unit                         = @{ "s" | "ms" }
 wait_marker                       = @{ float ~ wait_unit }
 value                             = { string | number }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
+binary_op                         = { "true" | "false" }
 filesystem_action_keyword         = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }
 filesystem_cond_keyword           = @{ "file_exists" | "dir_exists" | "file_contains" | "file_does_not_exist" }

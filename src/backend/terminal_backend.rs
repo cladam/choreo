@@ -26,7 +26,10 @@ pub struct TerminalBackend {
 }
 
 impl TerminalBackend {
-    pub fn new(base_dir: PathBuf) -> Self {
+    /// Creates a new backend with a PTY session.
+    /// - `base_dir`: The directory where the shell process should start.
+    /// - `shell_path`: An optional path to a specific shell executable.
+    pub fn new(base_dir: PathBuf, shell_path: Option<String>) -> Self {
         // Get the size of the user's actual terminal.
         let term_size = terminal_size();
         let (cols, rows) = if let Some((Width(w), Height(h))) = term_size {
@@ -48,9 +51,11 @@ impl TerminalBackend {
             })
             .expect("Failed to open pty");
 
-        // Spawn the command in the PTY.
-        let mut cmd = CommandBuilder::new("zsh");
-
+        // Use the provided shell path, or default to "zsh".
+        let shell = shell_path.unwrap();
+        println!("Shell path: {}", shell);
+        // Spawn the shell process.
+        let mut cmd = CommandBuilder::new(shell);
         cmd.cwd(base_dir.clone());
         let child = pair
             .slave
