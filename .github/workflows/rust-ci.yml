@@ -101,7 +101,7 @@ jobs:
             mv choreo.exe choreo-${{ matrix.target }}.exe
             echo "ASSET_NAME=choreo-${{ matrix.target }}.exe" >> $GITHUB_ENV
           else
-            mv medi medi-${{ matrix.target }}
+            mv choreo choreo-${{ matrix.target }}
             echo "ASSET_NAME=choreo-${{ matrix.target }}" >> $GITHUB_ENV
           fi
 
