@@ -47,7 +47,7 @@ impl Default for TestSuiteSettings {
             report_format: ReportFormat::Json,
             report_path: "reports/".to_string(),
             stop_on_failure: false,
-            shell_path: Option::from("zsh".to_string()),
+            shell_path: Option::from("/bin/bash".to_string()),
             expected_failures: 0,
         }
     }
