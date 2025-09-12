@@ -11,27 +11,27 @@ A `.chor` file is structured hierarchically to tell a clear story, following the
 ```
 feature "A high-level description of the capability being tested"
 
-\# ... (settings, vars, actors)
+# ... (settings, vars, actors)
 
 scenario "A concrete example of the feature's behaviour" {
 
     test TestNameOne "The first step in the scenario" {  
         given:  
-            \# Pre-conditions and setup actions  
+            # Pre-conditions and setup actions  
         when:  
-            \# The single action being tested  
+            # The single action being tested  
         then:  
-            \# The expected outcomes and assertions  
+            # The expected outcomes and assertions  
     }
 
     test TestNameTwo "The second step, depending on the first" {  
         given:  
-            Test has\_succeeded TestNameOne  
-        \# ... and so on  
+            Test has_succeeded TestNameOne  
+        # ... and so on  
     }
 
     after {  
-        \# Cleanup actions that run after all tests in this scenario  
+        # Cleanup actions that run after all tests in this scenario  
     }  
 }
 ```
@@ -57,10 +57,10 @@ A block for configuring the behaviour of the `choreo` test runner for the curren
 **Example:**
 ```
 settings:  
-  timeout\_seconds \= 60  
-  stop\_on\_failure \= true  
-  shell\_path \= "/bin/bash"  
-  report\_path \= "test-results/"
+  timeout_seconds = 60  
+  stop_on_failure = true  
+  shell_path = "/bin/bash"  
+  report_path = "test-results/"
 ```
 
 #### `vars`
@@ -70,8 +70,8 @@ A block for defining key-value variables that can be used throughout the test fi
 **Example:**
 ```
 vars:  
-  FILENAME \= "my\_output.txt"  
-  GREETING \= "Hello, Choreo\!"
+  FILENAME = "my_output.txt"  
+  GREETING = "Hello, Choreo!"
 ```
 
 #### `env`
@@ -80,7 +80,7 @@ Declares a list of environment variables that the test suite requires. The test 
 
 **Example:**
 ```
-env: API\_TOKEN, GITHUB\_USER
+env: API_TOKEN, GITHUB_USER
 ```
 
 #### `actors`
@@ -99,20 +99,20 @@ Describes a single, concrete example of the feature's behaviour. It acts as a co
 **Example:**
 ```
 scenario "A user can successfully create and then delete a file" {  
-    \# ... test blocks go here ...  
+    # ... test blocks go here ...  
 }
 ```
 
 #### `test`
 
-The core unit of testing in choreo. Each test block has a unique name (for dependencies) and a human-readable description. It is composed of given, when, and then blocks.
+The core unit of testing in choreo. Each `test` block has a unique name (for dependencies) and a human-readable description. It is composed of `given`, `when`, and `then` blocks.
 
 **Example:**
 ```
 test FileIsCreated "it creates a new file with content" {  
-    given: \# ...  
-    when:  \# ...  
-    then:  \# ...  
+    given: # ...  
+    when:  # ...  
+    then:  # ...  
 }
 ```
 
@@ -123,10 +123,10 @@ An optional block inside a scenario that contains a list of cleanup actions. The
 **Example:**
 ```
 scenario "..." {  
-    \# ... tests ...
+    # ... tests ...
 
     after {  
-        FileSystem delete\_file "${FILENAME}"  
+        FileSystem delete_file "${FILENAME}"  
     }  
 }
 ```
@@ -142,10 +142,10 @@ The `given` block sets up the context for a test. It can contain a mix of **acti
 **Example:**
 ```
 given:  
-    \# Action: Ensure a clean state  
-    FileSystem delete\_file "data.txt"  
-    \# Condition: This test can only run after the setup test has passed  
-    Test has\_succeeded InitialSetup
+    # Action: Ensure a clean state  
+    FileSystem delete_file "data.txt"  
+    # Condition: This test can only run after the setup test has passed  
+    Test has_succeeded InitialSetup
 ```
 
 #### `when`:
@@ -155,18 +155,18 @@ The `when` block contains the single, specific action that is being tested. A wh
 **Example:**
 ```
 when:  
-    Terminal runs "data-processor \--input data.txt"
+    Terminal runs "data-processor --input data.txt"
 ```
 
 #### `then`:
 
-The then block contains the assertions that verify the outcome of the when action. A then block should contain only conditions. The test passes if all then conditions are met.
+The `then` block contains the assertions that verify the outcome of the `when` action. A `then` block should contain only conditions. The test passes if all then conditions are met.
 
 **Example:**
 ```
 then:  
-    Terminal last\_command succeeded  
-    FileSystem file\_exists "output.txt"
+    Terminal last_command succeeded  
+    FileSystem file_exists "output.txt"
 ```
 
 ## **Vocabulary: Actions & Conditions**
