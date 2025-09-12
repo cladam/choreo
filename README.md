@@ -1,12 +1,11 @@
 # **choreo**
 
-**A declarative DSL for choreographing and testing command-line workflows.**
+`choreo` is an executable Domain-Specific Language (DSL) for writing automated, behaviour-driven tests for command-line
+applications and system interactions. It uses a structured, human-readable format inspired by Gherkin to define test
+scenarios that are easy to write, read, and maintain.
 
-Choreo is a test runner and automation tool that uses a simple, readable, rule-based language to define and execute
-complex interactions with command-line applications. It's designed for behavior-driven testing, integration testing, and
-generating reproducible demos of CLI tools.
-
-Think of it as **Cucumber for the command line**, with the reactive power of a rules engine.
+The goal of choreo is to provide the power and expressiveness of a BDD framework like Cucumber, but in a self-contained,
+executable format specifically designed for testing the shell.
 
 ### **Key Features**
 
