@@ -67,6 +67,21 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             for s in &test_suite.statements {
                 match s {
                     Statement::SettingsDef(s) => settings = s.clone(),
+                    Statement::BackgroundDef(steps) => {
+                        // Convert background steps to a scenario
+                        let bg_scenario = choreo::parser::ast::Scenario {
+                            name: "Background".to_string(),
+                            tests: vec![choreo::parser::ast::TestCase {
+                                name: "Background Setup".to_string(),
+                                description: "Setup steps from Background".to_string(),
+                                given: steps.clone(),
+                                when: vec![],
+                                then: vec![],
+                            }],
+                            after: vec![],
+                        };
+                        scenarios.insert(0, bg_scenario); // Ensure background is first
+                    }
                     Statement::EnvDef(vars) => {
                         for var in vars {
                             let value =
@@ -233,7 +248,6 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                         for (name, given_actions) in tests_to_start {
                             let test_case =
                                 scenario.tests.iter().find(|tc| tc.name == name).unwrap();
-                            let sync_test = is_synchronous(test_case);
 
                             if is_synchronous(test_case) {
                                 println!(" ▶️ Starting SYNC test: {}", name);

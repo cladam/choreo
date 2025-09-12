@@ -1,6 +1,5 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
 use crate::parser::ast::{Action, Condition, TestCase, TestState};
-use predicates::prelude::*;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
 
@@ -167,7 +166,6 @@ pub fn check_condition(
         Condition::OutputEquals(text) => {
             let actual_output: Vec<&str> =
                 buffer.lines().filter_map(extract_command_output).collect();
-            let filtered_output = actual_output.join("\n");
 
             actual_output.iter().any(|line| *line == text.trim())
         }

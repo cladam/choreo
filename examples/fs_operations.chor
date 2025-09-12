@@ -1,0 +1,38 @@
+feature: "File System Operations"
+actors: Terminal, FileSystem
+
+# These setup steps will run before EACH scenario in this file.
+background {
+    FileSystem create_dir "temp_data"
+    FileSystem create_file "temp_data/initial.txt" with_content "setup data"
+}
+
+scenario "Verifying file content" {
+    test FileContentIsCorrect "it can read the content of a file created in the background" {
+        given:
+            # The background already created this file
+            FileSystem file_exists "temp_data/initial.txt"
+        when:
+            Terminal runs "cat temp_data/initial.txt"
+        then:
+            Terminal output_contains "setup data"
+    }
+}
+
+scenario "Verifying directory listing" {
+    test DirectoryListingIsCorrect "it can list the file created in the background" {
+        given:
+            # The background already created this directory
+            FileSystem dir_exists "temp_data"
+        when:
+            Terminal runs "ls temp_data"
+        then:
+            Terminal output_contains "initial.txt"
+    }
+
+    # This cleanup step will run after all scenarios in this file.
+    after {
+        FileSystem delete_file "temp_data/initial.txt"
+        FileSystem delete_dir "temp_data"
+    }
+}

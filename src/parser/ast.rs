@@ -63,6 +63,7 @@ pub struct TestCase {
 // All possible top-level statements in a .chor file.
 pub enum Statement {
     SettingsDef(TestSuiteSettings),
+    BackgroundDef(Vec<GivenStep>),
     EnvDef(Vec<String>),
     VarsDef(HashMap<String, Value>),
     ActorDef(Vec<String>),

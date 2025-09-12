@@ -34,11 +34,18 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
             Rule::vars_def => build_vars_def(pair),
             Rule::feature_def => build_feature_def(pair),
             Rule::scenario_def => build_scenario(pair),
+            Rule::background_def => build_background_def(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
         });
     }
 
     Ok(TestSuite { statements })
+}
+
+// Helper function for a background definition.
+fn build_background_def(pair: Pair<Rule>) -> Statement {
+    let steps = build_given_steps(pair.into_inner());
+    Statement::BackgroundDef(steps)
 }
 
 // Helper function for a simple definition.
