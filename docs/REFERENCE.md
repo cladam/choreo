@@ -1,0 +1,250 @@
+# **Choreo DSL Reference**
+
+**choreo** is an executable Domain-Specific Language (DSL) for writing automated, behaviour-driven tests for command-line applications and system interactions. It uses a structured, human-readable format to define test scenarios that are easy to write, read, and maintain.
+
+This document serves as the official reference guide for the `.chor` file format and its syntax.
+
+## **File Structure: The BDD Hierarchy**
+
+A `.chor` file is structured hierarchically to tell a clear story, following the standard BDD pattern of Feature \-\> Scenario \-\> Test.
+
+```
+feature "A high-level description of the capability being tested"
+
+\# ... (settings, vars, actors)
+
+scenario "A concrete example of the feature's behaviour" {
+
+    test TestNameOne "The first step in the scenario" {  
+        given:  
+            \# Pre-conditions and setup actions  
+        when:  
+            \# The single action being tested  
+        then:  
+            \# The expected outcomes and assertions  
+    }
+
+    test TestNameTwo "The second step, depending on the first" {  
+        given:  
+            Test has\_succeeded TestNameOne  
+        \# ... and so on  
+    }
+
+    after {  
+        \# Cleanup actions that run after all tests in this scenario  
+    }  
+}
+```
+
+## **Keywords**
+
+`choreo` uses a set of keywords to define the structure and logic of a test suite.
+
+#### `feature`
+
+Provides a high-level description of the software capability being tested and groups related scenarios. A `.chor` file should contain exactly one feature.
+
+**Example:**
+
+```
+feature "User account management via the CLI"
+```
+
+#### `settings`
+
+A block for configuring the behaviour of the `choreo` test runner for the current file.
+
+**Example:**
+```
+settings:  
+  timeout\_seconds \= 60  
+  stop\_on\_failure \= true  
+  shell\_path \= "/bin/bash"  
+  report\_path \= "test-results/"
+```
+
+#### `vars`
+
+A block for defining key-value variables that can be used throughout the test file. This is useful for making tests more readable and maintainable by avoiding "magic strings."
+
+**Example:**
+```
+vars:  
+  FILENAME \= "my\_output.txt"  
+  GREETING \= "Hello, Choreo\!"
+```
+
+#### `env`
+
+Declares a list of environment variables that the test suite requires. The test runner will read these from the shell environment where `choreo` is executed and make them available for substitution.
+
+**Example:**
+```
+env: API\_TOKEN, GITHUB\_USER
+```
+
+#### `actors`
+
+Declares the different systems or components that the test will interact with. The two currently supported actors are `Terminal` and `FileSystem`.
+
+**Example:**
+```
+actors: Terminal, FileSystem
+```
+
+#### `scenario`
+
+Describes a single, concrete example of the feature's behaviour. It acts as a container for a sequence of related test blocks that form a user story or workflow.
+
+**Example:**
+```
+scenario "A user can successfully create and then delete a file" {  
+    \# ... test blocks go here ...  
+}
+```
+
+#### `test`
+
+The core unit of testing in choreo. Each test block has a unique name (for dependencies) and a human-readable description. It is composed of given, when, and then blocks.
+
+**Example:**
+```
+test FileIsCreated "it creates a new file with content" {  
+    given: \# ...  
+    when:  \# ...  
+    then:  \# ...  
+}
+```
+
+#### `after`
+
+An optional block inside a scenario that contains a list of cleanup actions. These actions are executed after all test blocks within that scenario have completed, regardless of whether they passed or failed.
+
+**Example:**
+```
+scenario "..." {  
+    \# ... tests ...
+
+    after {  
+        FileSystem delete\_file "${FILENAME}"  
+    }  
+}
+```
+
+## **Test Blocks: Given, When, Then**
+
+Each `test` block is structured using the standard BDD keywords to create a clear narrative.
+
+#### `given`:
+
+The `given` block sets up the context for a test. It can contain a mix of **actions** (to set up the environment) and **conditions** (to check pre-requisites, including dependencies on other tests).
+
+**Example:**
+```
+given:  
+    \# Action: Ensure a clean state  
+    FileSystem delete\_file "data.txt"  
+    \# Condition: This test can only run after the setup test has passed  
+    Test has\_succeeded InitialSetup
+```
+
+#### `when`:
+
+The `when` block contains the single, specific action that is being tested. A when block should contain only actions, not conditions.
+
+**Example:**
+```
+when:  
+    Terminal runs "data-processor \--input data.txt"
+```
+
+#### `then`:
+
+The then block contains the assertions that verify the outcome of the when action. A then block should contain only conditions. The test passes if all then conditions are met.
+
+**Example:**
+```
+then:  
+    Terminal last\_command succeeded  
+    FileSystem file\_exists "output.txt"
+```
+
+## **Vocabulary: Actions & Conditions**
+
+This is the reference for all available commands that can be used within the test blocks.
+
+### **Wait Conditions**
+
+| Syntax | Description |
+| :---- | :---- |
+| wait \>= 1.5s | Passes if the test has been running for at least 1.5 seconds. |
+| wait \<= 100ms | Passes if the test has been running for no more than 100 milliseconds. |
+
+### **State Conditions**
+
+| Syntax | Description |
+| :---- | :---- |
+| Test has\_succeeded \<TestName\> | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
+
+### **Terminal Commands**
+
+#### **Actions**
+
+| Syntax | Description |
+| :---- | :---- |
+| Terminal runs "..." | Executes a shell [48;59;239;1888;3346tcommand non-interactively. The command and a newline are sent at once. |
+| Terminal types "..." | Simulates a user typing a string into the terminal. |
+| Terminal presses "Enter" | Simulates a user pressing the Enter key. |
+
+#### **Conditions**
+
+| Syntax | Description |
+| :---- | :---- |
+| Terminal last\_command succeeded | Passes if the last Terminal runs command exited with code 0\. |
+| Terminal last\_command failed | Passes if the last Terminal runs command exited with a non-zero code. |
+| Terminal last\_command exit\_code\_is \<num\> | Passes if the last Terminal runs command exited with the specified code. |
+| Terminal output\_contains "..." | Passes if the combined stdout/stderr stream from the PTY contains the substring. |
+| Terminal stdout\_is\_empty | Passes if the stdout from the last Terminal runs command was empty. |
+| Terminal stderr\_contains "..." | Passes if the stderr from the last Terminal runs command contains the substring. |
+| Terminal output\_starts\_with "..." | Passes if the trimmed stdout of the last runs command starts with the string. |
+| Terminal output\_ends\_with "..." | Passes if the trimmed stdout of the last runs command ends with the string. |
+| Terminal output\_equals "..." | Passes if the trimmed stdout of the last runs command is an exact match. |
+| Terminal output\_matches "..." | Passes if the combined stdout/stderr stream from the PTY matches the regex. |
+
+### **FileSystem Commands**
+
+#### **Actions**
+
+| Syntax | Description |
+| :---- | :---- |
+| FileSystem create\_dir "..." | Creates a directory, including any necessary parent directories. |
+| FileSystem create\_file "..." | Creates an empty file. |
+| FileSystem create\_file "..." with\_content "..." | Creates a file and writes the specified content to it. |
+| FileSystem delete\_dir "..." | Deletes a directory and all its contents. |
+| FileSystem delete\_file "..." | Deletes a file. |
+
+#### **Conditions**
+
+| Syntax | Description |
+| :---- | :---- |
+| FileSystem dir\_exists "..." | Passes if a directory exists at the specified path. |
+| FileSystem file\_exists "..." | Passes if a file exists at the specified path. |
+| FileSystem file\_does\_not\_exist "..." | Passes if nothing exists at the specified path. |
+| FileSystem file\_contains "..." "..." | Passes if the file at the first path contains the second string. |
+
+## **Variables**
+
+choreo supports both environment variables and file-defined variables for making tests dynamic.
+
+### **Substitution**
+
+To use a variable, use the ${VAR\_NAME} syntax inside any string literal. The test runner will replace this placeholder with the variable's value before executing the step.
+
+**Example:**
+
+vars:  
+  FILENAME \= "output.log"  
+when:  
+  Terminal runs "echo 'hello' \> ${FILENAME}"  
+
+
