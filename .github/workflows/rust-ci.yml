@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --verbose --release
 
       - name: Check cargo formatting
         run: cargo fmt -- --check
