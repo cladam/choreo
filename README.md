@@ -25,7 +25,7 @@ executable format specifically designed for testing the shell.
 
 ### Example Usage
 
-Here is a simple `test_ls.chor` script that tests that `tee` correctly writes its input to both standard output and a
+Here is a simple script that tests that `tee` correctly writes its input to both standard output and a
 file.
 
 ```bash
@@ -97,14 +97,14 @@ Choreo is currently in the **alpha stage**. The core engine is functional, but i
 
 The journey ahead includes:
 
-* [ ] A `background` keyword for shared setup steps across scenarios.
 * [ ] A `default_actor` setting to reduce verbosity in tests.
 * [ ] **More Actors**
     * `WebActor` for making and asserting against HTTP API calls.
 * [ ] Generate JUnit XML reports.
 * [ ] Revisit the vhs inspiration by adding an option to record the terminal session as a GIF.
-* [ ] Publish the crate to crates.io.
 * [ ] An even richer vocabulary of built-in matchers and assertions.
+* [ ] A dedicated editor with syntax highlighting and linting.
+* [ ] A website with tutorials, examples, and documentation.
 
 ### **Contributing**
 
