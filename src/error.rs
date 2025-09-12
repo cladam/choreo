@@ -36,4 +36,7 @@ pub enum AppError {
 
     #[error("Pest parsing error: {0}")]
     PestParse(#[from] pest::error::Error<parser::parser::Rule>),
+
+    #[error("{count} test(s) failed.")]
+    TestsFailed { count: usize, expected: usize },
 }

@@ -508,6 +508,17 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             if verbose {
                 colours::success("Reports generated successfully.");
             }
+
+            // This makes sure that choreo exits with a non-zero
+            // status code if any tests failed. This is special for the regression tests in my CI pipeline
+            let failures = test_states.values().filter(|s| s.is_failed()).count();
+            if failures > settings.expected_failures {
+                return Err(AppError::TestsFailed {
+                    count: failures,
+                    expected: settings.expected_failures,
+                });
+            }
+
             Ok(())
         }
     }

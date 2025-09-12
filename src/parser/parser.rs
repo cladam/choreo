@@ -106,6 +106,13 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                     panic!("'shell_path' setting must be a string");
                 }
             }
+            "expected_failures" => {
+                if let Value::Number(n) = build_value(value_pair) {
+                    settings.expected_failures = n as usize;
+                } else {
+                    panic!("'expected_failures' setting must be a number");
+                }
+            }
             _ => { /* Ignore unknown settings */ }
         }
     }

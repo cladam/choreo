@@ -37,6 +37,7 @@ pub struct TestSuiteSettings {
     pub report_path: String,
     pub stop_on_failure: bool,
     pub shell_path: Option<String>,
+    pub expected_failures: usize,
 }
 
 impl Default for TestSuiteSettings {
@@ -47,6 +48,7 @@ impl Default for TestSuiteSettings {
             report_path: "reports/".to_string(),
             stop_on_failure: false,
             shell_path: Option::from("zsh".to_string()),
+            expected_failures: 0,
         }
     }
 }

@@ -1,12 +1,15 @@
 # Choreo DSL Reference
 
-**choreo** is an executable Domain-Specific Language (DSL) for writing automated, behaviour-driven tests for command-line applications and system interactions. It uses a structured, human-readable format to define test scenarios that are easy to write, read, and maintain.
+**choreo** is an executable Domain-Specific Language (DSL) for writing automated, behaviour-driven tests for
+command-line applications and system interactions. It uses a structured, human-readable format to define test scenarios
+that are easy to write, read, and maintain.
 
 This document serves as the official reference guide for the `.chor` file format and its syntax.
 
 ## File Structure: The BDD Hierarchy
 
-A `.chor` file is structured hierarchically to tell a clear story, following the standard BDD pattern of `Feature -> Scenario -> Test`.
+A `.chor` file is structured hierarchically to tell a clear story, following the standard BDD pattern of
+`Feature -> Scenario -> Test`.
 
 ```
 feature "A high-level description of the capability being tested"
@@ -42,7 +45,8 @@ scenario "A concrete example of the feature's behaviour" {
 
 #### `feature`
 
-Provides a high-level description of the software capability being tested and groups related scenarios. A `.chor` file should contain exactly one `feature`.
+Provides a high-level description of the software capability being tested and groups related scenarios. A `.chor` file
+should contain exactly one `feature`.
 
 **Example:**
 
@@ -52,15 +56,23 @@ feature "User account management via the CLI"
 
 #### `settings`
 
-A block for configuring the behaviour of the `choreo` test runner for the current file.
+A block for configuring the behavior of the choreo test runner for the current file.
+
+| Setting Key        | Value Type | Default    | Purpose                                                                                          |
+|:-------------------|:-----------|:-----------|:-------------------------------------------------------------------------------------------------|
+| `timeout_seconds`  | Number     | 30         | The maximum time in seconds a scenario can run before failing.                                   |  
+| `stop_on_failure`  | Boolean    | false      | If true, the entire test suite will stop immediately after the first test fails.                 |  
+| `shell_path`       | String     | "zsh"      | The absolute path to the shell to use for the Terminal actor.                                    |  
+| `report_path`      | String     | "reports/" | The directory where the report file will be saved.                                               |  
+| `expected_failures | Number     | 0          | Declares the number of tests that are expected to fail for the suite to be considered a success. |
 
 **Example:**
+
 ```
 settings:  
-  timeout_seconds = 60  
-  stop_on_failure = true  
-  shell_path = "/bin/bash"  
-  report_path = "test-results/"
+timeout_seconds = 10  
+stop_on_failure = true  
+expected_failures = 1
 ```
 
 #### `background`
@@ -68,6 +80,7 @@ settings:
 A block that provides a common set of readable `given` steps that apply to all scenarios in a feature.
 
 **Examle:**
+
 ```
 background {
   FileSystem create_dir "temp_data"
@@ -77,9 +90,11 @@ background {
 
 #### `vars`
 
-A block for defining key-value variables that can be used throughout the test file. This is useful for making tests more readable and maintainable by avoiding "magic strings."
+A block for defining key-value variables that can be used throughout the test file. This is useful for making tests more
+readable and maintainable by avoiding "magic strings."
 
 **Example:**
+
 ```
 vars:  
   FILENAME = "my_output.txt"  
@@ -88,27 +103,33 @@ vars:
 
 #### `env`
 
-Declares a list of environment variables that the test suite requires. The test runner will read these from the shell environment where `choreo` is executed and make them available for substitution.
+Declares a list of environment variables that the test suite requires. The test runner will read these from the shell
+environment where `choreo` is executed and make them available for substitution.
 
 **Example:**
+
 ```
 env: API_TOKEN, GITHUB_USER
 ```
 
 #### `actors`
 
-Declares the different systems or components that the test will interact with. The two currently supported actors are `Terminal` and `FileSystem`.
+Declares the different systems or components that the test will interact with. The two currently supported actors are
+`Terminal` and `FileSystem`.
 
 **Example:**
+
 ```
 actors: Terminal, FileSystem
 ```
 
 #### `scenario`
 
-Describes a single, concrete example of the feature's behaviour. It acts as a container for a sequence of related `test` blocks that form a user story or workflow.
+Describes a single, concrete example of the feature's behaviour. It acts as a container for a sequence of related `test`
+blocks that form a user story or workflow.
 
 **Example:**
+
 ```
 scenario "A user can successfully create and then delete a file" {  
     # ... test blocks go here ...  
@@ -117,9 +138,11 @@ scenario "A user can successfully create and then delete a file" {
 
 #### `test`
 
-The core unit of testing in `choreo`. Each `test` block has a unique name (for dependencies) and a human-readable description. It is composed of `given`, `when`, and `then` blocks.
+The core unit of testing in `choreo`. Each `test` block has a unique name (for dependencies) and a human-readable
+description. It is composed of `given`, `when`, and `then` blocks.
 
 **Example:**
+
 ```
 test FileIsCreated "it creates a new file with content" {  
     given: # ...  
@@ -130,9 +153,11 @@ test FileIsCreated "it creates a new file with content" {
 
 #### `after`
 
-An optional block inside a `scenario` that contains a list of cleanup actions. These actions are executed after all `test` blocks within that scenario have completed, regardless of whether they passed or failed.
+An optional block inside a `scenario` that contains a list of cleanup actions. These actions are executed after all
+`test` blocks within that scenario have completed, regardless of whether they passed or failed.
 
 **Example:**
+
 ```
 scenario "..." {  
     # ... tests ...
@@ -149,9 +174,11 @@ Each `test` block is structured using the standard BDD keywords to create a clea
 
 #### `given`:
 
-The `given` block sets up the context for a test. It can contain a mix of **actions** (to set up the environment) and **conditions** (to check pre-requisites, including dependencies on other tests).
+The `given` block sets up the context for a test. It can contain a mix of **actions** (to set up the environment) and *
+*conditions** (to check pre-requisites, including dependencies on other tests).
 
 **Example:**
+
 ```
 given:  
     # Action: Ensure a clean state  
@@ -162,9 +189,11 @@ given:
 
 #### `when`:
 
-The `when` block contains the single, specific action that is being tested. A `when` block should contain only actions, not conditions.
+The `when` block contains the single, specific action that is being tested. A `when` block should contain only actions,
+not conditions.
 
 **Example:**
+
 ```
 when:  
     Terminal runs "data-processor --input data.txt"
@@ -172,9 +201,11 @@ when:
 
 #### `then`:
 
-The `then` block contains the assertions that verify the outcome of the `when` action. A `then` block should contain only conditions. The test passes if all `then` conditions are met.
+The `then` block contains the assertions that verify the outcome of the `when` action. A `then` block should contain
+only conditions. The test passes if all `then` conditions are met.
 
 **Example:**
+
 ```
 then:  
     Terminal last_command succeeded  
@@ -187,25 +218,25 @@ This is the reference for all available commands that can be used within the `te
 
 ### Wait Conditions
 
-| Syntax | Description |
-| :---- | :---- |
-| `wait \>= 1.5s` | Passes if the test has been running for at least 1.5 seconds. |
+| Syntax           | Description                                                            |
+|:-----------------|:-----------------------------------------------------------------------|
+| `wait \>= 1.5s`  | Passes if the test has been running for at least 1.5 seconds.          |
 | `wait \<= 100ms` | Passes if the test has been running for no more than 100 milliseconds. |
 
 ### State Conditions
 
-| Syntax                        | Description |
-|:------------------------------| :---- |
+| Syntax                          | Description                                                                                                         |
+|:--------------------------------|:--------------------------------------------------------------------------------------------------------------------|
 | `Test has_succeeded <TestName>` | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
 
 ### Terminal Commands
 
 #### Actions
 
-| Syntax | Description                                                                             |
-| :---- |:----------------------------------------------------------------------------------------|
-| `Terminal runs "..."` | Executes a shell command non-interactively. The command and a newline are sent at once. |
-| `Terminal types "..."` | Simulates a user typing a string into the terminal.                                     |
+| Syntax                     | Description                                                                             |
+|:---------------------------|:----------------------------------------------------------------------------------------|
+| `Terminal runs "..."`      | Executes a shell command non-interactively. The command and a newline are sent at once. |
+| `Terminal types "..."`     | Simulates a user typing a string into the terminal.                                     |
 | `Terminal presses "Enter"` | Simulates a user pressing the Enter key.                                                |
 
 #### Conditions
@@ -214,35 +245,35 @@ This is the reference for all available commands that can be used within the `te
 |:-------------------------------------------|:-----------------------------------------------------------------------------------|
 | `Terminal last_command succeeded`          | Passes if the last `Terminal runs` command exited with code 0.                     |
 | `Terminal last_command failed`             | Passes if the last `Terminal runs` command exited with a non-zero code.            |
-| `Terminal last_command exit_code_is <num>` | Passes if the last `Terminal runs` command exited with the specified code.           |
+| `Terminal last_command exit_code_is <num>` | Passes if the last `Terminal runs` command exited with the specified code.         |
 | `Terminal output_contains "..."`           | Passes if the combined stdout/stderr stream from the PTY contains the substring.   |
-| `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal runs` command was empty.                |
-| `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal runs` command contains the substring.   |
-| `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `runs` command starts with the string.      |
-| `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `runs` command ends with the string.        |
-| `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `runs` command is an exact match.           |
+| `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal runs` command was empty.              |
+| `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal runs` command contains the substring. |
+| `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `runs` command starts with the string.    |
+| `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `runs` command ends with the string.      |
+| `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `runs` command is an exact match.         |
 | `Terminal output_matches "..."`            | Passes if the combined stdout/stderr stream from the PTY matches the regex.        |
 
 ### FileSystem Commands
 
 #### Actions
 
-| Syntax                                          | Description |
-|:------------------------------------------------| :---- |
+| Syntax                                            | Description                                                      |
+|:--------------------------------------------------|:-----------------------------------------------------------------|
 | `FileSystem create_dir "..."`                     | Creates a directory, including any necessary parent directories. |
-| `FileSystem create_file "..."`                    | Creates an empty file. |
-| `FileSystem create_file "..." with_content "..."` | Creates a file and writes the specified content to it. |
-| `FileSystem delete_dir "..."`                     | Deletes a directory and all its contents. |
-| `FileSystem delete_file "..."`                    | Deletes a file. |
+| `FileSystem create_file "..."`                    | Creates an empty file.                                           |
+| `FileSystem create_file "..." with_content "..."` | Creates a file and writes the specified content to it.           |
+| `FileSystem delete_dir "..."`                     | Deletes a directory and all its contents.                        |
+| `FileSystem delete_file "..."`                    | Deletes a file.                                                  |
 
 #### Conditions
 
-| Syntax                                 | Description |
-|:---------------------------------------| :---- |
-| `FileSystem dir_exists "..."`          | Passes if a directory exists at the specified path. |
-| `FileSystem file_exists "..."`         | Passes if a file exists at the specified path. |
-| `FileSystem file_does_not_exist "..."`  | Passes if nothing exists at the specified path. |
-| `FileSystem file_contains "..." "..."`  | Passes if the file at the first path contains the second string. |
+| Syntax                                 | Description                                                      |
+|:---------------------------------------|:-----------------------------------------------------------------|
+| `FileSystem dir_exists "..."`          | Passes if a directory exists at the specified path.              |
+| `FileSystem file_exists "..."`         | Passes if a file exists at the specified path.                   |
+| `FileSystem file_does_not_exist "..."` | Passes if nothing exists at the specified path.                  |
+| `FileSystem file_contains "..." "..."` | Passes if the file at the first path contains the second string. |
 
 ## Variables
 
@@ -250,9 +281,11 @@ This is the reference for all available commands that can be used within the `te
 
 ### Substitution
 
-To use a variable, use the `${VAR_NAME}` syntax inside any string literal. The test runner will replace this placeholder with the variable's value before executing the step.
+To use a variable, use the `${VAR_NAME}` syntax inside any string literal. The test runner will replace this placeholder
+with the variable's value before executing the step.
 
 **Example:**
+
 ```
 vars:  
   FILENAME = "output.log"  

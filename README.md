@@ -17,7 +17,7 @@ executable format specifically designed for testing the shell.
 - **Stateful Scenarios**: Capture variables from command output and reuse them in subsequent steps to test complex
   workflows.
 - **Multi-Actor System**: Interact with and assert against multiple parts of your system in a single test.
-    - **Terminal**: Control an interactive pseudo-terminal, check `stdout`, `stderr, and command exit codes.
+    - **Terminal**: Control an interactive pseudo-terminal, check `stdout`, `stderr`, and command exit codes.
     - **FileSystem**: Create, delete, and verify files and directories as part of your test setup and assertions.
 - **Configurable Test Runner**: Control test behavior with a settings block for features like timeouts and custom shell
   paths.

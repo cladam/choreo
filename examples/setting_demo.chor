@@ -12,6 +12,7 @@ settings:
   stop_on_failure = true
   # Specify the shell to use for the Terminal actor, defaults to bash.
   shell_path = "/bin/bash"
+  expected_failures = 1
 
 actors: Terminal
 
