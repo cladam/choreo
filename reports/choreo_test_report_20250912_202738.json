@@ -1,0 +1,54 @@
+[
+  {
+    "uri": "examples/test_medi_env_workflow.chor",
+    "keyword": "Feature",
+    "name": "Note and Task Management",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "User can create a note, add a task, and clean up",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "Create a new note",
+            "result": {
+              "status": "failed",
+              "durationInMs": 65,
+              "errorMessage": "Synchronous test failed. Stderr: sh: meddi: command not found"
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "Add a task to the new note",
+            "result": {
+              "status": "skipped",
+              "durationInMs": 0
+            }
+          },
+          {
+            "keyword": "Then ",
+            "name": "Confirm task appears in list",
+            "result": {
+              "status": "skipped",
+              "durationInMs": 0
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "Terminal runs 'medi delete ${noteName} --force'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "tests": 3,
+      "failures": 1,
+      "totalTimeInSeconds": 0.06548563
+    }
+  }
+]

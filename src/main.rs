@@ -312,8 +312,15 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                                         *state = TestState::Passed;
                                         colours::success(&format!(" 🟢 Test Passed: {}", name));
                                     } else {
-                                        let error_msg =
+                                        let mut error_msg =
                                             "Synchronous test conditions not met".to_string();
+                                        // Provide a better error if stderr has content
+                                        if !terminal_backend.last_stderr.is_empty() {
+                                            error_msg = format!(
+                                                "Synchronous test failed. Stderr: {}",
+                                                terminal_backend.last_stderr.trim()
+                                            );
+                                        }
                                         *state = TestState::Failed(error_msg.clone());
                                         colours::error(&format!(
                                             " 🔴 Test Failed: {} - {}",

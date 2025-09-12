@@ -2,6 +2,9 @@
 # A test suite for our 'medi' CLI tool, using the BDD `test` syntax.
 feature: "Note and Task Management"
 
+settings:
+  stop_on_failure = true
+
 vars:
   EVAR = "## My medi note from an environment variable"
 
