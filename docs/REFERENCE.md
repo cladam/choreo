@@ -169,51 +169,51 @@ then:
     FileSystem file_exists "output.txt"
 ```
 
-## **Vocabulary: Actions & Conditions**
+## Vocabulary: Actions & Conditions
 
-This is the reference for all available commands that can be used within the test blocks.
+This is the reference for all available commands that can be used within the `test` blocks.
 
-### **Wait Conditions**
-
-| Syntax | Description |
-| :---- | :---- |
-| wait \>= 1.5s | Passes if the test has been running for at least 1.5 seconds. |
-| wait \<= 100ms | Passes if the test has been running for no more than 100 milliseconds. |
-
-### **State Conditions**
+### Wait Conditions
 
 | Syntax | Description |
 | :---- | :---- |
-| Test has\_succeeded \<TestName\> | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
+| `wait \>= 1.5s` | Passes if the test has been running for at least 1.5 seconds. |
+| `wait \<= 100ms` | Passes if the test has been running for no more than 100 milliseconds. |
 
-### **Terminal Commands**
+### State Conditions
 
-#### **Actions**
+| Syntax                        | Description |
+|:------------------------------| :---- |
+| `Test has_succeeded <TestName>` | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
 
-| Syntax | Description |
-| :---- | :---- |
-| Terminal runs "..." | Executes a shell [48;59;239;1888;3346tcommand non-interactively. The command and a newline are sent at once. |
-| Terminal types "..." | Simulates a user typing a string into the terminal. |
-| Terminal presses "Enter" | Simulates a user pressing the Enter key. |
+### Terminal Commands
 
-#### **Conditions**
+#### Actions
 
-| Syntax | Description |
-| :---- | :---- |
-| Terminal last\_command succeeded | Passes if the last Terminal runs command exited with code 0\. |
-| Terminal last\_command failed | Passes if the last Terminal runs command exited with a non-zero code. |
-| Terminal last\_command exit\_code\_is \<num\> | Passes if the last Terminal runs command exited with the specified code. |
-| Terminal output\_contains "..." | Passes if the combined stdout/stderr stream from the PTY contains the substring. |
-| Terminal stdout\_is\_empty | Passes if the stdout from the last Terminal runs command was empty. |
-| Terminal stderr\_contains "..." | Passes if the stderr from the last Terminal runs command contains the substring. |
-| Terminal output\_starts\_with "..." | Passes if the trimmed stdout of the last runs command starts with the string. |
-| Terminal output\_ends\_with "..." | Passes if the trimmed stdout of the last runs command ends with the string. |
-| Terminal output\_equals "..." | Passes if the trimmed stdout of the last runs command is an exact match. |
-| Terminal output\_matches "..." | Passes if the combined stdout/stderr stream from the PTY matches the regex. |
+| Syntax | Description                                                                             |
+| :---- |:----------------------------------------------------------------------------------------|
+| `Terminal runs "..."` | Executes a shell command non-interactively. The command and a newline are sent at once. |
+| `Terminal types "..."` | Simulates a user typing a string into the terminal.                                     |
+| `Terminal presses "Enter"` | Simulates a user pressing the Enter key.                                                |
 
-### **FileSystem Commands**
+#### Conditions
 
-#### **Actions**
+| Syntax                                     | Description                                                                        |
+|:-------------------------------------------|:-----------------------------------------------------------------------------------|
+| `Terminal last_command succeeded`          | Passes if the last `Terminal runs` command exited with code 0.                     |
+| `Terminal last_command failed`             | Passes if the last `Terminal runs` command exited with a non-zero code.            |
+| `Terminal last_command exit_code_is <num>` | Passes if the last `Terminal runs` command exited with the specified code.           |
+| `Terminal output_contains "..."`           | Passes if the combined stdout/stderr stream from the PTY contains the substring.   |
+| `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal runs` command was empty.                |
+| `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal runs` command contains the substring.   |
+| `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `runs` command starts with the string.      |
+| `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `runs` command ends with the string.        |
+| `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `runs` command is an exact match.           |
+| `Terminal output_matches "..."`            | Passes if the combined stdout/stderr stream from the PTY matches the regex.        |
+
+### FileSystem Commands
+
+#### Actions
 
 | Syntax | Description |
 | :---- | :---- |
