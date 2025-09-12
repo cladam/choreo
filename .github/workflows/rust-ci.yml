@@ -25,25 +25,65 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build
-        run: cargo build --verbose --release
+        run: cargo build --release
 
       - name: Check cargo formatting
         run: cargo fmt -- --check
 
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test
 
-      - name: Run 'ls' example
-        run: ./target/release/choreo run --file examples/test_ls.chor
+      - name: Run `advanced matchers` example
+        run: ./target/release/choreo run --file examples/advanced_matchers.chor
 
-      - name: Run 'tee' example
+      - name: Run `checking date` example
+        run: ./target/release/choreo run --file examples/checking_date.chor
+
+      - name: Run `checking userid` example
+        run: ./target/release/choreo run --file examples/checking_userid.chor
+
+      - name: Run `extracting fields` example
+        run: ./target/release/choreo run --file examples/extracting_fields.chor
+
+      - name: Run `fs operations` example
+        run: ./target/release/choreo run --file examples/fs_operations.chor
+
+      - name: Run `new terminal conditions` example
+        run: ./target/release/choreo run --file examples/new_terminal_conditions.chor
+
+      - name: Run `process timout` example
+        run: ./target/release/choreo run --file examples/process_timout.chor
+
+      - name: Run `redirecting output tee` example
         run: ./target/release/choreo run --file examples/redirecting_output_tee.chor
 
-      - name: Run 'medi' example
-        run: ./target/release/choreo run --file examples/test_medi_env_workflow.chor
+      - name: Run `setting demo` example
+        run: ./target/release/choreo run --file examples/setting_demo.chor
 
-      - name: Run 'new matchers' example
-        run: ./target/release/choreo run --file examples/test_new_matchers.chor
+      - name: Run `simulate mocking` example
+        run: ./target/release/choreo run --file examples/simulate_mocking.chor
+
+      - name: Run `sorting lines` example
+        run: ./target/release/choreo run --file examples/sorting_lines.chor
+
+      - name: Run `test ls` example
+        run: ./target/release/choreo run --file examples/test_ls.chor
+
+      - name: Run `test system interactions` example
+        run: ./target/release/choreo run --file examples/test_system_interactions.chor
+
+      - name: Run `translating char` example
+        run: ./target/release/choreo run --file examples/translating_char.chor
+
+      - name: Run `variable substitution` example
+        run: ./target/release/choreo run --file examples/variable_substitution.chor
+
+      # These tests are commented out because they require installing medi on the runner
+      #- name: Run 'medi' example
+      #  run: ./target/release/choreo run --file examples/test_medi_env_workflow.chor
+
+      #- name: Run 'new matchers' example
+      #  run: ./target/release/choreo run --file examples/test_new_matchers.chor
 
   create_release:
     name: Create GitHub Release
