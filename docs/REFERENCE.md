@@ -1,12 +1,12 @@
-# **Choreo DSL Reference**
+# Choreo DSL Reference
 
 **choreo** is an executable Domain-Specific Language (DSL) for writing automated, behaviour-driven tests for command-line applications and system interactions. It uses a structured, human-readable format to define test scenarios that are easy to write, read, and maintain.
 
 This document serves as the official reference guide for the `.chor` file format and its syntax.
 
-## **File Structure: The BDD Hierarchy**
+## File Structure: The BDD Hierarchy
 
-A `.chor` file is structured hierarchically to tell a clear story, following the standard BDD pattern of Feature \-\> Scenario \-\> Test.
+A `.chor` file is structured hierarchically to tell a clear story, following the standard BDD pattern of `Feature -> Scenario -> Test`.
 
 ```
 feature "A high-level description of the capability being tested"
@@ -36,13 +36,13 @@ scenario "A concrete example of the feature's behaviour" {
 }
 ```
 
-## **Keywords**
+## Keywords
 
 `choreo` uses a set of keywords to define the structure and logic of a test suite.
 
 #### `feature`
 
-Provides a high-level description of the software capability being tested and groups related scenarios. A `.chor` file should contain exactly one feature.
+Provides a high-level description of the software capability being tested and groups related scenarios. A `.chor` file should contain exactly one `feature`.
 
 **Example:**
 
@@ -94,7 +94,7 @@ actors: Terminal, FileSystem
 
 #### `scenario`
 
-Describes a single, concrete example of the feature's behaviour. It acts as a container for a sequence of related test blocks that form a user story or workflow.
+Describes a single, concrete example of the feature's behaviour. It acts as a container for a sequence of related `test` blocks that form a user story or workflow.
 
 **Example:**
 ```
@@ -105,7 +105,7 @@ scenario "A user can successfully create and then delete a file" {
 
 #### `test`
 
-The core unit of testing in choreo. Each `test` block has a unique name (for dependencies) and a human-readable description. It is composed of `given`, `when`, and `then` blocks.
+The core unit of testing in `choreo`. Each `test` block has a unique name (for dependencies) and a human-readable description. It is composed of `given`, `when`, and `then` blocks.
 
 **Example:**
 ```
@@ -118,7 +118,7 @@ test FileIsCreated "it creates a new file with content" {
 
 #### `after`
 
-An optional block inside a scenario that contains a list of cleanup actions. These actions are executed after all test blocks within that scenario have completed, regardless of whether they passed or failed.
+An optional block inside a `scenario` that contains a list of cleanup actions. These actions are executed after all `test` blocks within that scenario have completed, regardless of whether they passed or failed.
 
 **Example:**
 ```
@@ -131,7 +131,7 @@ scenario "..." {
 }
 ```
 
-## **Test Blocks: Given, When, Then**
+## Test Blocks: Given, When, Then
 
 Each `test` block is structured using the standard BDD keywords to create a clear narrative.
 
@@ -150,7 +150,7 @@ given:
 
 #### `when`:
 
-The `when` block contains the single, specific action that is being tested. A when block should contain only actions, not conditions.
+The `when` block contains the single, specific action that is being tested. A `when` block should contain only actions, not conditions.
 
 **Example:**
 ```
@@ -160,7 +160,7 @@ when:
 
 #### `then`:
 
-The `then` block contains the assertions that verify the outcome of the `when` action. A `then` block should contain only conditions. The test passes if all then conditions are met.
+The `then` block contains the assertions that verify the outcome of the `when` action. A `then` block should contain only conditions. The test passes if all `then` conditions are met.
 
 **Example:**
 ```
