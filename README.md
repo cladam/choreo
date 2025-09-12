@@ -82,6 +82,8 @@ Choreo is built on a simple but powerful pipeline:
    tests in the scenario are complete or a timeout is reached.
 5. **Report:** After execution, a detailed JSON report is generated.
 
+See [Choreo REFERENCE](docs/REFERENCE.md) for a full reference on how the choreo DSL works.
+
 ### Getting Started
 
 #### Prerequisites
