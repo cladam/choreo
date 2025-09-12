@@ -215,36 +215,36 @@ This is the reference for all available commands that can be used within the `te
 
 #### Actions
 
-| Syntax | Description |
-| :---- | :---- |
-| FileSystem create\_dir "..." | Creates a directory, including any necessary parent directories. |
-| FileSystem create\_file "..." | Creates an empty file. |
-| FileSystem create\_file "..." with\_content "..." | Creates a file and writes the specified content to it. |
-| FileSystem delete\_dir "..." | Deletes a directory and all its contents. |
-| FileSystem delete\_file "..." | Deletes a file. |
+| Syntax                                          | Description |
+|:------------------------------------------------| :---- |
+| `FileSystem create_dir "..."`                     | Creates a directory, including any necessary parent directories. |
+| `FileSystem create_file "..."`                    | Creates an empty file. |
+| `FileSystem create_file "..." with_content "..."` | Creates a file and writes the specified content to it. |
+| `FileSystem delete_dir "..."`                     | Deletes a directory and all its contents. |
+| `FileSystem delete_file "..."`                    | Deletes a file. |
 
-#### **Conditions**
+#### Conditions
 
-| Syntax | Description |
-| :---- | :---- |
-| FileSystem dir\_exists "..." | Passes if a directory exists at the specified path. |
-| FileSystem file\_exists "..." | Passes if a file exists at the specified path. |
-| FileSystem file\_does\_not\_exist "..." | Passes if nothing exists at the specified path. |
-| FileSystem file\_contains "..." "..." | Passes if the file at the first path contains the second string. |
+| Syntax                                 | Description |
+|:---------------------------------------| :---- |
+| `FileSystem dir_exists "..."`          | Passes if a directory exists at the specified path. |
+| `FileSystem file_exists "..."`         | Passes if a file exists at the specified path. |
+| `FileSystem file_does_not_exist "..."`  | Passes if nothing exists at the specified path. |
+| `FileSystem file_contains "..." "..."`  | Passes if the file at the first path contains the second string. |
 
-## **Variables**
+## Variables
 
-choreo supports both environment variables and file-defined variables for making tests dynamic.
+`choreo` supports both environment variables and file-defined variables for making tests dynamic.
 
-### **Substitution**
+### Substitution
 
-To use a variable, use the ${VAR\_NAME} syntax inside any string literal. The test runner will replace this placeholder with the variable's value before executing the step.
+To use a variable, use the `${VAR_NAME}` syntax inside any string literal. The test runner will replace this placeholder with the variable's value before executing the step.
 
 **Example:**
-
+```
 vars:  
-  FILENAME \= "output.log"  
+  FILENAME = "output.log"  
 when:  
-  Terminal runs "echo 'hello' \> ${FILENAME}"  
-
+  Terminal runs "echo 'hello' > ${FILENAME}"  
+```
 
