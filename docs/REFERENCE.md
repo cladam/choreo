@@ -63,6 +63,18 @@ settings:
   report_path = "test-results/"
 ```
 
+#### `background`
+
+A block that provides a common set of readable `given` steps that apply to all scenarios in a feature.
+
+**Examle:**
+```
+background {
+  FileSystem create_dir "temp_data"
+  FileSystem create_file "temp_data/initial.txt" with_content "setup data"
+}
+```
+
 #### `vars`
 
 A block for defining key-value variables that can be used throughout the test file. This is useful for making tests more readable and maintainable by avoiding "magic strings."
