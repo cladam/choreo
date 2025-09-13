@@ -8,8 +8,11 @@
   <b>BDD testing that runs in your shell</b><br/>
 </p>
 
+
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/cladam/choreo/rust-ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/choreo.svg)](https://crates.io/crates/choreo)
 [![Downloads](https://img.shields.io/crates/d/choreo.svg)](https://crates.io/crates/choreo)
+[![License](https://img.shields.io/crates/l/choreo.svg)](https://crates.io/crates/choreo)
 
 </div>
 
