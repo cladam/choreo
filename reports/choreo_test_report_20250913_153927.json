@@ -1,0 +1,38 @@
+[
+  {
+    "uri": "examples/simulate_mocking.chor",
+    "keyword": "Feature",
+    "name": "Simulating Mocks",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "Testing a script that calls another command",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "it calls a mock function",
+            "result": {
+              "status": "failed",
+              "durationInMs": 165,
+              "errorMessage": "Synchronous test failed. Stderr: sh: ./: is a directory"
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "FileSystem delete_file '${MOCK_SCRIPT}'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "tests": 1,
+      "failures": 1,
+      "totalTimeInSeconds": 0.16786888
+    }
+  }
+]

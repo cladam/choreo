@@ -1,0 +1,74 @@
+[
+  {
+    "uri": "examples/fs_operations.chor",
+    "keyword": "Feature",
+    "name": "File System Operations",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "Background",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "Setup steps from Background",
+            "result": {
+              "status": "passed",
+              "durationInMs": 115
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "Verifying file content",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "it can read the content of a file created in the background",
+            "result": {
+              "status": "passed",
+              "durationInMs": 115
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "Verifying directory listing",
+        "steps": [
+          {
+            "keyword": "Then ",
+            "name": "it can list the file created in the background",
+            "result": {
+              "status": "passed",
+              "durationInMs": 58
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "FileSystem delete_file 'temp_data/initial.txt'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          },
+          {
+            "name": "FileSystem delete_dir 'temp_data'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "tests": 3,
+      "failures": 0,
+      "totalTimeInSeconds": 0.11598213
+    }
+  }
+]
