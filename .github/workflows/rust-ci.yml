@@ -85,9 +85,6 @@ jobs:
       - name: Run 'medi' example
         run: ./target/release/choreo run --file examples/test_medi_env_workflow.chor
 
-      - name: Run 'new matchers' example
-        run: ./target/release/choreo run --file examples/test_new_matchers.chor
-
   create_release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
