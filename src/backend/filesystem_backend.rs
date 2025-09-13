@@ -1,6 +1,6 @@
 use crate::parser::ast::{Action, Condition};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct FileSystemBackend {
     base_dir: PathBuf,
@@ -12,7 +12,12 @@ impl FileSystemBackend {
     }
 
     fn resolve_path(&self, path: &str) -> PathBuf {
-        self.base_dir.join(path)
+        let p = Path::new(path);
+        if p.is_absolute() {
+            p.to_path_buf()
+        } else {
+            self.base_dir.join(p)
+        }
     }
 
     /// Executes a file system action. Returns true if the action was handled.
