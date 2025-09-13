@@ -59,7 +59,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             let suite_start_time = Instant::now();
             let mut runner = TestRunner::new(
-                &test_suite,
+                test_suite,
                 base_dir.to_path_buf(),
                 env_vars.clone(),
                 verbose,

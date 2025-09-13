@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-// Represents the entire parsed test file.
+// Represents the entire parsed test file
+#[derive(Debug, Clone)]
 pub struct TestSuite {
     pub statements: Vec<Statement>,
 }
@@ -64,6 +65,7 @@ pub struct TestCase {
 }
 
 // All possible top-level statements in a .chor file.
+#[derive(Debug, Clone)]
 pub enum Statement {
     SettingsDef(TestSuiteSettings),
     BackgroundDef(Vec<GivenStep>),
