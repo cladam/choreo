@@ -30,9 +30,8 @@ jobs:
       - name: Check cargo formatting
         run: cargo fmt -- --check
 
-      # No unittests for now, the regression tests are more important
-      #- name: Run tests
-      #  run: cargo test
+      - name: Run tests
+        run: cargo test
 
       - name: Run `advanced matchers` example
         run: ./target/release/choreo run --file examples/advanced_matchers.chor
