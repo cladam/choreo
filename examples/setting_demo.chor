@@ -2,7 +2,7 @@
 
 feature: "Choreo Configuration"
 
-settings:
+settings {
   # Set a custom timeout for this test suite.
   timeout_seconds = 5
   # Specify the output directory for reports.
@@ -13,6 +13,7 @@ settings:
   # Specify the shell to use for the Terminal actor, defaults to bash.
   shell_path = "/bin/bash"
   expected_failures = 1
+}
 
 actors: Terminal
 

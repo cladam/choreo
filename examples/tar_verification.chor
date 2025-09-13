@@ -1,0 +1,75 @@
+# This feature tests the workflow of creating a compressed archive with 'tar',
+# extracting it, and verifying that the extracted contents match the original.
+feature: "Tar Archiving and Integrity Verification"
+actors: Terminal, FileSystem
+
+settings {
+    stop_on_failure = true
+    shell_path = "/bin/bash"
+}
+
+background {
+    # This background block runs before each test to set up a consistent environment.
+    FileSystem dir_does_not_exist "source_dir"
+    FileSystem dir_does_not_exist "extracted_dir"
+    FileSystem file_does_not_exist "backup.tar.gz"
+    FileSystem create_dir "source_dir/data"
+    FileSystem create_file "source_dir/config.yml" with_content "setting: true"
+    FileSystem create_file "source_dir/data/report.csv" with_content "id,value\n1,100"
+}
+
+scenario "Create, extract, and verify a tarball" {
+    test CreateSourceFiles "Verify source files and directories exist" {
+        given:
+            FileSystem dir_exists "source_dir/data"
+            FileSystem file_exists "source_dir/config.yml"
+        when:
+            Terminal runs "ls -l source_dir"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "config.yml"
+            Terminal output_contains "data"
+    }
+
+    test CreateArchive "Create a compressed tar archive" {
+        given:
+            Test has_succeeded CreateSourceFiles
+        when:
+            # The -C flag changes the directory, so paths in the archive are relative.
+            Terminal runs "tar -czf backup.tar.gz -C source_dir ."
+        then:
+            Terminal last_command succeeded
+            FileSystem file_exists "backup.tar.gz"
+    }
+
+    test ExtractArchive "Extract the archive to a new location" {
+        given:
+            Test has_succeeded CreateArchive
+        when:
+            FileSystem create_dir "extracted_dir"
+            Terminal runs "tar -xzf backup.tar.gz -C extracted_dir"
+        then:
+            Terminal last_command succeeded
+            FileSystem dir_exists "extracted_dir/data"
+            FileSystem file_exists "extracted_dir/config.yml"
+            FileSystem file_exists "extracted_dir/data/report.csv"
+    }
+
+    test VerifyIntegrity "Verify the integrity of the extracted files" {
+        given:
+            Test has_succeeded ExtractArchive
+        when:
+            # The 'diff' command will exit with a non-zero code if there are differences.
+            Terminal runs "diff -qr source_dir extracted_dir"
+        then:
+            Terminal last_command succeeded
+            Terminal stdout_is_empty
+    }
+
+    # This after block runs after the scenario to clean up all artifacts.
+    after {
+        FileSystem delete_dir "source_dir"
+        FileSystem delete_dir "extracted_dir"
+        FileSystem delete_file "backup.tar.gz"
+    }
+}

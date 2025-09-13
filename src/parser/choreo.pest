@@ -11,7 +11,7 @@ grammar                           = { SOI ~ statement* ~ EOI }
 statement                         = { feature_def | settings_def | env_def | vars_def | actors_def | background_def | scenario_def }
 
 // Setting up the test suite.
-settings_def                      = { "settings:" ~ setting+ }
+settings_def                      = { "settings" ~ "{" ~ setting+ ~ "}" }
 setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ (value | binary_op) }
 background_def                    = { "background" ~ "{" ~ (action | condition)+ ~ "}" }
 env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
@@ -90,4 +90,4 @@ value                             = { string | number }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
 binary_op                         = { "true" | "false" }
 filesystem_action_keyword         = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }
-filesystem_cond_keyword           = @{ "file_exists" | "dir_exists" | "file_contains" | "file_does_not_exist" }
+filesystem_cond_keyword           = @{ "file_exists" | "dir_exists" | "dir_does_not_exist" | "file_contains" | "file_does_not_exist" }

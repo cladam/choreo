@@ -317,6 +317,7 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                 "file_exists" => Condition::FileExists { path },
                 "file_does_not_exist" => Condition::FileDoesNotExist { path },
                 "dir_exists" => Condition::DirExists { path },
+                "dir_does_not_exist" => Condition::DirDoesNotExist { path },
                 "file_contains" => {
                     let content = inner
                         .next()

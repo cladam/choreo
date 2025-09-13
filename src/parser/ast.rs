@@ -125,6 +125,9 @@ pub enum Condition {
     DirExists {
         path: String,
     },
+    DirDoesNotExist {
+        path: String,
+    },
     FileContains {
         path: String,
         content: String,
