@@ -1,4 +1,19 @@
-# **choreo**
+<div align="center">
+
+<p align="center">
+  <img src="assets/choreo-logo.png" alt="choreo logo" width="200"/>
+</p>
+
+<p align="center">
+  <b>BDD testing that runs in your shell</b><br/>
+</p>
+
+[![Crates.io](https://img.shields.io/crates/v/choreo.svg)](https://crates.io/crates/choreo)
+[![Downloads](https://img.shields.io/crates/d/choreo.svg)](https://crates.io/crates/choreo)
+
+</div>
+
+## About
 
 `choreo` is an executable Domain-Specific Language (DSL) for writing automated, behaviour-driven tests for command-line
 applications and system interactions. It uses a structured, human-readable format inspired by Gherkin to define test
