@@ -156,7 +156,7 @@ impl TestRunner {
                             } else if self
                                 .test_start_times
                                 .get(&test_case.name)
-                                .map_or(false, |start| start.elapsed() > test_timeout)
+                                .is_some_and(|start| start.elapsed() > test_timeout)
                             {
                                 immediate_failures.push((
                                     test_case.name.clone(),
@@ -337,8 +337,6 @@ impl TestRunner {
         ) {
             return;
         }
-        if self.fs_backend.execute_action(action) {
-            return;
-        }
+        self.fs_backend.execute_action(action);
     }
 }

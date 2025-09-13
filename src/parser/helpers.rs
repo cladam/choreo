@@ -116,12 +116,10 @@ pub fn check_condition(
         }
         Condition::StateSucceeded { outcome } => test_states
             .get(outcome)
-            .map_or(false, |s| *s == TestState::Passed),
-        Condition::LastCommandSucceeded => last_exit_code.map_or(false, |code| code == 0),
-        Condition::LastCommandFailed => last_exit_code.map_or(false, |code| code != 0),
-        Condition::LastCommandExitCodeIs(expected_code) => {
-            last_exit_code.map_or(false, |code| code == *expected_code)
-        }
+            .is_some_and(|s| *s == TestState::Passed),
+        Condition::LastCommandSucceeded => *last_exit_code == Some(0),
+        Condition::LastCommandFailed => last_exit_code.is_some_and(|code| code != 0),
+        Condition::LastCommandExitCodeIs(expected_code) => *last_exit_code == Some(*expected_code),
         Condition::FileExists { path } => {
             fs_backend.file_exists(&substitute_string(path, env_vars), verbose)
         }
@@ -181,10 +179,10 @@ fn extract_command_output(line: &str) -> Option<&str> {
     for pat in &prompt_patterns {
         if let Some(idx) = line.rfind(pat) {
             // Check if it's a plausible prompt ending
-            if idx + pat.len() == line.len() || line[idx + pat.len()..].starts_with(' ') {
-                if last_prompt_idx.map_or(true, |(i, _)| idx > i) {
-                    last_prompt_idx = Some((idx, pat.len()));
-                }
+            if (idx + pat.len() == line.len() || line[idx + pat.len()..].starts_with(' '))
+                && last_prompt_idx.is_none_or(|(i, _)| idx > i)
+            {
+                last_prompt_idx = Some((idx, pat.len()));
             }
         }
     }
@@ -323,12 +321,14 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
 
 /// Determines if a test case contains only synchronous actions.
 pub fn is_synchronous(test_case: &TestCase) -> bool {
-    test_case.when.iter().all(|action| match action {
-        Action::Run { .. } => true,
-        Action::CreateFile { .. }
-        | Action::CreateDir { .. }
-        | Action::DeleteFile { .. }
-        | Action::DeleteDir { .. } => true,
-        _ => false,
+    test_case.when.iter().all(|action| {
+        matches!(
+            action,
+            Action::Run { .. }
+                | Action::CreateFile { .. }
+                | Action::DeleteFile { .. }
+                | Action::CreateDir { .. }
+                | Action::DeleteDir { .. }
+        )
     })
 }
