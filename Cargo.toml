@@ -6,7 +6,7 @@ repository = "https://github.com/cladam/choreo"
 readme = "README.md"
 license = "MIT"
 description = "DSL for BDD type testing."
-keywords = ["dsl"]
+keywords = ["dsl", "bdd", "testing", "cli"]
 categories = ["command-line-utilities", "development-tools"]
 edition = "2021"
 

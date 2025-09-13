@@ -79,11 +79,14 @@ jobs:
         run: ./target/release/choreo run --file examples/variable_substitution.chor
 
       # These tests are commented out because they require installing medi on the runner
-      #- name: Run 'medi' example
-      #  run: ./target/release/choreo run --file examples/test_medi_env_workflow.chor
+      - name: Install medi for the next tests
+        run: cargo install medi
 
-      #- name: Run 'new matchers' example
-      #  run: ./target/release/choreo run --file examples/test_new_matchers.chor
+      - name: Run 'medi' example
+        run: ./target/release/choreo run --file examples/test_medi_env_workflow.chor
+
+      - name: Run 'new matchers' example
+        run: ./target/release/choreo run --file examples/test_new_matchers.chor
 
   create_release:
     name: Create GitHub Release
