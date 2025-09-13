@@ -29,7 +29,6 @@ impl TestState {
 pub enum ReportFormat {
     Json,
     Junit,
-    None,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -80,8 +80,10 @@ impl TerminalBackend {
                 let char_str = String::from_utf8_lossy(&[byte]).to_string();
 
                 // Only send non-empty strings through the channel.
-                if !char_str.is_empty() && sender.send(char_str).is_err() {
-                    break;
+                if !char_str.is_empty() {
+                    if sender.send(char_str).is_err() {
+                        break;
+                    }
                 }
             }
         });

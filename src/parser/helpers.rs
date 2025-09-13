@@ -117,7 +117,15 @@ pub fn check_condition(
         Condition::StateSucceeded { outcome } => test_states
             .get(outcome)
             .is_some_and(|s| *s == TestState::Passed),
-        Condition::LastCommandSucceeded => *last_exit_code == Some(0),
+        Condition::LastCommandSucceeded => {
+            if verbose {
+                println!(
+                    "  [DEBUG](LastCommandSucceeded) Last exit code: {:?}",
+                    last_exit_code
+                );
+            }
+            *last_exit_code == Some(0)
+        }
         Condition::LastCommandFailed => last_exit_code.is_some_and(|code| code != 0),
         Condition::LastCommandExitCodeIs(expected_code) => *last_exit_code == Some(*expected_code),
         Condition::FileExists { path } => {
@@ -214,10 +222,16 @@ pub fn substitute_variables(action: &Action, state: &HashMap<String, String>) ->
             actor: actor.clone(),
             content: substitute_string(content, state),
         },
-        Action::Run { actor, command } => Action::Run {
-            actor: actor.clone(),
-            command: substitute_string(command, state),
-        },
+        Action::Run { actor, command } => {
+            println!(
+                "  [DEBUG] Substituting in Run action: command='{}'",
+                command
+            );
+            Action::Run {
+                actor: actor.clone(),
+                command: substitute_string(command, state),
+            }
+        }
         Action::CreateFile { path, content } => Action::CreateFile {
             path: substitute_string(path, state),
             content: substitute_string(content, state),
