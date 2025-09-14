@@ -1,0 +1,37 @@
+[
+  {
+    "uri": "examples/redirecting_output_tee.chor",
+    "keyword": "Feature",
+    "name": "Tee Utility",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "tee writes to both stdout and a file",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "tee writes to both destinations",
+            "result": {
+              "status": "passed",
+              "durationInMs": 111
+            }
+          },
+          {
+            "keyword": "Then ",
+            "name": "Cleanup the test note",
+            "result": {
+              "status": "passed",
+              "durationInMs": 55
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 2,
+      "failures": 0,
+      "totalTimeInSeconds": 0.11196762
+    }
+  }
+]

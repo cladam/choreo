@@ -21,7 +21,7 @@ scenario "Cloning a repository and checking its state" {
             # Attempt to clone a repository that doesn't exist.
             Terminal runs "pwd" # Just to show current directory in output
             Terminal runs "git --version" # Ensure git is available
-            Terminal runs "git clone https://github.com/user/invalid-repo.git"
+            Terminal runs "git clone https://github.com/cladam/invalid-repo.git"
         then:
             Terminal last_command failed
             Terminal stderr_contains "Repository not found"
