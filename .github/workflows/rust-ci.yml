@@ -68,6 +68,9 @@ jobs:
       - name: Run `sorting lines` example
         run: ./target/release/choreo run --file examples/sorting_lines.chor
 
+      - name: Run `tar verification` example
+        run: ./target/release/choreo run --file examples/tar_verification.chor
+
       - name: Run `test ls` example
         run: ./target/release/choreo run --file examples/test_ls.chor
 
@@ -80,7 +83,7 @@ jobs:
       - name: Run `variable substitution` example
         run: ./target/release/choreo run --file examples/variable_substitution.chor
 
-      # These tests are commented out because they require installing medi on the runner
+      # These tests require installing medi on the runner
       - name: Install medi for the next tests
         run: cargo install medi
 
