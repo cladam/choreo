@@ -185,14 +185,14 @@ pub fn check_condition(
                     !is_prompt
                 })
                 .collect();
-            println!("{}", actual_output.join("\n"));
+            //println!("{}", actual_output.join("\n"));
             //println!("Actual output {}", actual_output);
             actual_output.is_empty()
         }
         Condition::StderrIsEmpty => {
             let stderr_cleaned = strip(stderr_buffer);
             let stderr_buffer = String::from_utf8_lossy(&stderr_cleaned);
-            println!("stderr: {}", stderr_buffer);
+            //println!("stderr: {}", stderr_buffer);
             stderr_buffer.trim().is_empty()
         }
         Condition::StderrContains(text) => stderr_buffer.contains(text),
@@ -214,6 +214,34 @@ pub fn check_condition(
 
             actual_output.iter().any(|line| *line == text.trim())
         }
+        Condition::OutputIsValidJson => {
+            // For sync tests, the buffer contains the direct output.
+            // For async, it might be mixed. We look for a valid JSON object
+            // within the output.
+            let content_to_check = buffer.trim();
+            if serde_json::from_str::<serde_json::Value>(content_to_check).is_ok() {
+                return true;
+            }
+
+            // Fallback for async or mixed content: find JSON within the lines.
+            let actual_output: Vec<&str> =
+                buffer.lines().filter_map(extract_command_output).collect();
+            let filtered_output = actual_output.join("\n");
+            serde_json::from_str::<serde_json::Value>(&filtered_output).is_ok()
+        }
+        Condition::JsonOutputHasPath { path } => {
+            let actual_output: Vec<&str> =
+                buffer.lines().filter_map(extract_command_output).collect();
+            let filtered_output = actual_output.join("\n");
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&filtered_output) {
+                !jsonpath_lib::select(&json, path)
+                    .unwrap_or_default()
+                    .is_empty()
+            } else {
+                false
+            }
+        }
+        _ => false, // Other conditions not implemented yet
     }
 }
 

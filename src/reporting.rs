@@ -29,6 +29,9 @@ pub fn generate_choreo_report(
         let mut after_hooks = Vec::new();
 
         for (i, tc) in scenario.tests.iter().enumerate() {
+            println!("Processing test case: {}", tc.name);
+            println!("  Description: {}", tc.description);
+            println!("  Test case #{}", i);
             let keyword = match i {
                 0 => "Given",
                 _ if i == scenario.tests.len() - 1 => "Then",
@@ -46,8 +49,8 @@ pub fn generate_choreo_report(
                 .map_or(Duration::default(), |s| s.elapsed());
 
             steps.push(Step {
-                keyword: format!("{} ", keyword),
-                name: tc.description.clone(),
+                name: tc.name.clone(),
+                description: tc.description.clone(),
                 result: StepResult {
                     status,
                     duration_in_ms: duration.as_millis(),

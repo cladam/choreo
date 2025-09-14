@@ -3,7 +3,7 @@ use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
@@ -105,6 +105,10 @@ impl TerminalBackend {
 
         // Append the stdout from the last non-interactive `run` command, if any.
         if !self.last_stdout.is_empty() {
+            // Ensure there's a newline before appending the output from `run`.
+            if !pty_buffer.ends_with('\n') && !pty_buffer.is_empty() {
+                pty_buffer.push('\n');
+            }
             pty_buffer.push_str(&self.last_stdout);
             // Clear it so it's not appended again on the next check.
             self.last_stdout.clear();
@@ -146,7 +150,7 @@ impl TerminalBackend {
                     }
                     return true;
                 }
-                // This is the new, robust implementation.
+                // Reset last command results
                 *last_exit_code = None;
                 self.last_stdout.clear();
                 self.last_stderr.clear();
@@ -155,36 +159,74 @@ impl TerminalBackend {
                     .arg("-c")
                     .arg(command)
                     .current_dir(&self.cwd)
-                    .stdout(std::process::Stdio::piped())
-                    .stderr(std::process::Stdio::piped())
+                    .stdin(Stdio::null()) // Prevent hanging on commands waiting for stdin
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
                     .spawn()
                     .expect("Failed to spawn command");
 
-                if let Some(t) = timeout {
+                let mut stdout_handle = child.stdout.take().unwrap();
+                let mut stderr_handle = child.stderr.take().unwrap();
+
+                let stdout_thread = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    stdout_handle
+                        .read_to_end(&mut buf)
+                        .expect("Failed to read stdout");
+                    buf
+                });
+
+                let stderr_thread = thread::spawn(move || {
+                    let mut buf = Vec::new();
+                    stderr_handle
+                        .read_to_end(&mut buf)
+                        .expect("Failed to read stderr");
+                    buf
+                });
+
+                let status = if let Some(t) = timeout {
                     // This is a crude way to poll for completion with a timeout.
                     // A more robust solution might use `wait_timeout`.
                     let start = std::time::Instant::now();
+                    let mut status = None;
                     while start.elapsed() < t {
-                        if let Ok(Some(status)) = child.try_wait() {
-                            let output = child.wait_with_output().expect("Failed to get output");
-                            *last_exit_code = status.code();
-                            self.last_stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                            self.last_stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                            return true;
+                        match child.try_wait() {
+                            Ok(Some(s)) => {
+                                status = Some(s);
+                                break;
+                            }
+                            Ok(None) => {
+                                thread::sleep(Duration::from_millis(50));
+                                continue;
+                            }
+                            Err(e) => panic!("Error attempting to wait for child: {}", e),
                         }
-                        thread::sleep(Duration::from_millis(50));
                     }
-                    // If we get here, the process timed out.
-                    child.kill().expect("Failed to kill timed-out process");
-                    *last_exit_code = Some(137); // Convention for timeout
-                    self.last_stderr = "Command timed out".to_string();
+
+                    if status.is_none() {
+                        // If we get here, the process timed out.
+                        child.kill().expect("Failed to kill timed-out process");
+                        self.last_stderr = "Command timed out".to_string();
+                    }
+                    status
                 } else {
                     // No timeout, wait indefinitely.
-                    let output = child.wait_with_output().expect("Failed to execute command");
-                    *last_exit_code = output.status.code();
-                    self.last_stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                    self.last_stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                }
+                    Some(child.wait().expect("Failed to wait on child"))
+                };
+
+                let stdout_bytes = stdout_thread.join().unwrap();
+                let stderr_bytes = stderr_thread.join().unwrap();
+
+                self.last_stdout = String::from_utf8_lossy(&stdout_bytes).to_string();
+                self.last_stderr = String::from_utf8_lossy(&stderr_bytes).to_string();
+                *last_exit_code = status.and_then(|s| s.code()).or_else(|| {
+                    if self.last_stderr == "Command timed out" {
+                        Some(137)
+                    } else {
+                        None
+                    }
+                });
+
                 true
             }
             _ => false, // Ignore actions not meant for this backend

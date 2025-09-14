@@ -62,8 +62,8 @@ pub struct Scenario {
 
 #[derive(Debug, Serialize)]
 pub struct Step {
-    pub keyword: String,
     pub name: String,
+    pub description: String,
     pub result: Result,
 }
 

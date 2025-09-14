@@ -117,6 +117,23 @@ pub enum Condition {
     OutputStartsWith(String),
     OutputEndsWith(String),
     OutputEquals(String),
+    // --- JSON Conditions ---
+    OutputIsValidJson,
+    JsonOutputHasPath {
+        path: String,
+    },
+    JsonOutputAtEquals {
+        path: String,
+        value: Value,
+    },
+    JsonOutputAtIncludes {
+        path: String,
+        value: Value,
+    },
+    JsonOutputAtHasItemCount {
+        path: String,
+        count: i32,
+    },
     // --- Filesystem Conditions ---
     FileExists {
         path: String,
@@ -157,7 +174,7 @@ pub enum Action {
 }
 
 // Primitive values.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     String(String),
     Number(i32),

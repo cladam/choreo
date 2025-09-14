@@ -206,9 +206,8 @@ impl TestRunner {
                                     &mut last_exit_code,
                                     settings.timeout_seconds,
                                 );
+                                terminal_backend.read_pty_output(&mut output_buffer);
                             }
-
-                            terminal_backend.read_pty_output(&mut output_buffer);
 
                             if let Some(137) = last_exit_code {
                                 break;

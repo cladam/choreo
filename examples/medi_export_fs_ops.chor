@@ -36,10 +36,13 @@ scenario "User can create a note, export it, and verify file operations" {
     test VerifyExportedContent "Verify the content of the exported JSON file" {
         given:
             Test has_succeeded ExportNoteToFileSystem
+            FileSystem file_exists "medi-export.json"
         when:
-            Terminal runs "ls medi-export.json"
+            Terminal runs "cat medi-export.json"
         then:
-            Terminal last_command succeeded
+            #Terminal last_command succeeded
+            Terminal output_is_valid_json
+            #Terminal output_json_path "$.notes[0].name" equals "choreo-test"
     }
 
     # This block runs after all tests in the scenario are complete.

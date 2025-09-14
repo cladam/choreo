@@ -60,7 +60,12 @@ terminal_condition                = { "Terminal" ~ (
     stderr_contains_condition |
     output_starts_with_condition |
     output_ends_with_condition |
-    output_equals_condition
+    output_equals_condition |
+    output_is_valid_json_condition |
+    json_output_has_path_condition |
+    json_output_at_equals_condition |
+    json_output_at_includes_condition |
+    json_output_at_has_item_count_condition
 ) }
 
 // Terminal-specific condition parts
@@ -75,6 +80,12 @@ stderr_contains_condition         = { "stderr_contains" ~ string }
 output_starts_with_condition      = { "output_starts_with" ~ string }
 output_ends_with_condition        = { "output_ends_with" ~ string }
 output_equals_condition           = { "output_equals" ~ string }
+output_is_valid_json_condition    = { "output_is_valid_json" }
+json_output_has_path_condition    = { "json_output" ~ "has_path" ~ string }
+json_output_at_equals_condition   = { "json_output" ~ "at" ~ string ~ "equals" ~ value }
+json_output_at_includes_condition = { "json_output" ~ "at" ~ string ~ "includes" ~ value }
+json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ string ~ "has_item_count" ~ number }
+
 
 // Action Types
 type_action                       = { identifier ~ "types" ~ string }

@@ -297,6 +297,31 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             let code: i32 = code_str.parse().unwrap();
             Condition::LastCommandExitCodeIs(code)
         }
+        Rule::output_is_valid_json_condition => Condition::OutputIsValidJson,
+        Rule::json_output_has_path_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner.next().unwrap().as_str().to_string();
+            Condition::JsonOutputHasPath { path }
+        }
+        Rule::json_output_at_equals_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner.next().unwrap().as_str().to_string();
+            let value = build_value(inner.next().unwrap());
+            Condition::JsonOutputAtEquals { path, value }
+        }
+        Rule::json_output_at_includes_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner.next().unwrap().as_str().to_string();
+            let value = build_value(inner.next().unwrap());
+            Condition::JsonOutputAtIncludes { path, value }
+        }
+        Rule::json_output_at_has_item_count_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner.next().unwrap().as_str().to_string();
+            let count_str = inner.next().unwrap().as_str();
+            let count: i32 = count_str.parse().unwrap();
+            Condition::JsonOutputAtHasItemCount { path, count }
+        }
         Rule::file_is_empty_condition => {
             let mut inner = inner_cond.into_inner();
             let path = unescape_string(inner.next().unwrap().into_inner().next().unwrap().as_str());
