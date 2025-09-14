@@ -1,0 +1,52 @@
+# A test suite for medi note-taking application, testing export and FileSystem operations
+feature "Note and Task Management"
+
+settings {
+  stop_on_failure = true
+}
+
+actors: Terminal
+
+# A scenario groups related tests into a single workflow.
+scenario "User can create a note, export it, and verify file operations" {
+    # Create a note and capture its name for later use.
+    test NoteCreationSuccess "Create a new note" {
+        given:
+            wait >= 0s
+        when:
+            Terminal runs "medi new choreo-test -m '# My quick medi note'"
+        then:
+            Terminal output_matches "Successfully created note: '([\w-]+)'" as noteName
+    }
+
+    test ExportNoteToFileSystem "Export the created note to the file system" {
+        given:
+            Test has_succeeded NoteCreationSuccess
+        when:
+            Terminal runs "touch medi-export.txt"
+            Terminal runs "medi export medi-export --format json"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "notes as JSON to 'medi-export.json'"
+            FileSystem file_exists "medi-export.json"
+            FileSystem file "medi-export.json" is_not_empty
+            FileSystem file "medi-export.txt" is_empty
+    }
+
+    test VerifyExportedContent "Verify the content of the exported JSON file" {
+        given:
+            Test has_succeeded ExportNoteToFileSystem
+        when:
+            Terminal runs "ls medi-export.json"
+        then:
+            Terminal last_command succeeded
+    }
+
+    # This block runs after all tests in the scenario are complete.
+    after {
+        # Use the captured 'noteName' variable to delete the created note.
+        Terminal runs "medi delete ${noteName} --force"
+        FileSystem delete_file "medi-export.json"
+        FileSystem delete_file "medi-export.txt"
+    }
+}

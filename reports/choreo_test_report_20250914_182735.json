@@ -1,0 +1,53 @@
+[
+  {
+    "uri": "examples/medi_export_fs_ops.chor",
+    "keyword": "Feature",
+    "name": "Note and Task Management",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "User can create a note, add a task, and clean up",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "Create a new note",
+            "result": {
+              "status": "passed",
+              "durationInMs": 598
+            }
+          },
+          {
+            "keyword": "Then ",
+            "name": "Export the created note to the file system",
+            "result": {
+              "status": "failed",
+              "durationInMs": 263,
+              "errorMessage": "Synchronous test conditions not met"
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "Terminal runs 'medi delete choreo-test --force'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          },
+          {
+            "name": "FileSystem delete_file 'medi-export.json'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "tests": 2,
+      "failures": 1,
+      "totalTimeInSeconds": 0.59884566
+    }
+  }
+]

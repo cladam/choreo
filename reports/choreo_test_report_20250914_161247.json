@@ -1,0 +1,37 @@
+[
+  {
+    "uri": "examples/test_medi_export_fs_ops.chor",
+    "keyword": "Feature",
+    "name": "Note and Task Management",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "User can create a note, add a task, and clean up",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "Create a new note",
+            "result": {
+              "status": "passed",
+              "durationInMs": 547
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "Terminal runs 'medi delete choreo-test --force'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ]
+      }
+    ],
+    "summary": {
+      "tests": 1,
+      "failures": 0,
+      "totalTimeInSeconds": 0.54767704
+    }
+  }
+]

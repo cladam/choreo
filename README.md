@@ -77,7 +77,7 @@ scenario "tee writes to both stdout and a file" {
 }
 ```
 
-See [test_medi_env_workflow.chor](examples/test_medi_env_workflow.chor) for a more comprehensive example
+See [test_medi_env_workflow.chor](examples/medi_env_workflow.chor) for a more comprehensive example
 using [medi](https://github.com/cladam/medi) as the tools to test
 
 ### Full Documentation

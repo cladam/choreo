@@ -92,7 +92,7 @@ jobs:
         run: cargo install medi
 
       - name: Run 'medi' example
-        run: ./target/release/choreo run --file examples/test_medi_env_workflow.chor
+        run: ./target/release/choreo run --file examples/medi_env_workflow.chor
 
   create_release:
     name: Create GitHub Release

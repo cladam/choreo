@@ -44,7 +44,11 @@ action                            = { type_action | press_action | run_action | 
 // Condition Types
 wait_condition                    = { "wait" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ wait_marker }
 state_condition                   = { "Test" ~ "has_succeeded" ~ identifier }
-filesystem_condition              = { "FileSystem" ~ filesystem_cond_keyword ~ string ~ string? }
+// --- Filesystem Conditions ---
+file_is_not_empty_condition       = { "file" ~ string ~ "is_not_empty" }
+file_is_empty_condition           = { "file" ~ string ~ "is_empty" }
+filesystem_condition_keyword      = @{ "file_exists" | "file_does_not_exist" | "dir_exists" | "dir_does_not_exist" | "file_contains" }
+filesystem_condition              = { "FileSystem" ~ ( (filesystem_condition_keyword ~ string ~ "with_content" ~ string) | (filesystem_condition_keyword ~ string) | file_is_not_empty_condition | file_is_empty_condition) }
 terminal_condition                = { "Terminal" ~ (
     output_contains_condition |
     output_matches_condition |
@@ -77,6 +81,7 @@ type_action                       = { identifier ~ "types" ~ string }
 press_action                      = { identifier ~ "presses" ~ string }
 run_action                        = { identifier ~ "runs" ~ string }
 filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
+filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" }
 
 // The basic building blocks of the choreo language.
 identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
@@ -90,5 +95,3 @@ wait_marker                       = @{ float ~ wait_unit }
 value                             = { string | number }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
 binary_op                         = { "true" | "false" }
-filesystem_action_keyword         = @{ "create_dir" | "delete_file" | "delete_dir" | "create_file" }
-filesystem_cond_keyword           = @{ "file_exists" | "dir_exists" | "dir_does_not_exist" | "file_contains" | "file_does_not_exist" }

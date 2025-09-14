@@ -297,32 +297,55 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             let code: i32 = code_str.parse().unwrap();
             Condition::LastCommandExitCodeIs(code)
         }
+        Rule::file_is_empty_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = unescape_string(inner.next().unwrap().into_inner().next().unwrap().as_str());
+            Condition::FileIsEmpty { path }
+        }
+        Rule::file_is_not_empty_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = unescape_string(inner.next().unwrap().into_inner().next().unwrap().as_str());
+            Condition::FileIsNotEmpty { path }
+        }
         Rule::filesystem_condition => {
             let mut inner = inner_cond.into_inner();
-            //let _actor = inner.next().unwrap().as_str(); // Consume the actor identifier
-            let keyword = inner.next().unwrap().as_str();
-            let path = inner
-                .next()
-                .unwrap()
-                .into_inner()
-                .next()
-                .map_or(String::new(), |p| p.as_str().to_string());
+            let next_pair = inner.next().unwrap();
 
-            match keyword {
-                "file_exists" => Condition::FileExists { path },
-                "file_does_not_exist" => Condition::FileDoesNotExist { path },
-                "dir_exists" => Condition::DirExists { path },
-                "dir_does_not_exist" => Condition::DirDoesNotExist { path },
-                "file_contains" => {
-                    let content = inner
+            // Handle the different structures within a filesystem_condition
+            match next_pair.as_rule() {
+                Rule::file_is_empty_condition => build_condition_from_specific(next_pair),
+                Rule::file_is_not_empty_condition => build_condition_from_specific(next_pair),
+                _ => {
+                    // This handles `filesystem_condition_keyword ~ string ...`
+                    let keyword = next_pair.as_str();
+                    let path = inner
                         .next()
                         .unwrap()
                         .into_inner()
                         .next()
-                        .map_or(String::new(), |p| p.as_str().to_string());
-                    Condition::FileContains { path, content }
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+
+                    match keyword {
+                        "file_exists" => Condition::FileExists { path },
+                        "file_does_not_exist" => Condition::FileDoesNotExist { path },
+                        "dir_exists" => Condition::DirExists { path },
+                        "dir_does_not_exist" => Condition::DirDoesNotExist { path },
+                        "file_contains" => {
+                            let content = inner
+                                .next()
+                                .unwrap()
+                                .into_inner()
+                                .next()
+                                .unwrap()
+                                .as_str()
+                                .to_string();
+                            Condition::FileContains { path, content }
+                        }
+                        _ => unreachable!("Unsupported filesystem condition keyword: {}", keyword),
+                    }
                 }
-                _ => unreachable!(),
             }
         }
         Rule::stdout_is_empty_condition => Condition::StdoutIsEmpty,

@@ -80,7 +80,7 @@ settings {
 
 A block that provides a common set of readable `given` steps that apply to all scenarios in a feature.
 
-**Examle:**
+**Example:**
 
 ```
 background {
@@ -92,8 +92,7 @@ background {
 #### `var`
 
 A keyword for defining key-value variables that can be used throughout the test file. This is useful for making tests
-more
-readable and maintainable by avoiding "magic strings."
+more readable and maintainable by avoiding "magic strings."
 
 **Example:**
 
@@ -249,6 +248,7 @@ This is the reference for all available commands that can be used within the `te
 | `Terminal last_command exit_code_is <num>` | Passes if the last `Terminal runs` command exited with the specified code.         |
 | `Terminal output_contains "..."`           | Passes if the combined stdout/stderr stream from the PTY contains the substring.   |
 | `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal runs` command was empty.              |
+| `Terminal stderr_is_empty`                 | Passes if the stderr from the last `Terminal runs` command was empty.              |
 | `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal runs` command contains the substring. |
 | `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `runs` command starts with the string.    |
 | `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `runs` command ends with the string.      |
@@ -276,6 +276,8 @@ This is the reference for all available commands that can be used within the `te
 | `FileSystem file_exists "..."`         | Passes if a file exists at the specified path.                   |
 | `FileSystem file_does_not_exist "..."` | Passes if nothing exists at the specified path.                  |
 | `FileSystem file_contains "..." "..."` | Passes if the file at the first path contains the second string. |
+| `FileSystem file "..." is_empty`       | Passes if the file at the specified path is empty.               |
+| `FileSystem file "..." is_not_empty`   | Passes if the file at the specified path is not empty.           |
 
 ## Variables
 

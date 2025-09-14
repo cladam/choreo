@@ -134,6 +134,12 @@ pub enum Condition {
     FileDoesNotExist {
         path: String,
     },
+    FileIsEmpty {
+        path: String,
+    },
+    FileIsNotEmpty {
+        path: String,
+    },
 }
 
 // All possible actions that can be executed.

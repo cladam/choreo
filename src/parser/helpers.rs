@@ -139,6 +139,30 @@ pub fn check_condition(
             terminal_cwd,
             verbose,
         ),
+        Condition::FileIsEmpty { path } => {
+            let resolved_path =
+                fs_backend.resolve_path(&substitute_string(path, env_vars), terminal_cwd);
+            if verbose {
+                println!("Checking if file is empty: {}", resolved_path.display());
+            }
+            resolved_path.is_file()
+                && resolved_path
+                    .metadata()
+                    .map(|m| m.len() == 0)
+                    .unwrap_or(false)
+        }
+        Condition::FileIsNotEmpty { path } => {
+            let resolved_path =
+                fs_backend.resolve_path(&substitute_string(path, env_vars), terminal_cwd);
+            if verbose {
+                println!("Checking if file is not empty: {}", resolved_path.display());
+            }
+            resolved_path.is_file()
+                && resolved_path
+                    .metadata()
+                    .map(|m| m.len() > 0)
+                    .unwrap_or(false)
+        }
         Condition::DirExists { path } => {
             fs_backend.dir_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
         }

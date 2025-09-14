@@ -9,7 +9,7 @@ impl FileSystemBackend {
         Self {}
     }
 
-    fn resolve_path(&self, path: &str, cwd: &Path) -> PathBuf {
+    pub(crate) fn resolve_path(&self, path: &str, cwd: &Path) -> PathBuf {
         let p = Path::new(path);
         if p.is_absolute() {
             p.to_path_buf()
