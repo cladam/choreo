@@ -74,11 +74,6 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                     Statement::VarDef(key, value) => {
                         env_vars.insert(key.clone(), value.as_string());
                     }
-                    Statement::VarsDef(vars) => {
-                        for (key, value) in vars {
-                            env_vars.insert(key.clone(), value.as_string());
-                        }
-                    }
                     Statement::Scenario(scenario) => scenarios.push(scenario.clone()),
                     _ => {} // Ignore other statement types
                 }

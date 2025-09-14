@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 // Represents the entire parsed test file
 #[derive(Debug, Clone)]
 pub struct TestSuite {
@@ -71,7 +69,6 @@ pub enum Statement {
     BackgroundDef(Vec<GivenStep>),
     EnvDef(Vec<String>),
     VarDef(String, Value),
-    VarsDef(HashMap<String, Value>),
     ActorDef(Vec<String>),
     FeatureDef(String),
     Scenario(Scenario),

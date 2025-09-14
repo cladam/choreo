@@ -32,7 +32,6 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
             Rule::settings_def => build_settings_def(pair),
             Rule::env_def => build_env_def(pair),
             Rule::var_def => build_var_def(pair),
-            Rule::vars_def => build_vars_def(pair),
             Rule::feature_def => build_feature_def(pair),
             Rule::scenario_def => build_scenario(pair),
             Rule::background_def => build_background_def(pair),
@@ -128,21 +127,6 @@ fn build_var_def(pair: Pair<Rule>) -> Statement {
     let value_str = value_pair.into_inner().next().unwrap().as_str();
     let value = Value::String(unescape_string(value_str));
     Statement::VarDef(key, value)
-}
-
-// Helper function for a vars definition.
-fn build_vars_def(pair: Pair<Rule>) -> Statement {
-    let vars = pair
-        .into_inner()
-        .map(|var_pair| {
-            let mut inner = var_pair.into_inner();
-            let key = inner.next().unwrap().as_str().to_string();
-            let value_pair = inner.next().unwrap(); // This is a `string` rule
-            let value_str = value_pair.into_inner().next().unwrap().as_str();
-            (key, Value::String(unescape_string(value_str)))
-        })
-        .collect();
-    Statement::VarsDef(vars)
 }
 
 // Helper function for a feature definition.
