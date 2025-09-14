@@ -9,6 +9,7 @@ background {
     # This action runs before the scenarios below.
     Terminal runs "cd /tmp"
 }
+var GIT_TERMINAL_PROMPT=0 # Disable git prompts for credentials
 
 scenario "Cloning a repository and checking its state" {
 
