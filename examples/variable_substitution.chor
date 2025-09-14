@@ -15,7 +15,7 @@ scenario "Using file-defined variables" {
         then:
             Terminal last_command succeeded
             FileSystem file_exists "${FILENAME}"
-            FileSystem file_contains "${FILENAME}" "${GREETING}"
+            FileSystem file_contains "${FILENAME}" with_content "${GREETING}"
     }
 
     after {
