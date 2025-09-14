@@ -6,6 +6,7 @@ settings {
   stop_on_failure = true
 }
 
+#env: EVAR
 var EVAR = "## My medi note from an environment variable"
 
 actors: Terminal

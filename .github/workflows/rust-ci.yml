@@ -15,7 +15,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   # A dummy environment variable for the medi test
-  EVAR: "Test Note Content"
+  EVAR: "## My medi note from an environment variable"
+  GIT_TERMINAL_PROMPT: 0
 
 jobs:
   build-and-test:
