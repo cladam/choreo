@@ -50,6 +50,9 @@ jobs:
       - name: Run `fs operations` example
         run: ./target/release/choreo run --file examples/fs_operations.chor
 
+      - name: Run `Git Operations` example
+        run: ./target/release/choreo run --file examples/git_operations.chor
+        
       - name: Run `new terminal conditions` example
         run: ./target/release/choreo run --file examples/new_terminal_conditions.chor
 

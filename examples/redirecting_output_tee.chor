@@ -11,7 +11,8 @@ scenario "tee writes to both stdout and a file" {
         when:
             # Change to the project's working directory before running the command
             # to ensure the file is created in the correct place.
-            Terminal runs "cd $PWD; echo 'hello tee' | tee tee_output.txt"
+            Terminal runs "cd $PWD"
+            Terminal runs "echo 'hello tee' | tee tee_output.txt"
         then:
             Terminal output_contains "hello tee"
             FileSystem file_exists "tee_output.txt"
