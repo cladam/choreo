@@ -58,21 +58,22 @@ feature "User account management via the CLI"
 
 A block for configuring the behavior of the choreo test runner for the current file.
 
-| Setting Key        | Value Type | Default    | Purpose                                                                                          |
-|:-------------------|:-----------|:-----------|:-------------------------------------------------------------------------------------------------|
-| `timeout_seconds`  | Number     | 30         | The maximum time in seconds a scenario can run before failing.                                   |  
-| `stop_on_failure`  | Boolean    | false      | If true, the entire test suite will stop immediately after the first test fails.                 |  
-| `shell_path`       | String     | "zsh"      | The absolute path to the shell to use for the Terminal actor.                                    |  
-| `report_path`      | String     | "reports/" | The directory where the report file will be saved.                                               |  
-| `expected_failures | Number     | 0          | Declares the number of tests that are expected to fail for the suite to be considered a success. |
+| Setting Key         | Value Type | Default    | Purpose                                                                                          |
+|:--------------------|:-----------|:-----------|:-------------------------------------------------------------------------------------------------|
+| `timeout_seconds`   | Number     | 30         | The maximum time in seconds a scenario can run before failing.                                   |  
+| `stop_on_failure`   | Boolean    | false      | If true, the entire test suite will stop immediately after the first test fails.                 |  
+| `shell_path`        | String     | "zsh"      | The absolute path to the shell to use for the Terminal actor.                                    |  
+| `report_path`       | String     | "reports/" | The directory where the report file will be saved.                                               |  
+| `expected_failures` | Number     | 0          | Declares the number of tests that are expected to fail for the suite to be considered a success. |
 
 **Example:**
 
 ```
-settings:  
-timeout_seconds = 10  
-stop_on_failure = true  
-expected_failures = 1
+settings {
+  timeout_seconds = 10  
+  stop_on_failure = true  
+  expected_failures = 1
+}
 ```
 
 #### `background`
@@ -88,17 +89,17 @@ background {
 }
 ```
 
-#### `vars`
+#### `var`
 
-A block for defining key-value variables that can be used throughout the test file. This is useful for making tests more
+A keyword for defining key-value variables that can be used throughout the test file. This is useful for making tests
+more
 readable and maintainable by avoiding "magic strings."
 
 **Example:**
 
 ```
-vars:  
-  FILENAME = "my_output.txt"  
-  GREETING = "Hello, Choreo!"
+var FILENAME = "my_output.txt"  
+var GREETING = "Hello, Choreo!"
 ```
 
 #### `env`
@@ -271,6 +272,7 @@ This is the reference for all available commands that can be used within the `te
 | Syntax                                 | Description                                                      |
 |:---------------------------------------|:-----------------------------------------------------------------|
 | `FileSystem dir_exists "..."`          | Passes if a directory exists at the specified path.              |
+| `FileSystem dir_does_not_exist "..."`  | Passes if no directory exists at the specified path.             |
 | `FileSystem file_exists "..."`         | Passes if a file exists at the specified path.                   |
 | `FileSystem file_does_not_exist "..."` | Passes if nothing exists at the specified path.                  |
 | `FileSystem file_contains "..." "..."` | Passes if the file at the first path contains the second string. |
@@ -287,8 +289,7 @@ with the variable's value before executing the step.
 **Example:**
 
 ```
-vars:  
-  FILENAME = "output.log"  
+var FILENAME = "output.log"  
 when:  
   Terminal runs "echo 'hello' > ${FILENAME}"  
 ```

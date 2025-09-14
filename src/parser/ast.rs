@@ -70,6 +70,7 @@ pub enum Statement {
     SettingsDef(TestSuiteSettings),
     BackgroundDef(Vec<GivenStep>),
     EnvDef(Vec<String>),
+    VarDef(String, Value),
     VarsDef(HashMap<String, Value>),
     ActorDef(Vec<String>),
     FeatureDef(String),

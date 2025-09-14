@@ -2,7 +2,7 @@ use choreo::cli;
 use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
-use choreo::parser::ast::{Statement, TestSuiteSettings};
+use choreo::parser::ast::Statement;
 use choreo::parser::parser;
 use choreo::runner::TestRunner;
 use clap::Parser;
@@ -40,10 +40,8 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 }
             };
 
-            let mut feature_name = "Choreo Test Feature".to_string(); // Default name
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut scenarios: Vec<choreo::parser::ast::Scenario> = Vec::new();
-            let mut settings = TestSuiteSettings::default();
             let test_file_path = std::path::Path::new(&file);
             let base_dir = test_file_path
                 .parent()
@@ -51,7 +49,6 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             for s in &test_suite.statements {
                 match s {
-                    Statement::SettingsDef(s) => settings = s.clone(),
                     Statement::BackgroundDef(steps) => {
                         // Convert background steps to a scenario
                         let bg_scenario = choreo::parser::ast::Scenario {
@@ -74,12 +71,14 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                             env_vars.insert(var.clone(), value);
                         }
                     }
+                    Statement::VarDef(key, value) => {
+                        env_vars.insert(key.clone(), value.as_string());
+                    }
                     Statement::VarsDef(vars) => {
                         for (key, value) in vars {
                             env_vars.insert(key.clone(), value.as_string());
                         }
                     }
-                    Statement::FeatureDef(name) => feature_name = name.clone(),
                     Statement::Scenario(scenario) => scenarios.push(scenario.clone()),
                     _ => {} // Ignore other statement types
                 }

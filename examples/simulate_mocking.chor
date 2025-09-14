@@ -1,8 +1,7 @@
 feature: "Simulating Mocks"
 actors: Terminal, FileSystem
 
-vars:
-  MOCK_SCRIPT = "my_mock_command.sh"
+var MOCK_SCRIPT = "my_mock_command.sh"
 
 scenario "Testing a script that calls another command" {
 
