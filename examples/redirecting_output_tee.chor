@@ -16,7 +16,7 @@ scenario "tee writes to both stdout and a file" {
         then:
             Terminal output_contains "hello tee"
             FileSystem file_exists "tee_output.txt"
-            FileSystem file_contains "tee_output.txt" "hello tee"
+            FileSystem file_contains "tee_output.txt" with_content "hello tee"
     }
     test CleanupSuccess "Cleanup the test note" {
         given:
