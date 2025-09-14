@@ -31,7 +31,6 @@ scenario "Cloning a repository and checking its state" {
     test CloneSucceedsForValidRepo "it successfully clones a valid repository" {
         given:
             Test has_succeeded CloneFailsForInvalidRepo
-            FileSystem delete_dir "choreo" # Cleanup from previous runs
         when:
             # Use a real, public repository for the test.
             Terminal runs "pwd" # Just to show current directory in output

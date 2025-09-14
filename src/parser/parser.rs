@@ -123,9 +123,8 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
 fn build_var_def(pair: Pair<Rule>) -> Statement {
     let mut inner = pair.into_inner();
     let key = inner.next().unwrap().as_str().to_string();
-    let value_pair = inner.next().unwrap(); // This is a `string` rule
-    let value_str = value_pair.into_inner().next().unwrap().as_str();
-    let value = Value::String(unescape_string(value_str));
+    let value_pair = inner.next().unwrap();
+    let value = build_value(value_pair);
     Statement::VarDef(key, value)
 }
 

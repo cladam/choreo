@@ -77,6 +77,7 @@ impl TestRunner {
 
             loop {
                 let elapsed_since_scenario_start = scenario_start_time.elapsed();
+                let mut progress_made = false;
 
                 let mut tests_to_start: Vec<(String, Vec<Action>)> = Vec::new();
                 let mut tests_to_pass = Vec::new();
@@ -172,6 +173,7 @@ impl TestRunner {
 
                 // --- Updating Phase (Mutable Borrows) ---
                 if !tests_to_start.is_empty() {
+                    progress_made = true;
                     for (name, given_actions) in tests_to_start {
                         let test_case = scenario.tests.iter().find(|tc| tc.name == name).unwrap();
 
@@ -254,6 +256,8 @@ impl TestRunner {
                             {
                                 break;
                             }
+                            // Force a re-evaluation of conditions for the next test
+                            continue;
                         } else {
                             if let Some(state) = test_states.get_mut(&name) {
                                 println!(" ▶  Starting ASYNC test: {}", name);
@@ -287,20 +291,29 @@ impl TestRunner {
                         }
                     }
                 }
-                for name in tests_to_pass {
-                    if let Some(state) = test_states.get_mut(&name) {
-                        if !state.is_done() {
-                            *state = TestState::Passed;
-                            colours::success(&format!(" 🟢  Test Passed: {}", name));
+                if !tests_to_pass.is_empty() {
+                    progress_made = true;
+                    for name in tests_to_pass {
+                        if let Some(state) = test_states.get_mut(&name) {
+                            if !state.is_done() {
+                                *state = TestState::Passed;
+                                colours::success(&format!(" 🟢  Test Passed: {}", name));
+                            }
                         }
                     }
                 }
 
-                for (name, error_msg) in immediate_failures {
-                    if let Some(state) = test_states.get_mut(&name) {
-                        if !state.is_done() {
-                            *state = TestState::Failed(error_msg.clone());
-                            colours::error(&format!(" 🔴  Test Failed: {} - {}", name, error_msg));
+                if !immediate_failures.is_empty() {
+                    progress_made = true;
+                    for (name, error_msg) in immediate_failures {
+                        if let Some(state) = test_states.get_mut(&name) {
+                            if !state.is_done() {
+                                *state = TestState::Failed(error_msg.clone());
+                                colours::error(&format!(
+                                    " 🔴  Test Failed: {} - {}",
+                                    name, error_msg
+                                ));
+                            }
                         }
                     }
                 }
@@ -338,18 +351,12 @@ impl TestRunner {
                     break 'scenario_loop;
                 }
 
-                // Check for a hang condition: no tests are running, but not all are done.
-                let any_running = scenario
-                    .tests
-                    .iter()
-                    .any(|t| matches!(test_states.get(&t.name).unwrap(), TestState::Running));
-
-                if !any_running && !all_done {
-                    colours::warn("\nWarning: No tests are running, but the scenario is not complete. Breaking to avoid a hang.");
+                if !progress_made {
+                    colours::warn("\nWarning: No progress was made in the last loop iteration, but the scenario is not complete. Breaking to avoid a hang.");
                     // Mark any remaining pending tests as skipped to ensure a clean exit.
                     for test in &scenario.tests {
                         if let Some(state) = test_states.get_mut(&test.name) {
-                            if matches!(*state, TestState::Pending) {
+                            if matches!(*state, TestState::Pending | TestState::Running) {
                                 *state = TestState::Skipped;
                             }
                         }

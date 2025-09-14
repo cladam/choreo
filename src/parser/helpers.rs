@@ -143,7 +143,7 @@ pub fn check_condition(
             fs_backend.dir_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
         }
         Condition::DirDoesNotExist { path } => {
-            !fs_backend.dir_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
+            fs_backend.dir_does_not_exist(&substitute_string(path, env_vars), terminal_cwd, verbose)
         }
         Condition::FileContains { path, content } => fs_backend.file_contains(
             &substitute_string(path, env_vars),

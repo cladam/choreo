@@ -15,7 +15,7 @@ settings_def                      = { "settings" ~ "{" ~ setting+ ~ "}" }
 setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ (value | binary_op) }
 background_def                    = { "background" ~ "{" ~ (action | condition)+ ~ "}" }
 env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
-var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ string }
+var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
 actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 feature_def                       = { "feature" ~ string }
 scenario_def                      = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }

@@ -90,4 +90,15 @@ impl FileSystemBackend {
             false
         }
     }
+
+    pub fn dir_does_not_exist(&self, path: &str, cwd: &Path, verbose: bool) -> bool {
+        let resolved_path = self.resolve_path(path, cwd);
+        if verbose {
+            println!(
+                "Checking if dir does not exist: {}",
+                resolved_path.display()
+            );
+        }
+        !resolved_path.exists()
+    }
 }
