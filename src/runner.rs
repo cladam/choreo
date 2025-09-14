@@ -55,7 +55,7 @@ impl TestRunner {
 
         // --- Backend and State Initialisation ---
         let mut terminal_backend = TerminalBackend::new(self.base_dir.clone(), settings.clone());
-        let fs_backend = FileSystemBackend::new(self.base_dir.clone());
+        let fs_backend = FileSystemBackend::new();
         let mut last_exit_code: Option<i32> = None;
         let mut output_buffer = String::new();
         let mut test_states: HashMap<String, TestState> = HashMap::new();
@@ -119,6 +119,7 @@ impl TestRunner {
                                     &mut self.env_vars,
                                     &last_exit_code,
                                     &fs_backend,
+                                    terminal_backend.get_cwd(),
                                     self.verbose,
                                 ) {
                                     tests_to_start.push((test_case.name.clone(), given_actions));
@@ -147,6 +148,7 @@ impl TestRunner {
                                     &mut self.env_vars,
                                     &last_exit_code,
                                     &fs_backend,
+                                    terminal_backend.get_cwd(),
                                     self.verbose,
                                 ) {
                                     tests_to_pass.push(test_case.name.clone());
@@ -222,6 +224,7 @@ impl TestRunner {
                                 &mut self.env_vars,
                                 &last_exit_code,
                                 &fs_backend,
+                                terminal_backend.get_cwd(),
                                 self.verbose,
                             );
 
@@ -406,7 +409,7 @@ impl TestRunner {
             return;
         }
         // Check if it's a filesystem action
-        if fs.execute_action(action) {
+        if fs.execute_action(action, terminal.get_cwd()) {
             return;
         }
     }

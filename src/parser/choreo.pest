@@ -17,7 +17,7 @@ background_def                    = { "background" ~ "{" ~ (action | condition)+
 env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
 var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ string }
 actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
-feature_def                       = { "feature:" ~ string }
+feature_def                       = { "feature" ~ string }
 scenario_def                      = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
 after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
 
@@ -52,6 +52,7 @@ terminal_condition                = { "Terminal" ~ (
     last_command_failed_cond |
     last_command_exit_code_is_cond |
     stdout_is_empty_condition |
+    stderr_is_empty_condition |
     stderr_contains_condition |
     output_starts_with_condition |
     output_ends_with_condition |
@@ -65,6 +66,7 @@ last_command_succeeded_cond       = { "last_command" ~ "succeeded" }
 last_command_failed_cond          = { "last_command" ~ "failed" }
 last_command_exit_code_is_cond    = { "last_command" ~ "exit_code_is" ~ number }
 stdout_is_empty_condition         = { "stdout_is_empty" }
+stderr_is_empty_condition         = { "stderr_is_empty" }
 stderr_contains_condition         = { "stderr_contains" ~ string }
 output_starts_with_condition      = { "output_starts_with" ~ string }
 output_ends_with_condition        = { "output_ends_with" ~ string }

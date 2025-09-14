@@ -1,0 +1,98 @@
+Starting Choreo Test Runner: examples/git_operations.chor
+Test suite parsed successfully.
+
+Running scenario: 'Background'
+ ▶️ Starting SYNC test: Background Setup
+ 🟢 Test Passed: Background Setup
+
+Running scenario: 'Cloning a repository and checking its state'
+Checking if dir exists: /private/tmp/invalid-repo
+  [DEBUG] Checking given condition: DirDoesNotExist { path: "invalid-repo" } -> true
+  [DEBUG] Checking given condition: StateSucceeded { outcome: "CloneFailsForInvalidRepo" } -> false
+  [DEBUG] Checking given condition: StateSucceeded { outcome: "CloneSucceedsForValidRepo" } -> false
+ ▶️ Starting SYNC test: CloneFailsForInvalidRepo
+  [DEBUG] Checking then condition: LastCommandFailed -> true
+  [DEBUG] Checking then condition: StderrContains("Repository not found") -> true
+Checking if dir exists: /private/tmp/invalid-repo
+  [DEBUG] Checking then condition: DirDoesNotExist { path: "invalid-repo" } -> true
+ 🟢 Test Passed: CloneFailsForInvalidRepo
+  [DEBUG] Checking given condition: StateSucceeded { outcome: "CloneFailsForInvalidRepo" } -> true
+  [DEBUG] Checking given condition: StateSucceeded { outcome: "CloneSucceedsForValidRepo" } -> false
+ ▶️ Starting SYNC test: CloneSucceedsForValidRepo
+  [DEBUG](LastCommandSucceeded) Last exit code: Some(0)
+  [DEBUG] Checking then condition: LastCommandSucceeded -> true
+  [DEBUG] Checking then condition: StderrContains("Cloning into 'choreo'") -> true
+Checking if dir exists: /private/tmp/choreo
+  [DEBUG] Checking then condition: DirExists { path: "choreo" } -> true
+Checking if file exists: /private/tmp/choreo/README.md
+  [DEBUG] Checking then condition: FileExists { path: "choreo/README.md" } -> true
+ 🟢 Test Passed: CloneSucceedsForValidRepo
+  [DEBUG] Checking given condition: StateSucceeded { outcome: "CloneSucceedsForValidRepo" } -> true
+ ▶️ Starting SYNC test: LogContainsInitialCommit
+  [DEBUG](LastCommandSucceeded) Last exit code: Some(1)
+  [DEBUG] Checking then condition: LastCommandSucceeded -> false
+
+Test suite 'examples/git_operations.chor' summary: 4 tests run in 1.75s (3 passed, 1 failed, 0 skipped)
+JSON report content:
+[
+  {
+    "uri": "examples/git_operations.chor",
+    "keyword": "Feature",
+    "name": "Git CLI Operations",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "Background",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "Setup steps from Background",
+            "result": {
+              "status": "passed",
+              "durationInMs": 1750
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "Cloning a repository and checking its state",
+        "steps": [
+          {
+            "keyword": "Given ",
+            "name": "it fails to clone a non-existent repository",
+            "result": {
+              "status": "passed",
+              "durationInMs": 1750
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "it successfully clones a valid repository",
+            "result": {
+              "status": "passed",
+              "durationInMs": 1143
+            }
+          },
+          {
+            "keyword": "Then ",
+            "name": "the git log contains the initial commit",
+            "result": {
+              "status": "failed",
+              "durationInMs": 0,
+              "errorMessage": "Synchronous test failed. Stderr: cd: no such file or directory: choreo && git log"
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 4,
+      "failures": 1,
+      "totalTimeInSeconds": 1.7509205
+    }
+  }
+]
+Reports generated successfully.

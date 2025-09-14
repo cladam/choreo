@@ -1,6 +1,6 @@
 # This feature tests the workflow of creating a compressed archive with 'tar',
 # extracting it, and verifying that the extracted contents match the original.
-feature: "Tar Archiving and Integrity Verification"
+feature "Tar Archiving and Integrity Verification"
 actors: Terminal, FileSystem
 
 settings {

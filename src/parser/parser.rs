@@ -327,6 +327,7 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             }
         }
         Rule::stdout_is_empty_condition => Condition::StdoutIsEmpty,
+        Rule::stderr_is_empty_condition => Condition::StderrIsEmpty,
         Rule::stderr_contains_condition => {
             let text = unescape_string(
                 inner_cond

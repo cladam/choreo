@@ -1,4 +1,4 @@
-feature: "Simulating Mocks"
+feature "Simulating Mocks"
 actors: Terminal, FileSystem
 
 var MOCK_SCRIPT = "my_mock_command.sh"

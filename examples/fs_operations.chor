@@ -1,4 +1,4 @@
-feature: "File System Operations"
+feature "File System Operations"
 actors: Terminal, FileSystem
 
 # These setup steps will run before EACH scenario in this file.

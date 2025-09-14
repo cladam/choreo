@@ -1,5 +1,5 @@
 # test_ls.chor
-feature: "List Files in Directory"
+feature "List Files in Directory"
 actors: Terminal
 
 scenario "Listing files in the current directory" {

@@ -112,6 +112,7 @@ pub enum Condition {
     LastCommandFailed,
     LastCommandExitCodeIs(i32),
     StdoutIsEmpty,
+    StderrIsEmpty,
     StderrContains(String),
     OutputStartsWith(String),
     OutputEndsWith(String),

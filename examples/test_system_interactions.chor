@@ -1,7 +1,7 @@
 # test_system_interactions.chor
 # This file uses the new exit code and file system conditions.
 
-feature: "System Interaction Commands"
+feature "System Interaction Commands"
 
 # You would need to add FileSystem to your list of actors.
 actors: Terminal, FileSystem

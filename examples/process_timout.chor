@@ -1,5 +1,5 @@
 # This test checks that timeout correctly terminates a process (sleep) that exceeds the specified duration, and verifies it exits with the correct status code.
-feature: "Timeout Utility"
+feature "Timeout Utility"
 actors: Terminal
 
 scenario "Terminate a long-running process" {

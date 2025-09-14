@@ -1,5 +1,5 @@
 # This test uses an environment variable (USER) to dynamically check if the id command's output contains the current user's name.
-feature: "User ID Utility"
+feature "User ID Utility"
 env: USER
 actors: Terminal
 

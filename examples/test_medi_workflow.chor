@@ -1,7 +1,7 @@
 # test_medi_workflow.chor
 # A test suite for our 'medi' CLI tool.
 
-feature: "Note and Task Management"
+feature "Note and Task Management"
 actors: Terminal
 scenario "User can create a note, add a task, verify it, and clean up" {
     # This scenario tests the full workflow of creating a note, adding a task,

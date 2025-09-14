@@ -1,5 +1,5 @@
  # This test verifies that tee correctly writes its input to both standard output and the specified file.
- feature: "Tee Utility"
+ feature "Tee Utility"
  env: PWD
  actors: Terminal, FileSystem
 

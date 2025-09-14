@@ -1,6 +1,6 @@
 # This example demonstrates advanced terminal output matchers in choreo.
 
-feature: "Advanced Terminal Matchers"
+feature "Advanced Terminal Matchers"
 
 actors: Terminal
 

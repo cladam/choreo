@@ -1,5 +1,5 @@
 # This test verifies that cut can correctly extract a specific field from a delimited string provided via echo.
-feature: "Cut Utility"
+feature "Cut Utility"
 actors: Terminal
 
 scenario "Extract a field from a delimited string" {

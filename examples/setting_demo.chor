@@ -1,6 +1,6 @@
 # This test file demonstrates how to use the `settings` block.
 
-feature: "Choreo Configuration"
+feature "Choreo Configuration"
 
 settings {
   # Set a custom timeout for this test suite.

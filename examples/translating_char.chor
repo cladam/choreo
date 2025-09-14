@@ -1,5 +1,5 @@
 # This test checks that tr can correctly translate a lowercase string to uppercase when piped from echo.
-feature: "Translate Utility"
+feature "Translate Utility"
 actors: Terminal
 
 scenario "Translate lowercase to uppercase" {

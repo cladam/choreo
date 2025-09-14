@@ -1,0 +1,64 @@
+feature "Git CLI Operations"
+
+actors: Terminal, FileSystem
+settings {
+    #stop_on_failure = true
+    shell_path = "/bin/zsh"
+}
+background {
+    # This action runs before the scenarios below.
+    Terminal runs "cd /tmp"
+}
+
+scenario "Cloning a repository and checking its state" {
+
+    test CloneFailsForInvalidRepo "it fails to clone a non-existent repository" {
+        given:
+            # Ensure the target directory does not exist.
+            FileSystem dir_does_not_exist "invalid-repo"
+        when:
+            # Attempt to clone a repository that doesn't exist.
+            Terminal runs "pwd" # Just to show current directory in output
+            Terminal runs "git --version" # Ensure git is available
+            Terminal runs "git clone https://github.com/user/invalid-repo.git"
+        then:
+            Terminal last_command failed
+            Terminal stderr_contains "Repository not found"
+            FileSystem dir_does_not_exist "invalid-repo" # The directory should not be created
+    }
+
+    test CloneSucceedsForValidRepo "it successfully clones a valid repository" {
+        given:
+            Test has_succeeded CloneFailsForInvalidRepo
+            FileSystem delete_dir "choreo" # Cleanup from previous runs
+        when:
+            # Use a real, public repository for the test.
+            Terminal runs "pwd" # Just to show current directory in output
+            Terminal runs "git clone https://github.com/cladam/choreo.git"
+        then:
+            Terminal last_command succeeded
+            Terminal stderr_contains "Cloning into 'choreo'"
+            FileSystem dir_exists "choreo"
+            FileSystem file_exists "choreo/README.md"
+    }
+
+    test LogContainsInitialCommit "the git log contains the initial commit" {
+        given:
+            Test has_succeeded CloneSucceedsForValidRepo
+        when:
+            # Run a command inside the newly cloned repository.
+            Terminal runs "cd choreo"
+            Terminal runs "git log"
+        then:
+            Terminal last_command succeeded
+            # Use a regex to check the structure of the output.
+            Terminal output_matches "commit [a-f0-9]{40}"
+            Terminal output_contains "Initial commit"
+    }
+
+    after {
+        # Cleanup actions to run after the scenario.
+        Terminal runs "cd .." # Return to previous directory
+        FileSystem delete_dir "choreo"
+    }
+}

@@ -14,6 +14,7 @@ pub fn check_all_conditions_met(
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
+    terminal_cwd: &std::path::Path,
     verbose: bool,
 ) -> bool {
     conditions.iter().all(|condition| {
@@ -27,6 +28,7 @@ pub fn check_all_conditions_met(
             env_vars,
             last_exit_code,
             fs_backend,
+            terminal_cwd,
             verbose,
         );
         if verbose {
@@ -49,6 +51,7 @@ pub fn check_condition(
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
+    terminal_cwd: &std::path::Path,
     verbose: bool,
 ) -> bool {
     let cleaned_buffer = strip(output_buffer);
@@ -129,20 +132,23 @@ pub fn check_condition(
         Condition::LastCommandFailed => last_exit_code.is_some_and(|code| code != 0),
         Condition::LastCommandExitCodeIs(expected_code) => *last_exit_code == Some(*expected_code),
         Condition::FileExists { path } => {
-            fs_backend.file_exists(&substitute_string(path, env_vars), verbose)
+            fs_backend.file_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
         }
-        Condition::FileDoesNotExist { path } => {
-            fs_backend.file_does_not_exist(&substitute_string(path, env_vars), verbose)
-        }
+        Condition::FileDoesNotExist { path } => fs_backend.file_does_not_exist(
+            &substitute_string(path, env_vars),
+            terminal_cwd,
+            verbose,
+        ),
         Condition::DirExists { path } => {
-            fs_backend.dir_exists(&substitute_string(path, env_vars), verbose)
+            fs_backend.dir_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
         }
         Condition::DirDoesNotExist { path } => {
-            !fs_backend.dir_exists(&substitute_string(path, env_vars), verbose)
+            !fs_backend.dir_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
         }
         Condition::FileContains { path, content } => fs_backend.file_contains(
             &substitute_string(path, env_vars),
             &substitute_string(content, env_vars),
+            terminal_cwd,
             verbose,
         ),
         Condition::StdoutIsEmpty => {
@@ -158,6 +164,12 @@ pub fn check_condition(
             println!("{}", actual_output.join("\n"));
             //println!("Actual output {}", actual_output);
             actual_output.is_empty()
+        }
+        Condition::StderrIsEmpty => {
+            let stderr_cleaned = strip(stderr_buffer);
+            let stderr_buffer = String::from_utf8_lossy(&stderr_cleaned);
+            println!("stderr: {}", stderr_buffer);
+            stderr_buffer.trim().is_empty()
         }
         Condition::StderrContains(text) => stderr_buffer.contains(text),
         Condition::OutputStartsWith(text) => {

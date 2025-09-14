@@ -1,5 +1,5 @@
 # This test ensures that the sort command correctly orders a series of lines piped to it.
-feature: "Sort Utility"
+feature "Sort Utility"
 actors: Terminal
 
 scenario "Sort a list of lines" {

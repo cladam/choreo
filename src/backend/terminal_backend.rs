@@ -2,7 +2,7 @@ use crate::parser::ast::{Action, TestSuiteSettings};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::io::Read;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -18,12 +18,10 @@ pub struct TerminalBackend {
     child: Box<dyn portable_pty::Child + Send + Sync>,
     #[allow(dead_code)]
     reader_thread: Option<JoinHandle<()>>,
-
     // For non-interactive command execution (`runs`)
     pub last_stdout: String,
     pub last_stderr: String,
-
-    base_dir: PathBuf,
+    cwd: PathBuf,
 }
 
 impl TerminalBackend {
@@ -95,7 +93,7 @@ impl TerminalBackend {
             reader_thread: Some(reader_thread),
             last_stdout: String::new(),
             last_stderr: String::new(),
-            base_dir,
+            cwd: base_dir,
         }
     }
 
@@ -132,6 +130,22 @@ impl TerminalBackend {
                 true
             }
             Action::Run { command, .. } => {
+                // Special handling for 'cd' to update the backend's CWD.
+                if command.trim().starts_with("cd ") {
+                    let path_str = command.trim().strip_prefix("cd ").unwrap().trim();
+                    let new_path = self.cwd.join(path_str);
+                    if new_path.is_dir() {
+                        self.cwd = new_path.canonicalize().unwrap_or_else(|_| new_path.clone());
+                        *last_exit_code = Some(0);
+                        self.last_stdout.clear();
+                        self.last_stderr.clear();
+                    } else {
+                        *last_exit_code = Some(1);
+                        self.last_stdout.clear();
+                        self.last_stderr = format!("cd: no such file or directory: {}", path_str);
+                    }
+                    return true;
+                }
                 // This is the new, robust implementation.
                 *last_exit_code = None;
                 self.last_stdout.clear();
@@ -140,7 +154,7 @@ impl TerminalBackend {
                 let mut child = Command::new("sh")
                     .arg("-c")
                     .arg(command)
-                    .current_dir(&self.base_dir)
+                    .current_dir(&self.cwd)
                     .stdout(std::process::Stdio::piped())
                     .stderr(std::process::Stdio::piped())
                     .spawn()
@@ -175,6 +189,11 @@ impl TerminalBackend {
             }
             _ => false, // Ignore actions not meant for this backend
         }
+    }
+
+    /// Returns the current working directory of the terminal backend.
+    pub fn get_cwd(&self) -> &Path {
+        &self.cwd
     }
 }
 

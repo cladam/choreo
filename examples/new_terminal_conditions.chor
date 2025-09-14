@@ -1,5 +1,5 @@
 # examples/new_terminal_conditions.chor
-feature: "Advanced Terminal Conditions"
+feature "Advanced Terminal Conditions"
 actors: Terminal
 
 scenario "Demonstrate new terminal output assertions" {

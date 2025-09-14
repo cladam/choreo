@@ -1,5 +1,5 @@
 # examples/variable_substitution.chor
-feature: "Variable Substitution"
+feature "Variable Substitution"
 
 var FILENAME = "my_test_output.txt"
 var GREETING = "Hello from a defined variable!"

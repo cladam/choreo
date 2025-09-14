@@ -1,5 +1,5 @@
 # This test uses a regular expression to verify that the output of the date command matches a standard format (e.g., "YYYY-MM-DD").
-feature: "Date Utility"
+feature "Date Utility"
 actors: Terminal
 
 scenario "Validate date output format" {
