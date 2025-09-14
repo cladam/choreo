@@ -24,7 +24,7 @@ scenario "Testing exit codes and file system conditions" {
             Terminal last_command succeeded
             FileSystem dir_exists "temp_test_dir"
             FileSystem file_exists "temp_test_dir/hello.txt"
-            FileSystem file_contains "temp_test_dir/hello.txt" "hello choreo"
+            FileSystem file_contains "temp_test_dir/hello.txt" with_content "hello choreo"
     }
 
     # Test 2: Failing command with a specific exit code
