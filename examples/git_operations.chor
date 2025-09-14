@@ -3,7 +3,7 @@ feature "Git CLI Operations"
 actors: Terminal, FileSystem
 settings {
     #stop_on_failure = true
-    shell_path = "/bin/zsh"
+    shell_path = "/bin/bash"
 }
 background {
     # This action runs before the scenarios below.

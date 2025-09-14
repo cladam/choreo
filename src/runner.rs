@@ -248,6 +248,12 @@ impl TestRunner {
                                     ));
                                 }
                             }
+                            // If a sync test fails and we should stop, break the scenario loop now.
+                            if settings.stop_on_failure
+                                && test_states.values().any(|s| s.is_failed())
+                            {
+                                break;
+                            }
                         } else {
                             if let Some(state) = test_states.get_mut(&name) {
                                 println!(" ▶  Starting ASYNC test: {}", name);
@@ -304,12 +310,7 @@ impl TestRunner {
                     .iter()
                     .all(|t| test_states.get(&t.name).unwrap().is_done());
 
-                let any_pending = scenario
-                    .tests
-                    .iter()
-                    .any(|t| matches!(test_states.get(&t.name).unwrap(), TestState::Pending));
-
-                if all_done && !any_pending {
+                if all_done {
                     if !scenario.after.is_empty() {
                         colours::info("\nRunning after block...");
                         for action in &scenario.after {
@@ -329,12 +330,31 @@ impl TestRunner {
 
                 if settings.stop_on_failure && test_states.values().any(|s| s.is_failed()) {
                     for (_name, state) in test_states.iter_mut() {
-                        if matches!(*state, TestState::Pending) {
+                        if matches!(*state, TestState::Pending | TestState::Running) {
                             *state = TestState::Skipped;
                         }
                     }
                     colours::error("\nStopping test run due to failure (stop_on_failure is true).");
                     break 'scenario_loop;
+                }
+
+                // Check for a hang condition: no tests are running, but not all are done.
+                let any_running = scenario
+                    .tests
+                    .iter()
+                    .any(|t| matches!(test_states.get(&t.name).unwrap(), TestState::Running));
+
+                if !any_running && !all_done {
+                    colours::warn("\nWarning: No tests are running, but the scenario is not complete. Breaking to avoid a hang.");
+                    // Mark any remaining pending tests as skipped to ensure a clean exit.
+                    for test in &scenario.tests {
+                        if let Some(state) = test_states.get_mut(&test.name) {
+                            if matches!(*state, TestState::Pending) {
+                                *state = TestState::Skipped;
+                            }
+                        }
+                    }
+                    break;
                 }
             }
         }
