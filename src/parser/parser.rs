@@ -300,7 +300,14 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
         Rule::output_is_valid_json_condition => Condition::OutputIsValidJson,
         Rule::json_output_has_path_condition => {
             let mut inner = inner_cond.into_inner();
-            let path = inner.next().unwrap().as_str().to_string();
+            let path = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
             Condition::JsonOutputHasPath { path }
         }
         Rule::json_output_at_equals_condition => {

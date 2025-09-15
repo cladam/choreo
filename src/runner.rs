@@ -120,7 +120,7 @@ impl TestRunner {
                                     &mut self.env_vars,
                                     &last_exit_code,
                                     &fs_backend,
-                                    terminal_backend.get_cwd(),
+                                    &terminal_backend,
                                     self.verbose,
                                 ) {
                                     tests_to_start.push((test_case.name.clone(), given_actions));
@@ -149,7 +149,7 @@ impl TestRunner {
                                     &mut self.env_vars,
                                     &last_exit_code,
                                     &fs_backend,
-                                    terminal_backend.get_cwd(),
+                                    &terminal_backend,
                                     self.verbose,
                                 ) {
                                     tests_to_pass.push(test_case.name.clone());
@@ -225,7 +225,7 @@ impl TestRunner {
                                 &mut self.env_vars,
                                 &last_exit_code,
                                 &fs_backend,
-                                terminal_backend.get_cwd(),
+                                &terminal_backend,
                                 self.verbose,
                             );
 

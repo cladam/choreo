@@ -1,5 +1,7 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
+use crate::backend::terminal_backend::TerminalBackend;
 use crate::parser::ast::{Action, Condition, TestCase, TestState};
+use jsonpath_lib::selector;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
 
@@ -14,7 +16,7 @@ pub fn check_all_conditions_met(
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
-    terminal_cwd: &std::path::Path,
+    terminal_backend: &TerminalBackend,
     verbose: bool,
 ) -> bool {
     conditions.iter().all(|condition| {
@@ -28,7 +30,7 @@ pub fn check_all_conditions_met(
             env_vars,
             last_exit_code,
             fs_backend,
-            terminal_cwd,
+            terminal_backend,
             verbose,
         );
         if verbose {
@@ -51,7 +53,7 @@ pub fn check_condition(
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
-    terminal_cwd: &std::path::Path,
+    terminal_backend: &TerminalBackend,
     verbose: bool,
 ) -> bool {
     let cleaned_buffer = strip(output_buffer);
@@ -131,17 +133,21 @@ pub fn check_condition(
         }
         Condition::LastCommandFailed => last_exit_code.is_some_and(|code| code != 0),
         Condition::LastCommandExitCodeIs(expected_code) => *last_exit_code == Some(*expected_code),
-        Condition::FileExists { path } => {
-            fs_backend.file_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
-        }
+        Condition::FileExists { path } => fs_backend.file_exists(
+            &substitute_string(path, env_vars),
+            terminal_backend.get_cwd(),
+            verbose,
+        ),
         Condition::FileDoesNotExist { path } => fs_backend.file_does_not_exist(
             &substitute_string(path, env_vars),
-            terminal_cwd,
+            terminal_backend.get_cwd(),
             verbose,
         ),
         Condition::FileIsEmpty { path } => {
-            let resolved_path =
-                fs_backend.resolve_path(&substitute_string(path, env_vars), terminal_cwd);
+            let resolved_path = fs_backend.resolve_path(
+                &substitute_string(path, env_vars),
+                terminal_backend.get_cwd(),
+            );
             if verbose {
                 println!("Checking if file is empty: {}", resolved_path.display());
             }
@@ -152,8 +158,10 @@ pub fn check_condition(
                     .unwrap_or(false)
         }
         Condition::FileIsNotEmpty { path } => {
-            let resolved_path =
-                fs_backend.resolve_path(&substitute_string(path, env_vars), terminal_cwd);
+            let resolved_path = fs_backend.resolve_path(
+                &substitute_string(path, env_vars),
+                terminal_backend.get_cwd(),
+            );
             if verbose {
                 println!("Checking if file is not empty: {}", resolved_path.display());
             }
@@ -163,16 +171,20 @@ pub fn check_condition(
                     .map(|m| m.len() > 0)
                     .unwrap_or(false)
         }
-        Condition::DirExists { path } => {
-            fs_backend.dir_exists(&substitute_string(path, env_vars), terminal_cwd, verbose)
-        }
-        Condition::DirDoesNotExist { path } => {
-            fs_backend.dir_does_not_exist(&substitute_string(path, env_vars), terminal_cwd, verbose)
-        }
+        Condition::DirExists { path } => fs_backend.dir_exists(
+            &substitute_string(path, env_vars),
+            terminal_backend.get_cwd(),
+            verbose,
+        ),
+        Condition::DirDoesNotExist { path } => fs_backend.dir_does_not_exist(
+            &substitute_string(path, env_vars),
+            terminal_backend.get_cwd(),
+            verbose,
+        ),
         Condition::FileContains { path, content } => fs_backend.file_contains(
             &substitute_string(path, env_vars),
             &substitute_string(content, env_vars),
-            terminal_cwd,
+            terminal_backend.get_cwd(),
             verbose,
         ),
         Condition::StdoutIsEmpty => {
@@ -215,10 +227,12 @@ pub fn check_condition(
             actual_output.iter().any(|line| *line == text.trim())
         }
         Condition::OutputIsValidJson => {
-            // For sync tests, the buffer contains the direct output.
-            // For async, it might be mixed. We look for a valid JSON object
-            // within the output.
-            let content_to_check = buffer.trim();
+            let content_to_check = if !terminal_backend.last_stdout.is_empty() {
+                terminal_backend.last_stdout.trim()
+            } else {
+                buffer.trim()
+            };
+
             if serde_json::from_str::<serde_json::Value>(content_to_check).is_ok() {
                 return true;
             }
@@ -230,56 +244,68 @@ pub fn check_condition(
             serde_json::from_str::<serde_json::Value>(&filtered_output).is_ok()
         }
         Condition::JsonOutputHasPath { path } => {
-            let actual_output: Vec<&str> =
-                buffer.lines().filter_map(extract_command_output).collect();
-            let filtered_output = actual_output.join("\n");
-            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&filtered_output) {
-                !jsonpath_lib::select(&json, path)
-                    .unwrap_or_default()
-                    .is_empty()
+            let content_to_check = if !terminal_backend.last_stdout.is_empty() {
+                terminal_backend.last_stdout.trim()
             } else {
-                false
+                // Fallback for async: try to find JSON in the buffer
+                let actual_output: Vec<&str> =
+                    buffer.lines().filter_map(extract_command_output).collect();
+                &*actual_output.join("\n")
+            };
+
+            let json_obj = match serde_json::from_str::<serde_json::Value>(&content_to_check) {
+                Ok(json) => json,
+                Err(e) => {
+                    if verbose {
+                        println!("  [DEBUG](JsonOutputHasPath) Failed to parse JSON: {}", e);
+                    }
+                    return false;
+                }
+            };
+
+            if verbose {
+                println!("  [DEBUG](JsonOutputHasPath) Checking path: '{}'", path);
+            }
+
+            let mut selector = selector(&json_obj);
+            match selector(path) {
+                Ok(nodes) => !nodes.is_empty(),
+                Err(e) => {
+                    if verbose {
+                        println!("  [DEBUG](JsonOutputHasPath) Invalid JSONPath: {}", e);
+                    }
+                    false
+                }
             }
         }
         _ => false, // Other conditions not implemented yet
     }
 }
 
-// Helper to extract actual command output from a buffer line
+/// This is a very basic attempt to extract command output from a line that might
+/// contain a shell prompt. It's not very robust.
 fn extract_command_output(line: &str) -> Option<&str> {
-    // Common prompt patterns: "$", "%", ">"
-    let prompt_patterns = ["$", "%", ">"];
-    let mut last_prompt_idx = None;
-
-    for pat in &prompt_patterns {
-        if let Some(idx) = line.rfind(pat) {
-            // Check if it's a plausible prompt ending
-            if (idx + pat.len() == line.len() || line[idx + pat.len()..].starts_with(' '))
-                && last_prompt_idx.is_none_or(|(i, _)| idx > i)
-            {
-                last_prompt_idx = Some((idx, pat.len()));
-            }
+    // A simple heuristic: if a line starts with common prompt characters,
+    // try to find where the actual output begins. This is brittle.
+    // A more robust solution would require knowing the exact prompt format.
+    let prompt_chars = &['$', '%', '>', '#'];
+    if let Some(_pos) = line.rfind(prompt_chars) {
+        // If we find a prompt character, we might take the part after it.
+        // But what if the output itself contains these characters?
+        // This is tricky. For now, let's just avoid lines that look like prompts.
+        if line.trim().ends_with('$') || line.trim().ends_with('%') {
+            return None; // Likely a prompt line
         }
     }
 
-    if let Some((idx, pat_len)) = last_prompt_idx {
-        // A prompt was found. Return only what comes after it.
-        let after = &line[idx + pat_len..].trim();
-        return if !after.is_empty() {
-            Some(after)
-        } else {
-            // Prompt was found, but nothing followed it. Filter this line out.
-            None
-        };
+    // If the line starts with a JSON character, it's probably part of the output.
+    let trimmed = line.trim_start();
+    if trimmed.starts_with('{') || trimmed.starts_with('[') {
+        return Some(line);
     }
 
-    // No prompt was found. Return the whole line if it's not empty.
-    let trimmed_line = line.trim();
-    if !trimmed_line.is_empty() {
-        Some(trimmed_line)
-    } else {
-        None
-    }
+    // This is a guess. If it doesn't look like a prompt, include it.
+    Some(line)
 }
 
 /// Creates a new Action with its string values substituted from the state map.
