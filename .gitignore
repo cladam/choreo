@@ -21,3 +21,7 @@ target
 .idea/
 
 .DS_Store
+
+reports
+examples/temp_test_dir
+test_result
