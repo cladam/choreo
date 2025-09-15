@@ -24,4 +24,7 @@ pub enum Commands {
         #[arg(long)]
         verbose: bool,
     },
+    /// Update choreo to the latest version.
+    #[command(name = "update", hide = true)] // Hidden from help
+    Update,
 }

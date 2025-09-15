@@ -39,4 +39,7 @@ pub enum AppError {
 
     #[error("{count} test(s) failed.")]
     TestsFailed { count: usize, expected: usize },
+
+    #[error("Self-update error: {0}")]
+    SelfUpdate(#[from] self_update::errors::Error),
 }

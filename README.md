@@ -91,10 +91,36 @@ official [Choreo DSL Reference](docs/REFERENCE.md).
 
 You need [Rust and Cargo](https://www.rust-lang.org/tools/install) installed.
 
-#### Build
+#### Installing from crates.io
+
+The easiest way to install `choreo` is to download it from [crates.io](https://crates.io/crates/choreo). You can do it
+using the following command:
 
 ```bash
+cargo install choreo
+```
+
+If you want to update `choreo` to the latest version, execute the following command:
+
+```bash
+choreo update
+```
+
+#### Building from source
+
+Alternatively you can build `medi` from source using Cargo:
+
+```bash
+git clone https://github.com/cladam/choreo.git
+cd choreo
 cargo build --release
+
+# The binary will be located at target/release/choreo
+# Optionally, you can add it to your PATH
+export PATH=$PATH:$(pwd)/target/release
+
+# Or, install it system-wide
+cargo install --path .
 ```
 
 #### Run a script
@@ -103,10 +129,10 @@ Use the `run` command to execute a `.chor` file. Use the `--verbose` flag for de
 
 ```bash
 # Run a test script
-cargo run -- run --file "examples/redirecting_output_tee.chor"
+choreo run --file "examples/redirecting_output_tee.chor"
 
 # Run with verbose logging
-cargo run -- run --file "examples/redirecting_output_tee.chor" --verbose
+choreo run --file "examples/redirecting_output_tee.chor" --verbose
 ```
 
 ### Status & Roadmap

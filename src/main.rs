@@ -6,6 +6,7 @@ use choreo::parser::ast::Statement;
 use choreo::parser::parser;
 use choreo::runner::TestRunner;
 use clap::Parser;
+use colored::Colorize;
 use std::collections::HashMap;
 use std::{env, fs};
 
@@ -88,6 +89,25 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             // Call the runner and return its result
             runner.run(&suite_name, &scenarios)
+        }
+        Commands::Update => {
+            println!("{}", "--- Checking for updates ---".blue());
+            let status = self_update::backends::github::Update::configure()
+                .repo_owner("cladam")
+                .repo_name("choreo")
+                .bin_name("choreo")
+                .show_download_progress(true)
+                .current_version(self_update::cargo_crate_version!())
+                .build()?
+                .update()?;
+
+            println!("Update status: `{}`!", status.version());
+            if status.updated() {
+                println!("{}", "Successfully updated choreo!".green());
+            } else {
+                println!("{}", "choreo is already up to date.".green());
+            }
+            Ok(())
         }
     }
 }
