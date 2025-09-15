@@ -255,6 +255,7 @@ This is the reference for all available commands that can be used within the `te
 | `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `runs` command is an exact match.         |
 | `Terminal output_matches "..."`            | Passes if the combined stdout/stderr stream from the PTY matches the regex.        |
 | `Terminal output_is_valid_json`            | Passes if the combined stdout/stderr stream from the PTY is valid JSON.            |
+| `Terminal json_output has_path "..."`      | Passes if the JSON output has the specified JSON path.                             |
 
 ### FileSystem Commands
 
