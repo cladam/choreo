@@ -13,6 +13,7 @@ use crate::reporting::generate_choreo_report;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::thread;
 use std::time::{Duration, Instant};
 
 pub struct TestRunner {
@@ -51,6 +52,11 @@ impl TestRunner {
                 Statement::FeatureDef(name) => feature_name = name.clone(),
                 _ => {}
             }
+        }
+
+        // Set a default shell path if not provided
+        if settings.shell_path.is_none() {
+            settings.shell_path = Some("/bin/sh".to_string());
         }
 
         // --- Backend and State Initialisation ---
@@ -115,12 +121,12 @@ impl TestRunner {
                                     &given_conditions,
                                     &test_states,
                                     &output_buffer,
-                                    &terminal_backend.last_stderr,
+                                    &terminal_backend.last_stderr.clone(),
                                     elapsed_since_scenario_start.as_secs_f32(),
                                     &mut self.env_vars,
                                     &last_exit_code,
                                     &fs_backend,
-                                    &terminal_backend,
+                                    &mut terminal_backend,
                                     self.verbose,
                                 ) {
                                     tests_to_start.push((test_case.name.clone(), given_actions));
@@ -142,14 +148,14 @@ impl TestRunner {
                                     &test_case.then,
                                     &test_states,
                                     &output_buffer,
-                                    &terminal_backend.last_stderr,
+                                    &terminal_backend.last_stderr.clone(),
                                     test_start_times
                                         .get(&test_case.name)
                                         .map_or(0.0, |start| start.elapsed().as_secs_f32()),
                                     &mut self.env_vars,
                                     &last_exit_code,
                                     &fs_backend,
-                                    &terminal_backend,
+                                    &mut terminal_backend,
                                     self.verbose,
                                 ) {
                                     tests_to_pass.push(test_case.name.clone());
@@ -191,10 +197,7 @@ impl TestRunner {
                                     &mut last_exit_code,
                                     settings.timeout_seconds,
                                 );
-                                terminal_backend.read_pty_output(&mut output_buffer);
                             }
-
-                            output_buffer.clear();
 
                             for action in &test_case.when {
                                 let substituted_action =
@@ -206,7 +209,6 @@ impl TestRunner {
                                     &mut last_exit_code,
                                     settings.timeout_seconds,
                                 );
-                                terminal_backend.read_pty_output(&mut output_buffer);
                             }
 
                             if let Some(137) = last_exit_code {
@@ -218,14 +220,14 @@ impl TestRunner {
                                 &test_case.then,
                                 &test_states,
                                 &output_buffer,
-                                &terminal_backend.last_stderr,
+                                &terminal_backend.last_stderr.clone(),
                                 test_start_times
                                     .get(&name)
                                     .map_or(0.0, |start| start.elapsed().as_secs_f32()),
                                 &mut self.env_vars,
                                 &last_exit_code,
                                 &fs_backend,
-                                &terminal_backend,
+                                &mut terminal_backend,
                                 self.verbose,
                             );
 
@@ -351,16 +353,24 @@ impl TestRunner {
                 }
 
                 if !progress_made {
-                    colours::warn("\nWarning: No progress was made in the last loop iteration, but the scenario is not complete. Breaking to avoid a hang.");
-                    // Mark any remaining pending tests as skipped to ensure a clean exit.
-                    for test in &scenario.tests {
-                        if let Some(state) = test_states.get_mut(&test.name) {
-                            if matches!(*state, TestState::Pending | TestState::Running) {
-                                *state = TestState::Skipped;
+                    // If no progress is made, we might be waiting for a time-based condition.
+                    // Add a small delay to prevent a tight loop from consuming CPU.
+                    thread::sleep(Duration::from_millis(50));
+
+                    // Check if we are truly stuck
+                    let elapsed_since_suite_start = suite_start_time.elapsed();
+                    if elapsed_since_suite_start > test_timeout + Duration::from_secs(1) {
+                        colours::warn("\nWarning: No progress was made in the last loop iteration, and the scenario is not complete. Breaking to avoid a hang.");
+                        // Mark any remaining pending tests as skipped to ensure a clean exit.
+                        for test in &scenario.tests {
+                            if let Some(state) = test_states.get_mut(&test.name) {
+                                if matches!(*state, TestState::Pending | TestState::Running) {
+                                    *state = TestState::Skipped;
+                                }
                             }
                         }
+                        break;
                     }
-                    break;
                 }
             }
         }

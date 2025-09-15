@@ -1,0 +1,48 @@
+# This example demonstrates advanced terminal output matchers in choreo.
+
+feature "Advanced Terminal Matchers"
+
+actors: Terminal
+
+scenario "Verifying precise terminal output" {
+
+    test StartsWith "output_starts_with matches the beginning of the output" {
+        given:
+            wait >= 1s
+        when:
+            Terminal runs "echo 'Hello Choreo World'"
+        then:
+            Terminal last_command succeeded
+            Terminal output_starts_with 'Hello'
+    }
+
+    test CheckAppVersion "Check application version" {
+        given:
+            # Conditions that must be met before the test runs.
+            wait >= 2s
+            Test has_succeeded StartsWith
+        when:
+            # Actions to be performed.
+            Terminal runs "echo 'my-app version 1.0.0'"
+        then:
+            # Conditions that must be true after the actions.
+            Terminal last_command succeeded
+            Terminal output_contains "my-app version"
+    }
+
+    test CreateAndCapture "Create a resource and capture its ID" {
+        given:
+            # This test depends on the success of the previous one.
+            Test has_succeeded CheckAppVersion
+        when:
+            Terminal runs "echo 'Created resource with ID: res-123'"
+        then:
+            # Capture part of the output into a variable named 'resourceId'.
+            Terminal output_matches "Created resource with ID: (res-\d+)" as resourceId
+    }
+    # This block runs after all tests in the scenario are complete.
+    after {
+        # Use the captured 'resourceId' variable to clean up.
+        Terminal runs "echo 'Cleaning up ${resourceId}'"
+    }
+}

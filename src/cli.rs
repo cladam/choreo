@@ -24,6 +24,12 @@ pub enum Commands {
         #[arg(long)]
         verbose: bool,
     },
+    /// Create a new example test file.
+    Init {
+        /// Path to create the new test file.
+        #[arg(default_value = "test.chor")]
+        file: String,
+    },
     /// Update choreo to the latest version.
     #[command(name = "update", hide = true)] // Hidden from help
     Update,

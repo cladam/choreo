@@ -101,7 +101,7 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
             }
             "shell_path" => {
                 if let Value::String(s) = build_value(value_pair) {
-                    settings.shell_path = Option::from(s);
+                    settings.shell_path = Some(s);
                 } else {
                     panic!("'shell_path' setting must be a string");
                 }

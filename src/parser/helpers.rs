@@ -16,7 +16,7 @@ pub fn check_all_conditions_met(
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
-    terminal_backend: &TerminalBackend,
+    terminal_backend: &mut TerminalBackend,
     verbose: bool,
 ) -> bool {
     conditions.iter().all(|condition| {
@@ -53,11 +53,19 @@ pub fn check_condition(
     env_vars: &mut HashMap<String, String>,
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
-    terminal_backend: &TerminalBackend,
+    terminal_backend: &mut TerminalBackend,
     verbose: bool,
 ) -> bool {
     let cleaned_buffer = strip(output_buffer);
     let buffer = String::from_utf8_lossy(&cleaned_buffer);
+
+    // For synchronous commands, the output is in `last_stdout`.
+    // For asynchronous commands, it's in the PTY `output_buffer`.
+    let content_to_check = if !terminal_backend.last_stdout.is_empty() {
+        terminal_backend.last_stdout.as_str()
+    } else {
+        buffer.as_ref()
+    };
 
     match condition {
         Condition::Wait { op, wait } => match op.as_str() {
@@ -70,64 +78,40 @@ pub fn check_condition(
         },
         Condition::OutputContains { text, .. } => {
             if verbose {
-                println!(
-                    "  [DEBUG](OutputContains) Checking output contains: '{}'",
-                    text
-                );
-                println!("  [DEBUG](OutputContains) Raw buffer: '{}'", buffer);
+                println!("Checking if '{}' contains '{}'", content_to_check, text);
             }
-            let actual_output: Vec<&str> =
-                buffer.lines().filter_map(extract_command_output).collect();
-
-            let filtered_output = actual_output.join("\n");
-            if verbose {
-                println!("  [DEBUG] Filtered output: '{}'", filtered_output);
-            }
-            filtered_output.contains(text)
+            content_to_check.contains(text)
         }
         Condition::OutputMatches {
             regex, capture_as, ..
         } => {
-            let actual_output: Vec<&str> =
-                buffer.lines().filter_map(extract_command_output).collect();
-            let filtered_output = actual_output.join("\n");
-
-            if filtered_output.is_empty() {
-                println!("  [DEBUG] No command output detected after filtering");
-                return false;
-            }
-
-            match regex::Regex::new(regex) {
-                Ok(re) => {
-                    if let Some(captures) = re.captures(&filtered_output) {
-                        if let Some(var_name) = capture_as {
-                            // The first capture group (index 1) is the one we want.
-                            if let Some(capture) = captures.get(1) {
-                                let value = capture.as_str().to_string();
-                                env_vars.insert(var_name.clone(), value);
+            if let Ok(re) = regex::Regex::new(regex) {
+                if let Some(captures) = re.captures(content_to_check) {
+                    if let Some(var_name) = capture_as {
+                        if let Some(capture_group) = captures.get(1) {
+                            let value = capture_group.as_str().to_string();
+                            if verbose {
+                                println!(
+                                    "  [DEBUG] Captured value '{}' into variable '{}'",
+                                    value, var_name
+                                );
                             }
+                            env_vars.insert(var_name.clone(), value);
+                            // Clear last_stdout after successful capture to prevent reuse
+                            terminal_backend.last_stdout.clear();
                         }
-                        true
-                    } else {
-                        println!("  [DEBUG] Regex did not match the filtered output");
-                        false
                     }
-                }
-                Err(e) => {
-                    println!("  [DEBUG] Invalid regex: {}", e);
-                    false
+                    return true;
                 }
             }
+            false
         }
         Condition::StateSucceeded { outcome } => test_states
             .get(outcome)
             .is_some_and(|s| *s == TestState::Passed),
         Condition::LastCommandSucceeded => {
             if verbose {
-                println!(
-                    "  [DEBUG](LastCommandSucceeded) Last exit code: {:?}",
-                    last_exit_code
-                );
+                println!("Checking if last command succeeded: {:?}", last_exit_code);
             }
             *last_exit_code == Some(0)
         }
@@ -149,11 +133,10 @@ pub fn check_condition(
                 terminal_backend.get_cwd(),
             );
             if verbose {
-                println!("Checking if file is empty: {}", resolved_path.display());
+                println!("Checking if file is empty: {:?}", resolved_path);
             }
             resolved_path.is_file()
-                && resolved_path
-                    .metadata()
+                && std::fs::metadata(resolved_path)
                     .map(|m| m.len() == 0)
                     .unwrap_or(false)
         }
@@ -163,11 +146,10 @@ pub fn check_condition(
                 terminal_backend.get_cwd(),
             );
             if verbose {
-                println!("Checking if file is not empty: {}", resolved_path.display());
+                println!("Checking if file is not empty: {:?}", resolved_path);
             }
             resolved_path.is_file()
-                && resolved_path
-                    .metadata()
+                && std::fs::metadata(resolved_path)
                     .map(|m| m.len() > 0)
                     .unwrap_or(false)
         }
@@ -187,20 +169,7 @@ pub fn check_condition(
             terminal_backend.get_cwd(),
             verbose,
         ),
-        Condition::StdoutIsEmpty => {
-            let actual_output: Vec<&str> = buffer
-                .lines()
-                .map(|line| line.trim())
-                .filter(|line| !line.is_empty())
-                .filter(|line| {
-                    let is_prompt = line.contains('%') || line.contains('$') || line.contains('>');
-                    !is_prompt
-                })
-                .collect();
-            //println!("{}", actual_output.join("\n"));
-            //println!("Actual output {}", actual_output);
-            actual_output.is_empty()
-        }
+        Condition::StdoutIsEmpty => content_to_check.trim().is_empty(),
         Condition::StderrIsEmpty => {
             let stderr_cleaned = strip(stderr_buffer);
             let stderr_buffer = String::from_utf8_lossy(&stderr_cleaned);
@@ -208,74 +177,27 @@ pub fn check_condition(
             stderr_buffer.trim().is_empty()
         }
         Condition::StderrContains(text) => stderr_buffer.contains(text),
-        Condition::OutputStartsWith(text) => {
-            let actual_output: Vec<&str> =
-                buffer.lines().filter_map(extract_command_output).collect();
-            let filtered_output = actual_output.join("\n");
-            filtered_output.starts_with(text)
-        }
-        Condition::OutputEndsWith(text) => {
-            let actual_output: Vec<&str> =
-                buffer.lines().filter_map(extract_command_output).collect();
-            let filtered_output = actual_output.join("\n");
-            filtered_output.ends_with(text)
-        }
-        Condition::OutputEquals(text) => {
-            let actual_output: Vec<&str> =
-                buffer.lines().filter_map(extract_command_output).collect();
-
-            actual_output.iter().any(|line| *line == text.trim())
-        }
+        Condition::OutputStartsWith(text) => content_to_check.trim().starts_with(text),
+        Condition::OutputEndsWith(text) => content_to_check.trim().ends_with(text),
+        Condition::OutputEquals(text) => content_to_check.trim() == text.trim(),
         Condition::OutputIsValidJson => {
-            let content_to_check = if !terminal_backend.last_stdout.is_empty() {
-                terminal_backend.last_stdout.trim()
-            } else {
-                buffer.trim()
-            };
-
-            if serde_json::from_str::<serde_json::Value>(content_to_check).is_ok() {
-                return true;
-            }
-
-            // Fallback for async or mixed content: find JSON within the lines.
-            let actual_output: Vec<&str> =
-                buffer.lines().filter_map(extract_command_output).collect();
-            let filtered_output = actual_output.join("\n");
-            serde_json::from_str::<serde_json::Value>(&filtered_output).is_ok()
+            serde_json::from_str::<serde_json::Value>(content_to_check.trim()).is_ok()
         }
         Condition::JsonOutputHasPath { path } => {
-            let content_to_check = if !terminal_backend.last_stdout.is_empty() {
-                terminal_backend.last_stdout.trim()
-            } else {
-                // Fallback for async: try to find JSON in the buffer
-                let actual_output: Vec<&str> =
-                    buffer.lines().filter_map(extract_command_output).collect();
-                &*actual_output.join("\n")
-            };
-
-            let json_obj = match serde_json::from_str::<serde_json::Value>(&content_to_check) {
-                Ok(json) => json,
-                Err(e) => {
-                    if verbose {
-                        println!("  [DEBUG](JsonOutputHasPath) Failed to parse JSON: {}", e);
-                    }
-                    return false;
-                }
+            let json_obj = match serde_json::from_str::<serde_json::Value>(content_to_check.trim())
+            {
+                Ok(obj) => obj,
+                Err(_) => return false,
             };
 
             if verbose {
-                println!("  [DEBUG](JsonOutputHasPath) Checking path: '{}'", path);
+                println!("Checking if JSON has path: {}", path);
             }
 
             let mut selector = selector(&json_obj);
             match selector(path) {
                 Ok(nodes) => !nodes.is_empty(),
-                Err(e) => {
-                    if verbose {
-                        println!("  [DEBUG](JsonOutputHasPath) Invalid JSONPath: {}", e);
-                    }
-                    false
-                }
+                Err(_) => false,
             }
         }
         _ => false, // Other conditions not implemented yet

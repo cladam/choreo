@@ -10,6 +10,54 @@ use colored::Colorize;
 use std::collections::HashMap;
 use std::{env, fs};
 
+const INIT_TEMPLATE: &str = r#"# A test suite for your application
+feature "My Application Feature"
+
+settings {
+  # Stop running tests in a scenario after the first failure.
+  stop_on_failure = true
+  # Set a timeout for each test case.
+  timeout_seconds = 10
+}
+
+# Define the actors that will perform actions.
+actors: Terminal
+
+# A scenario groups related tests into a single workflow.
+scenario "User can perform a basic workflow" {
+    # A test case with a unique name and description.
+    test CheckAppVersion "Check application version" {
+        given:
+            # Conditions that must be met before the test runs.
+            wait >= 0s
+        when:
+            # Actions to be performed.
+            Terminal runs "echo 'my-app version 1.0.0'"
+        then:
+            # Conditions that must be true after the actions.
+            Terminal last_command succeeded
+            Terminal output_contains "my-app version"
+    }
+
+    test CreateAndCapture "Create a resource and capture its ID" {
+        given:
+            # This test depends on the success of the previous one.
+            Test has_succeeded CheckAppVersion
+        when:
+            Terminal runs "echo 'Created resource with ID: res-123'"
+        then:
+            # Capture part of the output into a variable named 'resourceId'.
+            Terminal output_matches "Created resource with ID: (res-\d+)" as resourceId
+    }
+
+    # This block runs after all tests in the scenario are complete.
+    after {
+        # Use the captured 'resourceId' variable to clean up.
+        Terminal runs "echo 'Cleaning up ${resourceId}'"
+    }
+}
+"#;
+
 fn main() {
     let cli = cli::Cli::parse();
     if let Err(e) = run(cli) {
@@ -46,7 +94,8 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             let test_file_path = std::path::Path::new(&file);
             let base_dir = test_file_path
                 .parent()
-                .unwrap_or_else(|| std::path::Path::new(""));
+                .filter(|p| !p.as_os_str().is_empty())
+                .unwrap_or_else(|| std::path::Path::new("."));
 
             for s in &test_suite.statements {
                 match s {
@@ -89,6 +138,21 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             // Call the runner and return its result
             runner.run(&suite_name, &scenarios)
+        }
+        Commands::Init { file } => {
+            if std::path::Path::new(&file).exists() {
+                colours::error(&format!(
+                    "File '{}' already exists. Aborting to prevent overwrite.",
+                    file
+                ));
+                return Ok(());
+            }
+            fs::write(&file, INIT_TEMPLATE)?;
+            colours::success(&format!(
+                "Successfully created example test file '{}'",
+                file
+            ));
+            Ok(())
         }
         Commands::Update => {
             println!("{}", "--- Checking for updates ---".blue());

@@ -22,13 +22,14 @@ pub struct TerminalBackend {
     pub last_stdout: String,
     pub last_stderr: String,
     cwd: PathBuf,
+    settings: TestSuiteSettings,
 }
 
 impl TerminalBackend {
     /// Creates a new backend with a PTY session.
     /// - `base_dir`: The directory where the shell process should start.
     /// - `shell_path`: An optional path to a specific shell executable.
-    pub fn new(base_dir: PathBuf, settings: TestSuiteSettings) -> Self {
+    pub fn new(cwd: PathBuf, settings: TestSuiteSettings) -> Self {
         // Get the size of the user's actual terminal.
         let term_size = terminal_size();
         let (cols, rows) = if let Some((Width(w), Height(h))) = term_size {
@@ -50,11 +51,12 @@ impl TerminalBackend {
             })
             .expect("Failed to open pty");
 
-        // Use the provided shell path, or default to "zsh".
-        let shell = settings.shell_path.unwrap();
-        // Spawn the shell process.
-        let mut cmd = CommandBuilder::new(shell);
-        cmd.cwd(base_dir.clone());
+        let shell_path = settings
+            .shell_path
+            .clone()
+            .unwrap_or_else(|| "/bin/sh".to_string());
+        let mut cmd = CommandBuilder::new(shell_path);
+        cmd.cwd(&cwd);
         let child = pair
             .slave
             .spawn_command(cmd)
@@ -93,7 +95,8 @@ impl TerminalBackend {
             reader_thread: Some(reader_thread),
             last_stdout: String::new(),
             last_stderr: String::new(),
-            cwd: base_dir,
+            cwd,
+            settings,
         }
     }
 
@@ -155,7 +158,12 @@ impl TerminalBackend {
                 self.last_stdout.clear();
                 self.last_stderr.clear();
 
-                let mut child = Command::new("sh")
+                println!("Running command: {}", command);
+                println!("{}", self.last_stdout);
+                println!("{}", self.last_stderr);
+                println!("{:?}", self.cwd);
+                let shell = self.settings.shell_path.as_deref().unwrap_or("/bin/sh");
+                let mut child = Command::new(shell)
                     .arg("-c")
                     .arg(command)
                     .current_dir(&self.cwd)
