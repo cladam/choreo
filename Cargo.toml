@@ -1,6 +1,6 @@
 [package]
 name = "choreo"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Claes Adamsson <claes.adamsson@gmail.com>"]
 repository = "https://github.com/cladam/choreo"
 readme = "README.md"
@@ -27,6 +27,8 @@ portable-pty = "0.9.0"
 regex = "1.11.2"
 itertools = "0.14.0"
 self_update = "0.42.0"
+[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
+openssl-sys = { version = "0.9.109", features = ["vendored"] }
 
 [lib]
 name = "choreo"

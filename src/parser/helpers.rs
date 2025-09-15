@@ -204,32 +204,6 @@ pub fn check_condition(
     }
 }
 
-/// This is a very basic attempt to extract command output from a line that might
-/// contain a shell prompt. It's not very robust.
-fn extract_command_output(line: &str) -> Option<&str> {
-    // A simple heuristic: if a line starts with common prompt characters,
-    // try to find where the actual output begins. This is brittle.
-    // A more robust solution would require knowing the exact prompt format.
-    let prompt_chars = &['$', '%', '>', '#'];
-    if let Some(_pos) = line.rfind(prompt_chars) {
-        // If we find a prompt character, we might take the part after it.
-        // But what if the output itself contains these characters?
-        // This is tricky. For now, let's just avoid lines that look like prompts.
-        if line.trim().ends_with('$') || line.trim().ends_with('%') {
-            return None; // Likely a prompt line
-        }
-    }
-
-    // If the line starts with a JSON character, it's probably part of the output.
-    let trimmed = line.trim_start();
-    if trimmed.starts_with('{') || trimmed.starts_with('[') {
-        return Some(line);
-    }
-
-    // This is a guess. If it doesn't look like a prompt, include it.
-    Some(line)
-}
-
 /// Creates a new Action with its string values substituted from the state map.
 pub fn substitute_variables(action: &Action, state: &HashMap<String, String>) -> Action {
     match action {
