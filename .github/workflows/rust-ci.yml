@@ -18,7 +18,8 @@ env:
   EVAR: "## My medi note from an environment variable"
 
 jobs:
-  build-and-test:
+  validate-examples:
+    name: Validate Examples
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -26,6 +27,24 @@ jobs:
 
       - name: Build
         run: cargo build --release
+
+      - name: Validate all examples
+        run: |
+          for file in examples/*.chor; do
+            echo "Validating $file"
+            ./target/release/choreo validate --file "$file"
+          done
+
+  build-and-test:
+    needs: validate-examples
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Done in the validate-examples job
+      #- name: Build
+      #  run: cargo build --release
 
       - name: Check cargo formatting
         run: cargo fmt -- --check

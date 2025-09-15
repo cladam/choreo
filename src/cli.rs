@@ -30,6 +30,13 @@ pub enum Commands {
         #[arg(default_value = "test.chor")]
         file: String,
     },
+    /// Validate a choreography test suite file.
+    /// Checks syntax and reports any issues without executing tests.
+    Validate {
+        /// Path to the choreography test suite file.
+        #[arg(short, long, default_value = "test.chor")]
+        file: String,
+    },
     /// Update choreo to the latest version.
     #[command(name = "update", hide = true)] // Hidden from help
     Update,

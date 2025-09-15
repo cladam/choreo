@@ -154,6 +154,16 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             ));
             Ok(())
         }
+        Commands::Validate { file } => {
+            let source = fs::read_to_string(&file)?;
+            match parser::parse(&source) {
+                Ok(_) => {
+                    colours::success("Test suite is valid.");
+                    Ok(())
+                }
+                Err(e) => Err(AppError::ParseError(e.to_string())),
+            }
+        }
         Commands::Update => {
             println!("{}", "--- Checking for updates ---".blue());
             let status = self_update::backends::github::Update::configure()

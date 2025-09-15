@@ -1,6 +1,13 @@
 # A test suite for your application
 feature "My Application Feature"
 
+settings {
+  # Stop running tests in a scenario after the first failure.
+  stop_on_failure = true
+  # Set a timeout for each test case.
+  timeout_seconds = 10
+}
+
 # Define the actors that will perform actions.
 actors: Terminal
 

@@ -123,6 +123,32 @@ export PATH=$PATH:$(pwd)/target/release
 cargo install --path .
 ```
 
+### Command-Line Usage
+
+#### Create a new test file
+
+Use the `init` command to generate a new example `.chor` file. This is a great starting point for a new test suite.
+
+```bash
+# Create a new test file with default name "test.chor"
+choreo init
+
+# Create a new test file
+choreo init --file "my_test.chor"
+```
+
+#### Validate a test file
+
+Use the `validate` command to check the syntax and structure of a `.chor` file without executing it.
+
+```bash
+# Validate the default test.chor file
+choreo validate
+
+# Validate a specific file
+choreo validate --file "examples/advanced_matchers.chor"
+```
+
 #### Run a script
 
 Use the `run` command to execute a `.chor` file. Use the `--verbose` flag for detailed debug output.
