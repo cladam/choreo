@@ -42,9 +42,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Done in the validate-examples job
-      #- name: Build
-      #  run: cargo build --release
+      - name: Build
+        run: cargo build --release
 
       - name: Check cargo formatting
         run: cargo fmt -- --check
