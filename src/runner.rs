@@ -1,5 +1,6 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
+use crate::backend::web_backend::WebBackend;
 use crate::colours;
 use crate::error::AppError;
 use crate::parser::ast::{
@@ -61,6 +62,7 @@ impl TestRunner {
 
         // --- Backend and State Initialisation ---
         let mut terminal_backend = TerminalBackend::new(self.base_dir.clone(), settings.clone());
+        let mut web_backend = crate::backend::web_backend::WebBackend::new();
         let fs_backend = FileSystemBackend::new();
         let mut last_exit_code: Option<i32> = None;
         let mut output_buffer = String::new();
@@ -127,6 +129,7 @@ impl TestRunner {
                                     &last_exit_code,
                                     &fs_backend,
                                     &mut terminal_backend,
+                                    &mut web_backend,
                                     self.verbose,
                                 ) {
                                     tests_to_start.push((test_case.name.clone(), given_actions));
@@ -156,6 +159,7 @@ impl TestRunner {
                                     &last_exit_code,
                                     &fs_backend,
                                     &mut terminal_backend,
+                                    &mut web_backend,
                                     self.verbose,
                                 ) {
                                     tests_to_pass.push(test_case.name.clone());
@@ -194,6 +198,7 @@ impl TestRunner {
                                     &substituted_action,
                                     &mut terminal_backend,
                                     &fs_backend,
+                                    &mut web_backend,
                                     &mut last_exit_code,
                                     settings.timeout_seconds,
                                 );
@@ -206,6 +211,7 @@ impl TestRunner {
                                     &substituted_action,
                                     &mut terminal_backend,
                                     &fs_backend,
+                                    &mut web_backend,
                                     &mut last_exit_code,
                                     settings.timeout_seconds,
                                 );
@@ -228,6 +234,7 @@ impl TestRunner {
                                 &last_exit_code,
                                 &fs_backend,
                                 &mut terminal_backend,
+                                &mut web_backend,
                                 self.verbose,
                             );
 
@@ -273,6 +280,7 @@ impl TestRunner {
                                         &substituted_action,
                                         &mut terminal_backend,
                                         &fs_backend,
+                                        &mut web_backend,
                                         &mut last_exit_code,
                                         settings.timeout_seconds,
                                     );
@@ -284,6 +292,7 @@ impl TestRunner {
                                         &substituted_action,
                                         &mut terminal_backend,
                                         &fs_backend,
+                                        &mut web_backend,
                                         &mut last_exit_code,
                                         settings.timeout_seconds,
                                     );
@@ -334,6 +343,7 @@ impl TestRunner {
                                 &substituted_action,
                                 &mut terminal_backend,
                                 &fs_backend,
+                                &mut web_backend,
                                 &mut last_exit_code,
                                 settings.timeout_seconds,
                             );
@@ -433,9 +443,14 @@ impl TestRunner {
         action: &Action,
         terminal: &mut TerminalBackend,
         fs: &FileSystemBackend,
+        web: &mut WebBackend,
         last_exit_code: &mut Option<i32>,
         timeout_seconds: u64,
     ) {
+        println!("\n[EXECUTING ACTION] {:?}", action);
+        // Substitute variables in the action
+        let substituted_action = substitute_variables_in_action(action, &self.env_vars);
+
         // Check if it's a terminal action
         if terminal.execute_action(
             action,
@@ -448,5 +463,19 @@ impl TestRunner {
         if fs.execute_action(action, terminal.get_cwd()) {
             return;
         }
+
+        // Check if it's a web action
+        if web.execute_action2(&substituted_action, &self.env_vars, self.verbose) {
+            return;
+        } else {
+            println!(
+                "[WARNING] Web action failed to execute: {:?}",
+                substituted_action
+            );
+        }
+        println!(
+            "[WARNING] Action not recognised by any backend: {:?}",
+            action
+        );
     }
 }

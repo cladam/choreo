@@ -113,5 +113,6 @@ fn format_action_for_report(action: &Action) -> String {
         Action::DeleteFile { path } => format!("FileSystem delete_file '{}'", path),
         Action::CreateDir { path } => format!("FileSystem create_dir '{}'", path),
         Action::DeleteDir { path } => format!("FileSystem delete_dir '{}'", path),
+        Action::HttpGet { url, .. } => format!("HTTP GET '{}'", url),
     }
 }

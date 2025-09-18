@@ -157,6 +157,22 @@ pub enum Condition {
     FileIsNotEmpty {
         path: String,
     },
+    // --- Web Conditions ---
+    ResponseStatusIs(u16),
+    ResponseBodyContains {
+        value: String,
+    },
+    ResponseBodyMatches {
+        regex: String,
+        capture_as: Option<String>,
+    },
+    JsonBodyHasPath {
+        path: String,
+    },
+    JsonPathEquals {
+        path: String,
+        expected_value: Value,
+    },
 }
 
 // All possible actions that can be executed.
@@ -171,6 +187,8 @@ pub enum Action {
     CreateDir { path: String },
     DeleteFile { path: String },
     DeleteDir { path: String },
+    // --- Web Actions ---
+    HttpGet { actor: String, url: String },
 }
 
 // Primitive values.

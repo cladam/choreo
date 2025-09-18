@@ -1,5 +1,6 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
+use crate::backend::web_backend::WebBackend;
 use crate::parser::ast::{Action, Condition, TestCase, TestState};
 use jsonpath_lib::selector;
 use std::collections::HashMap;
@@ -17,6 +18,7 @@ pub fn check_all_conditions_met(
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
     terminal_backend: &mut TerminalBackend,
+    web_backend: &WebBackend,
     verbose: bool,
 ) -> bool {
     conditions.iter().all(|condition| {
@@ -31,6 +33,7 @@ pub fn check_all_conditions_met(
             last_exit_code,
             fs_backend,
             terminal_backend,
+            web_backend,
             verbose,
         );
         if verbose {
@@ -54,6 +57,7 @@ pub fn check_condition(
     last_exit_code: &Option<i32>,
     fs_backend: &FileSystemBackend,
     terminal_backend: &mut TerminalBackend,
+    web_backend: &WebBackend,
     verbose: bool,
 ) -> bool {
     let cleaned_buffer = strip(output_buffer);
@@ -200,6 +204,11 @@ pub fn check_condition(
                 Err(_) => false,
             }
         }
+        Condition::ResponseStatusIs(_)
+        | Condition::ResponseBodyContains { .. }
+        | Condition::ResponseBodyMatches { .. }
+        | Condition::JsonBodyHasPath { .. }
+        | Condition::JsonPathEquals { .. } => web_backend.check_condition(condition, env_vars),
         _ => false, // Other conditions not implemented yet
     }
 }
@@ -332,6 +341,7 @@ pub fn is_synchronous(test_case: &TestCase) -> bool {
                 | Action::DeleteFile { .. }
                 | Action::CreateDir { .. }
                 | Action::DeleteDir { .. }
+                | Action::HttpGet { .. }
         )
     })
 }
