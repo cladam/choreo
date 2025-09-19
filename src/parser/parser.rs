@@ -1,208 +1,290 @@
-// src/parser/parser.rs
-
-use crate::error::AppError;
+// parser.rs
 use crate::parser::ast::{
     Action, Condition, GivenStep, ReportFormat, Scenario, Statement, TestCase, TestSuite,
     TestSuiteSettings, Value,
 };
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
+use pest_derive::Parser;
 
-#[derive(pest_derive::Parser)]
+#[derive(Parser, Debug)]
 #[grammar = "parser/choreo.pest"]
 pub struct ChoreoParser;
 
-pub fn parse(source: &str) -> Result<TestSuite, AppError> {
-    let pairs = ChoreoParser::parse(Rule::grammar, source)?;
-    let statements = pairs
-        .flat_map(|pair| pair.into_inner())
-        .filter(|pair| pair.as_rule() != Rule::EOI)
-        .map(parse_statement)
-        .collect();
+/// Parses a source string into an Abstract Syntax Tree (AST).
+pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
+    let pairs = ChoreoParser::parse(Rule::grammar, source)?.next().unwrap();
+
+    let mut statements = vec![];
+    for statement_pair in pairs.into_inner() {
+        if statement_pair.as_rule() == Rule::EOI {
+            break;
+        }
+        //println!("Parsed statement: {:?}", statement_pair);
+
+        // This opens the "statement" container to get the content.
+        let pair = statement_pair.into_inner().next().unwrap();
+        //println!("Parsed pair: {:?}", pair);
+
+        statements.push(match pair.as_rule() {
+            // Now this will correctly match on the inner rule.
+            Rule::actors_def => build_actors_def(pair),
+            Rule::settings_def => build_settings_def(pair),
+            Rule::env_def => build_env_def(pair),
+            Rule::var_def => build_var_def(pair),
+            Rule::feature_def => build_feature_def(pair),
+            Rule::scenario_def => build_scenario(pair),
+            Rule::background_def => build_background_def(pair),
+            _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
+        });
+    }
+
     Ok(TestSuite { statements })
 }
 
-fn parse_statement(pair: Pair<Rule>) -> Statement {
-    match pair.as_rule() {
-        Rule::settings_def => Statement::SettingsDef(parse_settings(pair.into_inner())),
-        Rule::background_def => Statement::BackgroundDef(parse_background(pair.into_inner())),
-        Rule::env_def => Statement::EnvDef(parse_env(pair.into_inner())),
-        Rule::var_def => {
-            let mut inner = pair.into_inner();
-            let name = inner.next().unwrap().as_str().to_string();
-            let value = parse_value(inner.next().unwrap());
-            Statement::VarDef(name, value)
-        }
-        Rule::actors_def => Statement::ActorDef(parse_actors(pair.into_inner())),
-        Rule::feature_def => {
-            let feature_name = parse_string(pair.into_inner().next().unwrap());
-            Statement::FeatureDef(feature_name)
-        }
-        Rule::scenario_def => Statement::Scenario(parse_scenario(pair.into_inner())),
-        _ => unreachable!("Unexpected top-level statement: {:?}", pair.as_rule()),
-    }
+// Helper function for a background definition.
+fn build_background_def(pair: Pair<Rule>) -> Statement {
+    let steps = build_given_steps(pair.into_inner());
+    Statement::BackgroundDef(steps)
 }
 
-fn parse_settings(pairs: Pairs<Rule>) -> TestSuiteSettings {
+// Helper function for a simple definition.
+fn build_actors_def(pair: Pair<Rule>) -> Statement {
+    let identifiers: Vec<String> = pair
+        .into_inner()
+        .filter(|p| p.as_rule() == Rule::identifier)
+        .map(|p| p.as_str().to_string())
+        .collect();
+    Statement::ActorDef(identifiers)
+}
+
+// Helper function for settings
+fn build_settings_def(pair: Pair<Rule>) -> Statement {
     let mut settings = TestSuiteSettings::default();
-    for setting in pairs {
-        let mut inner = setting.into_inner();
+    for setting_pair in pair.into_inner() {
+        let mut inner = setting_pair.into_inner();
         let key = inner.next().unwrap().as_str();
         let value_pair = inner.next().unwrap();
+
         match key {
             "timeout_seconds" => {
-                settings.timeout_seconds = value_pair
-                    .as_str()
-                    .parse()
-                    .unwrap_or(settings.timeout_seconds)
-            }
-            "report_format" => {
-                settings.report_format = match value_pair.as_str() {
-                    "json" => ReportFormat::Json,
-                    "junit" => ReportFormat::Junit,
-                    "none" => ReportFormat::None,
-                    _ => settings.report_format,
+                if let Value::Number(n) = build_value(value_pair) {
+                    settings.timeout_seconds = n as u64;
+                } else {
+                    panic!("'timeout_seconds' setting must be a number");
                 }
             }
-            "report_path" => settings.report_path = value_pair.as_str().to_string(),
+            "report_path" => {
+                if let Value::String(s) = build_value(value_pair) {
+                    settings.report_path = s;
+                } else {
+                    panic!("'report_path' setting must be a string");
+                }
+            }
+            "report_format" => {
+                if let Value::String(s) = build_value(value_pair) {
+                    settings.report_format = match s.as_str() {
+                        "json" => ReportFormat::Json,
+                        "junit" => ReportFormat::Junit,
+                        _ => panic!("Invalid 'report_format': must be 'json' or 'junit'"),
+                    };
+                } else {
+                    panic!("'report_format' setting must be a string");
+                }
+            }
             "stop_on_failure" => {
-                settings.stop_on_failure = value_pair.as_str().parse().unwrap_or(false)
+                if value_pair.as_rule() == Rule::binary_op {
+                    settings.stop_on_failure = value_pair.as_str().parse().unwrap();
+                } else {
+                    panic!("'stop_on_failure' setting must be a boolean (true/false)");
+                }
             }
-            "shell_path" => settings.shell_path = Some(value_pair.as_str().to_string()),
+            "shell_path" => {
+                if let Value::String(s) = build_value(value_pair) {
+                    settings.shell_path = Some(s);
+                } else {
+                    panic!("'shell_path' setting must be a string");
+                }
+            }
             "expected_failures" => {
-                settings.expected_failures = value_pair
-                    .as_str()
-                    .parse()
-                    .unwrap_or(settings.expected_failures)
+                if let Value::Number(n) = build_value(value_pair) {
+                    settings.expected_failures = n as usize;
+                } else {
+                    panic!("'expected_failures' setting must be a number");
+                }
             }
-            _ => {} // Ignore unknown settings
+            _ => { /* Ignore unknown settings */ }
         }
     }
-    settings
+    Statement::SettingsDef(settings)
 }
 
-fn parse_background(pairs: Pairs<Rule>) -> Vec<GivenStep> {
+// Helper function for a var definition.
+fn build_var_def(pair: Pair<Rule>) -> Statement {
+    let mut inner = pair.into_inner();
+    let key = inner.next().unwrap().as_str().to_string();
+    let value_pair = inner.next().unwrap();
+    let value = build_value(value_pair);
+    Statement::VarDef(key, value)
+}
+
+// Helper function for a feature definition.
+fn build_feature_def(pair: Pair<Rule>) -> Statement {
+    let name = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
+    Statement::FeatureDef(name)
+}
+
+fn build_env_def(pair: Pair<Rule>) -> Statement {
+    let identifiers: Vec<String> = pair.into_inner().map(|p| p.as_str().to_string()).collect();
+    Statement::EnvDef(identifiers)
+}
+
+// This is the other key function to implement.
+fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
     pairs
-        .map(|p| match p.as_rule() {
-            Rule::action => GivenStep::Action(parse_action(p)),
-            Rule::condition => GivenStep::Condition(parse_condition(p)),
-            _ => unreachable!(),
+        .map(|pair| {
+            // An 'action' rule from the grammar contains one of the specific action types.
+            let inner_action = pair.into_inner().next().unwrap();
+            build_action(inner_action)
         })
         .collect()
 }
 
-fn parse_env(pairs: Pairs<Rule>) -> Vec<String> {
-    pairs.map(|p| p.as_str().to_string()).collect()
-}
-
-fn parse_actors(pairs: Pairs<Rule>) -> Vec<String> {
-    pairs.map(|p| p.as_str().to_string()).collect()
-}
-
-fn parse_scenario(pairs: Pairs<Rule>) -> Scenario {
-    let mut name = String::new();
+fn build_scenario(pair: Pair<Rule>) -> Statement {
+    let mut inner = pair.into_inner();
+    let name = inner
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
     let mut tests = Vec::new();
     let mut after = Vec::new();
-
-    for pair in pairs {
-        match pair.as_rule() {
-            Rule::string => name = parse_string(pair),
-            Rule::test => tests.push(parse_test(pair.into_inner())),
-            Rule::after_block => after = parse_after_block(pair.into_inner()),
-            _ => unreachable!(),
+    for item in inner {
+        match item.as_rule() {
+            Rule::test => tests.push(build_test_case(item)),
+            Rule::after_block => {
+                after = build_actions(item.into_inner());
+            }
+            _ => {}
         }
     }
-
-    Scenario { name, tests, after }
+    Statement::Scenario(Scenario { name, tests, after })
 }
 
-fn parse_test(pairs: Pairs<Rule>) -> TestCase {
-    let mut name = String::new();
-    let mut description = String::new();
-    let mut given = Vec::new();
-    let mut when = Vec::new();
-    let mut then = Vec::new();
+/// Builds a TestCase from a parsed Pair.
+pub fn build_test_case(pair: Pair<Rule>) -> TestCase {
+    let mut inner = pair.into_inner();
+    let name = inner.next().unwrap().as_str().to_string();
+    let description = inner
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
 
-    for pair in pairs {
-        match pair.as_rule() {
-            Rule::identifier => name = pair.as_str().to_string(),
-            Rule::string => description = parse_string(pair),
-            Rule::given_block => given = parse_given_block(pair.into_inner()),
-            Rule::when_block => when = parse_when_block(pair.into_inner()),
-            Rule::then_block => then = parse_then_block(pair.into_inner()),
-            _ => unreachable!(),
-        }
-    }
+    let given_block = inner.next().expect("Missing given block in test case");
+    let when_block = inner.next().expect("Missing when block in test case");
+    let then_block = inner.next().expect("Missing then block in test case");
 
     TestCase {
         name,
         description,
-        given,
-        when,
-        then,
+        given: build_given_steps(given_block.into_inner()),
+        when: build_actions(when_block.into_inner()),
+        then: build_conditions(then_block.into_inner()),
     }
 }
 
-fn parse_given_block(pairs: Pairs<Rule>) -> Vec<GivenStep> {
+// Builds a vector of GivenSteps, which can be either an Action or a Condition.
+pub fn build_given_steps(pairs: Pairs<Rule>) -> Vec<GivenStep> {
     pairs
-        .map(|p| match p.as_rule() {
-            Rule::action => GivenStep::Action(parse_action(p)),
-            Rule::condition => GivenStep::Condition(parse_condition(p)),
-            _ => unreachable!(),
+        .map(|pair| {
+            // The pair will be either an 'action' or a 'condition'.
+            match pair.as_rule() {
+                Rule::action => {
+                    // The 'action' rule contains one of the specific action types.
+                    let specific_action = pair.into_inner().next().unwrap();
+                    GivenStep::Action(build_action(specific_action))
+                }
+                Rule::condition => GivenStep::Condition(build_condition(pair)),
+                _ => unreachable!("Unexpected rule in given block: {:?}", pair.as_rule()),
+            }
         })
         .collect()
 }
 
-fn parse_when_block(pairs: Pairs<Rule>) -> Vec<Action> {
-    pairs.map(parse_action).collect()
-}
-
-fn parse_then_block(pairs: Pairs<Rule>) -> Vec<Condition> {
-    pairs.map(parse_condition).collect()
-}
-
-fn parse_after_block(pairs: Pairs<Rule>) -> Vec<Action> {
-    pairs.map(parse_action).collect()
-}
-
-fn parse_condition(pair: Pair<Rule>) -> Condition {
-    let inner_pair = pair.into_inner().next().unwrap();
-    match inner_pair.as_rule() {
+/// Builds a single Condition from a specific, inner condition rule Pair.
+/// This is a helper to avoid unwrapping the 'condition' rule multiple times.
+pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
+    //println!("Building condition from specific: {:?}", inner_cond);
+    match inner_cond.as_rule() {
         Rule::wait_condition => {
-            let mut inner = inner_pair.into_inner();
+            let mut inner = inner_cond.into_inner();
             let op = inner.next().unwrap().as_str().to_string();
-            let wait_str = inner.next().unwrap().as_str();
-            let wait = wait_str[..wait_str.len() - 1].parse::<f32>().unwrap_or(0.0);
+            let wait_marker_str = inner.next().unwrap().as_str();
+
+            let wait = if wait_marker_str.ends_with("ms") {
+                let value_str = &wait_marker_str[..wait_marker_str.len() - 2];
+                value_str.parse::<f32>().unwrap() / 1000.0
+            } else if wait_marker_str.ends_with('s') {
+                let value_str = &wait_marker_str[..wait_marker_str.len() - 1];
+                value_str.parse::<f32>().unwrap()
+            } else {
+                // This case should not be reached if the grammar is correct
+                0.0
+            };
             Condition::Wait { op, wait }
         }
-        Rule::state_condition => {
-            let outcome = inner_pair.into_inner().next().unwrap().as_str().to_string();
-            Condition::StateSucceeded { outcome }
-        }
         Rule::terminal_condition => {
-            parse_terminal_condition(inner_pair.into_inner().next().unwrap())
+            let mut inner = inner_cond.into_inner();
+            let terminal_cond = inner.next().unwrap();
+            build_condition_from_specific(terminal_cond)
         }
-        Rule::filesystem_condition => {
-            parse_filesystem_condition(inner_pair.into_inner().next().unwrap())
-        }
-        Rule::web_condition => parse_web_condition(inner_pair.into_inner().next().unwrap()),
-        _ => unreachable!("Unhandled condition: {:?}", inner_pair.as_rule()),
-    }
-}
-
-fn parse_terminal_condition(pair: Pair<Rule>) -> Condition {
-    let actor = "Terminal".to_string(); // Hardcoded for now
-    match pair.as_rule() {
         Rule::output_contains_condition => {
-            let text = parse_string(pair.into_inner().next().unwrap());
+            let mut inner = inner_cond.into_inner();
+            //let actor = inner.next().unwrap().as_str().to_string();
+            let actor = "Terminal".to_string(); // Default actor for terminal conditions
+            let text = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
             Condition::OutputContains { actor, text }
         }
+        Rule::state_condition => {
+            let outcome = inner_cond.into_inner().next().unwrap().as_str().to_string();
+            Condition::StateSucceeded { outcome }
+        }
         Rule::output_matches_condition => {
-            let mut inner = pair.into_inner();
-            let regex = parse_string(inner.next().unwrap());
+            let mut inner = inner_cond.into_inner();
+            //let actor = inner.next().unwrap().as_str().to_string();
+            let regex = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
             let capture_as = inner.next().map(|p| p.as_str().to_string());
             Condition::OutputMatches {
-                actor,
+                actor: "Terminal".to_string(),
                 regex,
                 capture_as,
             }
@@ -210,206 +292,338 @@ fn parse_terminal_condition(pair: Pair<Rule>) -> Condition {
         Rule::last_command_succeeded_cond => Condition::LastCommandSucceeded,
         Rule::last_command_failed_cond => Condition::LastCommandFailed,
         Rule::last_command_exit_code_is_cond => {
-            let code = pair
+            let mut inner = inner_cond.into_inner();
+            let code_str = inner.next().unwrap().as_str();
+            let code: i32 = code_str.parse().unwrap();
+            Condition::LastCommandExitCodeIs(code)
+        }
+        Rule::output_is_valid_json_condition => Condition::OutputIsValidJson,
+        Rule::json_output_has_path_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner
+                .next()
+                .unwrap()
                 .into_inner()
                 .next()
                 .unwrap()
                 .as_str()
-                .parse::<i32>()
-                .unwrap();
-            Condition::LastCommandExitCodeIs(code)
+                .to_string();
+            Condition::JsonOutputHasPath { path }
+        }
+        Rule::json_output_at_equals_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner.next().unwrap().as_str().to_string();
+            let value = build_value(inner.next().unwrap());
+            Condition::JsonOutputAtEquals { path, value }
+        }
+        Rule::json_output_at_includes_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner.next().unwrap().as_str().to_string();
+            let value = build_value(inner.next().unwrap());
+            Condition::JsonOutputAtIncludes { path, value }
+        }
+        Rule::json_output_at_has_item_count_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner.next().unwrap().as_str().to_string();
+            let count_str = inner.next().unwrap().as_str();
+            let count: i32 = count_str.parse().unwrap();
+            Condition::JsonOutputAtHasItemCount { path, count }
+        }
+        Rule::file_is_empty_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = unescape_string(inner.next().unwrap().into_inner().next().unwrap().as_str());
+            Condition::FileIsEmpty { path }
+        }
+        Rule::file_is_not_empty_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = unescape_string(inner.next().unwrap().into_inner().next().unwrap().as_str());
+            Condition::FileIsNotEmpty { path }
+        }
+        Rule::filesystem_condition => {
+            let mut inner = inner_cond.into_inner();
+            let next_pair = inner.next().unwrap();
+
+            // Handle the different structures within a filesystem_condition
+            match next_pair.as_rule() {
+                Rule::file_is_empty_condition => build_condition_from_specific(next_pair),
+                Rule::file_is_not_empty_condition => build_condition_from_specific(next_pair),
+                _ => {
+                    // This handles `filesystem_condition_keyword ~ string ...`
+                    let keyword = next_pair.as_str();
+                    let path = inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+
+                    match keyword {
+                        "file_exists" => Condition::FileExists { path },
+                        "file_does_not_exist" => Condition::FileDoesNotExist { path },
+                        "dir_exists" => Condition::DirExists { path },
+                        "dir_does_not_exist" => Condition::DirDoesNotExist { path },
+                        "file_contains" => {
+                            let content = inner
+                                .next()
+                                .unwrap()
+                                .into_inner()
+                                .next()
+                                .unwrap()
+                                .as_str()
+                                .to_string();
+                            Condition::FileContains { path, content }
+                        }
+                        _ => unreachable!("Unsupported filesystem condition keyword: {}", keyword),
+                    }
+                }
+            }
         }
         Rule::stdout_is_empty_condition => Condition::StdoutIsEmpty,
         Rule::stderr_is_empty_condition => Condition::StderrIsEmpty,
         Rule::stderr_contains_condition => {
-            let text = parse_string(pair.into_inner().next().unwrap());
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
             Condition::StderrContains(text)
         }
         Rule::output_starts_with_condition => {
-            let text = parse_string(pair.into_inner().next().unwrap());
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            //println!("Building output_starts_with_condition '{}'", text);
             Condition::OutputStartsWith(text)
         }
         Rule::output_ends_with_condition => {
-            let text = parse_string(pair.into_inner().next().unwrap());
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
             Condition::OutputEndsWith(text)
         }
         Rule::output_equals_condition => {
-            let text = parse_string(pair.into_inner().next().unwrap());
+            let text = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
             Condition::OutputEquals(text)
         }
-        Rule::output_is_valid_json_condition => Condition::OutputIsValidJson,
-        Rule::json_output_has_path_condition => {
-            let path = parse_string(pair.into_inner().next().unwrap());
-            Condition::JsonOutputHasPath { path }
+        Rule::web_condition => {
+            let inner = inner_cond.into_inner().next().unwrap();
+            build_condition_from_specific(inner)
         }
-        Rule::json_output_at_equals_condition => {
-            let mut inner = pair.into_inner();
-            let path = parse_string(inner.next().unwrap());
-            let value = parse_value(inner.next().unwrap());
-            Condition::JsonOutputAtEquals { path, value }
-        }
-        Rule::json_output_at_includes_condition => {
-            let mut inner = pair.into_inner();
-            let path = parse_string(inner.next().unwrap());
-            let value = parse_value(inner.next().unwrap());
-            Condition::JsonOutputAtIncludes { path, value }
-        }
-        Rule::json_output_at_has_item_count_condition => {
-            let mut inner = pair.into_inner();
-            let path = parse_string(inner.next().unwrap());
-            let count = inner.next().unwrap().as_str().parse::<i32>().unwrap();
-            Condition::JsonOutputAtHasItemCount { path, count }
-        }
-        _ => unreachable!("Unhandled terminal condition: {:?}", pair.as_rule()),
-    }
-}
-
-fn parse_filesystem_condition(pair: Pair<Rule>) -> Condition {
-    match pair.as_rule() {
-        Rule::filesystem_condition_keyword => {
-            let keyword = pair.as_str();
-            let mut inner = pair.clone().into_inner();
-            let path = parse_string(inner.next().unwrap());
-            match keyword {
-                "file_exists" => Condition::FileExists { path },
-                "file_does_not_exist" => Condition::FileDoesNotExist { path },
-                "dir_exists" => Condition::DirExists { path },
-                "dir_does_not_exist" => Condition::DirDoesNotExist { path },
-                "file_contains" => {
-                    let content = parse_string(inner.next().unwrap());
-                    Condition::FileContains { path, content }
-                }
-                _ => unreachable!("Unhandled filesystem keyword: {}", keyword),
-            }
-        }
-        Rule::file_is_empty_condition => {
-            let path = parse_string(pair.into_inner().next().unwrap());
-            Condition::FileIsEmpty { path }
-        }
-        Rule::file_is_not_empty_condition => {
-            let path = parse_string(pair.into_inner().next().unwrap());
-            Condition::FileIsNotEmpty { path }
-        }
-        _ => {
-            // This handles the case where the rule is nested, e.g., `filesystem_condition -> (filesystem_condition_keyword ...)`
-            let mut inner = pair.into_inner();
-            let keyword_pair = inner.next().unwrap();
-            let keyword = keyword_pair.as_str();
-            let mut keyword_inner = keyword_pair.into_inner();
-            let path = parse_string(keyword_inner.next().unwrap());
-
-            match keyword {
-                "file_exists" => Condition::FileExists { path },
-                "file_does_not_exist" => Condition::FileDoesNotExist { path },
-                "dir_exists" => Condition::DirExists { path },
-                "dir_does_not_exist" => Condition::DirDoesNotExist { path },
-                "file_contains" => {
-                    let content = parse_string(keyword_inner.next().unwrap());
-                    Condition::FileContains { path, content }
-                }
-                _ => unreachable!("Unhandled filesystem keyword: {}", keyword),
-            }
-        }
-    }
-}
-
-fn parse_web_condition(pair: Pair<Rule>) -> Condition {
-    match pair.as_rule() {
         Rule::response_status_is_condition => {
-            let status = pair
+            let status = inner_cond
                 .into_inner()
                 .next()
                 .unwrap()
                 .as_str()
-                .parse::<u16>()
+                .parse()
                 .unwrap();
             Condition::ResponseStatusIs(status)
         }
         Rule::response_body_contains_condition => {
-            let value = parse_string(pair.into_inner().next().unwrap());
+            let value = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
             Condition::ResponseBodyContains { value }
         }
         Rule::response_body_matches_condition => {
-            let mut inner = pair.into_inner();
-            let regex = parse_string(inner.next().unwrap());
+            let mut inner = inner_cond.into_inner();
+            let regex = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
             let capture_as = inner.next().map(|p| p.as_str().to_string());
             Condition::ResponseBodyMatches { regex, capture_as }
         }
         Rule::json_body_has_path_condition => {
-            let path = parse_string(pair.into_inner().next().unwrap());
+            let path = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
             Condition::JsonBodyHasPath { path }
         }
         Rule::json_path_equals_condition => {
-            let mut inner = pair.into_inner();
-            let path = parse_string(inner.next().unwrap());
-            let expected_value = parse_value(inner.next().unwrap());
+            let mut inner = inner_cond.into_inner();
+            let path = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            let expected_value = build_value(inner.next().unwrap());
             Condition::JsonPathEquals {
                 path,
                 expected_value,
             }
         }
-        _ => unreachable!("Unhandled web condition: {:?}", pair.as_rule()),
+        _ => unreachable!("Unhandled condition: {:?}", inner_cond.as_rule()),
     }
 }
 
-fn parse_action(pair: Pair<Rule>) -> Action {
-    let action_type = pair.into_inner().next().unwrap();
-    match action_type.as_rule() {
+/// Builds a single Condition from a parsed Pair.
+pub fn build_condition(pair: Pair<Rule>) -> Condition {
+    // A 'condition' pair from the grammar contains one of the specific condition types.
+    let inner_cond = pair.into_inner().next().unwrap();
+    build_condition_from_specific(inner_cond)
+}
+
+/// Builds a vector of Conditions from parsed Pairs.
+fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
+    pairs.map(build_condition).collect()
+}
+
+// --- Single Item Build Functions ---
+
+/// Builds a single Action from a parsed Pair.
+/// Builds a single Action from a parsed Pair.
+pub fn build_action(inner_action: Pair<Rule>) -> Action {
+    //println!("Building action for inner_action: {:?}", inner_action);
+    match inner_action.as_rule() {
         Rule::type_action => {
-            let mut inner = action_type.into_inner();
+            let mut inner = inner_action.into_inner();
             let actor = inner.next().unwrap().as_str().to_string();
-            let content = parse_string(inner.next().unwrap());
+            let content = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .map_or(String::new(), |p| p.as_str().to_string());
             Action::Type { actor, content }
         }
         Rule::press_action => {
-            let mut inner = action_type.into_inner();
+            let mut inner = inner_action.into_inner();
             let actor = inner.next().unwrap().as_str().to_string();
-            let key = parse_string(inner.next().unwrap());
+            let key = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .map_or(String::new(), |p| p.as_str().to_string());
             Action::Press { actor, key }
         }
         Rule::run_action => {
-            let mut inner = action_type.into_inner();
+            let mut inner = inner_action.into_inner();
             let actor = inner.next().unwrap().as_str().to_string();
-            let command = parse_string(inner.next().unwrap());
+            let command = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .map_or(String::new(), |p| p.as_str().to_string());
             Action::Run { actor, command }
         }
         Rule::filesystem_action => {
-            let mut inner = action_type.into_inner();
+            let mut inner = inner_action.into_inner();
+            //let _actor = inner.next().unwrap().as_str(); // Consume the actor identifier
             let keyword = inner.next().unwrap().as_str();
-            let path = parse_string(inner.next().unwrap());
-            let content = inner.next().map(parse_string);
+            let path = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .map_or(String::new(), |p| p.as_str().to_string());
 
             match keyword {
-                "create_file" => Action::CreateFile {
-                    path,
-                    content: content.unwrap_or_default(),
-                },
                 "create_dir" => Action::CreateDir { path },
                 "delete_file" => Action::DeleteFile { path },
                 "delete_dir" => Action::DeleteDir { path },
-                _ => unreachable!("Unhandled filesystem action keyword: {}", keyword),
+                "create_file" => {
+                    let content = if let Some(content_pair) = inner.next() {
+                        content_pair
+                            .into_inner()
+                            .next()
+                            .map_or(String::new(), |p| p.as_str().to_string())
+                    } else {
+                        String::new()
+                    };
+                    Action::CreateFile { path, content }
+                }
+                _ => unreachable!(),
             }
         }
         Rule::web_action => {
-            let mut inner = action_type.into_inner();
+            let mut inner = inner_action.into_inner();
             let actor = inner.next().unwrap().as_str().to_string();
-            let url = parse_string(inner.next().unwrap());
+            // The grammar is `identifier ~ "http_get" ~ string`, so "http_get" is implicit.
+            let url = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
             Action::HttpGet { actor, url }
         }
-        _ => unreachable!("Unhandled action: {:?}", action_type.as_rule()),
+        _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),
     }
 }
 
-fn parse_string(pair: Pair<Rule>) -> String {
-    let inner = pair.into_inner().next().unwrap();
-    inner.as_str().to_string()
+fn build_value(pair: Pair<Rule>) -> Value {
+    // The `value` rule is silent, so we need to inspect its inner pair.
+    let inner_pair = pair.into_inner().next().unwrap();
+    match inner_pair.as_rule() {
+        Rule::string => {
+            let inner = inner_pair.into_inner().next().unwrap();
+            Value::String(unescape_string(inner.as_str()))
+        }
+        Rule::number => Value::Number(inner_pair.as_str().parse().unwrap()),
+        _ => unreachable!("Unexpected value rule: {:?}", inner_pair.as_rule()),
+    }
 }
 
-fn parse_value(pair: Pair<Rule>) -> Value {
-    let inner = pair.into_inner().next().unwrap();
-    match inner.as_rule() {
-        Rule::string => Value::String(parse_string(inner)),
-        Rule::number => Value::Number(inner.as_str().parse().unwrap()),
-        _ => unreachable!(),
-    }
+/// Unescapes a string captured by the parser.
+fn unescape_string(s: &str) -> String {
+    s.replace("\\\"", "\"")
+        .replace("\\'", "'")
+        .replace("\\n", "\n")
+        .replace("\\t", "\t")
+        .replace("\\r", "\r")
+        .replace("\\\\", "\\")
 }

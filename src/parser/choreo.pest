@@ -8,7 +8,7 @@ COMMENT                           = _{ "#" ~ (!NEWLINE ~ ANY)* }
 
 // The program is a series of statements.
 grammar                           = { SOI ~ statement* ~ EOI }
-statement                         = _{ feature_def | settings_def | env_def | var_def | actors_def | background_def | scenario_def }
+statement                         = { feature_def | settings_def | env_def | var_def | actors_def | background_def | scenario_def }
 
 // Setting up the test suite.
 settings_def                      = { "settings" ~ "{" ~ setting+ ~ "}" }
@@ -73,6 +73,14 @@ terminal_condition                = { "Terminal" ~ (
     json_output_at_includes_condition |
     json_output_at_has_item_count_condition
 ) }
+web_condition                     = { "Web" ~ (
+    response_status_is_condition |
+    response_body_contains_condition |
+    response_body_matches_condition |
+    json_body_has_path_condition |
+    json_path_equals_condition
+) }
+
 
 // Terminal-specific condition parts
 output_contains_condition         = { "output_contains" ~ string }
@@ -91,6 +99,7 @@ json_output_has_path_condition    = { "json_output" ~ "has_path" ~ string }
 json_output_at_equals_condition   = { "json_output" ~ "at" ~ string ~ "equals" ~ value }
 json_output_at_includes_condition = { "json_output" ~ "at" ~ string ~ "includes" ~ value }
 json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ string ~ "has_item_count" ~ number }
+
 // Web-specific condition parts
 response_status_is_condition      = { "response_status_is" ~ number }
 response_body_contains_condition  = { "response_body_contains" ~ string }
@@ -98,22 +107,13 @@ response_body_matches_condition   = { "response_body_matches" ~ string ~ ("as" ~
 json_body_has_path_condition      = { "json_body" ~ "has_path" ~ string }
 json_path_equals_condition        = { "json_path" ~ "at" ~ string ~ "equals" ~ value }
 
-// -- Web Conditions --
-web_condition                  = { "Web" ~ (
-    response_status_is_condition |
-    response_body_contains_condition |
-    response_body_matches_condition |
-    json_body_has_path_condition |
-    json_path_equals_condition
-) }
-
 // Action Types
 type_action                       = { identifier ~ "types" ~ string }
 press_action                      = { identifier ~ "presses" ~ string }
 run_action                        = { identifier ~ "runs" ~ string }
+web_action                        = { identifier ~ "http_get" ~ string }
 filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
 filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" }
-web_action                        = { identifier ~ "http_get" ~ string }
 
 // The basic building blocks of the choreo language.
 identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
