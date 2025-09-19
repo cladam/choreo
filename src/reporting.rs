@@ -114,5 +114,10 @@ fn format_action_for_report(action: &Action) -> String {
         Action::CreateDir { path } => format!("FileSystem create_dir '{}'", path),
         Action::DeleteDir { path } => format!("FileSystem delete_dir '{}'", path),
         Action::HttpGet { url, .. } => format!("HTTP GET '{}'", url),
+        Action::HttpPost { url, .. } => format!("HTTP POST '{}'", url),
+        Action::HttpPut { url, .. } => format!("HTTP PUT '{}'", url),
+        Action::HttpPatch { url, .. } => format!("HTTP PATCH '{}'", url),
+        Action::HttpDelete { url, .. } => format!("HTTP DELETE '{}'", url),
+        Action::HttpSetHeader { key, value } => format!("HTTP set_header '{}: {}'", key, value),
     }
 }

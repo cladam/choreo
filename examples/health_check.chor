@@ -1,19 +1,14 @@
 feature "API Health Check"
 
-# Declare an actor to perform web requests.
-# The name can be anything, but it must be used consistently for actions.
 actors: Web
 
 scenario "Server is healthy" {
     test HealthCheckReturns200 "The health check endpoint returns a 200 OK status" {
         given:
-            # No pre-conditions needed for this simple test.
             wait >= 0s
         when:
-            # The web action is performed by the 'API' actor.
             Web http_get "https://httpbin.org/status/200"
         then:
-            # Web-specific conditions are asserted against the 'Web' actor.
             Web response_status_is 200
     }
 }

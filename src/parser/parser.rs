@@ -589,7 +589,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
         }
         Rule::web_action => {
             let mut inner = inner_action.into_inner();
-            let actor = inner.next().unwrap().as_str().to_string();
+            let _actor = inner.next().unwrap().as_str().to_string();
             // The grammar is `identifier ~ "http_get" ~ string`, so "http_get" is implicit.
             let url = inner
                 .next()
@@ -599,7 +599,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                 .unwrap()
                 .as_str()
                 .to_string();
-            Action::HttpGet { actor, url }
+            Action::HttpGet { url }
         }
         _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),
     }

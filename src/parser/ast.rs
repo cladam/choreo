@@ -188,7 +188,12 @@ pub enum Action {
     DeleteFile { path: String },
     DeleteDir { path: String },
     // --- Web Actions ---
-    HttpGet { actor: String, url: String },
+    HttpSetHeader { key: String, value: String },
+    HttpGet { url: String },
+    HttpPost { url: String, body: String },
+    HttpPut { url: String, body: String },
+    HttpPatch { url: String, body: String },
+    HttpDelete { url: String },
 }
 
 // Primitive values.

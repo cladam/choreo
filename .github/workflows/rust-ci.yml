@@ -105,6 +105,9 @@ jobs:
       - name: Run `variable substitution` example
         run: ./target/release/choreo run --file examples/variable_substitution.chor
 
+      - name: Run `API Health Check` example
+        run: ./target/release/choreo run --file examples/health_check.chor
+              
       # These tests require installing medi on the runner
       #- name: Install medi for the next tests
       #  run: cargo install medi

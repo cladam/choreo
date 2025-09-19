@@ -1,8 +1,8 @@
 use crate::parser::ast::{Action, Condition, Value};
-use reqwest::blocking::Client;
-use reqwest::StatusCode;
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
+use ureq::http::StatusCode;
+use ureq::Agent;
 
 /// State of the last web request made.
 #[derive(Debug, Clone, Default)]
@@ -14,7 +14,7 @@ pub struct LastResponse {
 /// The backend responsible for handling web-based actions and conditions.
 #[derive(Debug)]
 pub struct WebBackend {
-    client: Client,
+    agent: Agent,
     pub last_response: Option<LastResponse>,
 }
 
@@ -22,69 +22,13 @@ impl WebBackend {
     /// Creates a new WebBackend with a persistent HTTP client.
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
+            agent: Agent::new_with_defaults(),
             last_response: None,
         }
     }
 
-    /// Executes a single web-related action from the AST.
+    /// Executes a single web-related action. Returns true if the action was handled.
     pub fn execute_action(
-        &mut self,
-        action: &Action,
-        variables: &HashMap<String, String>,
-        verbose: bool,
-    ) {
-        // Clear the previous response before making a new request.
-        self.last_response = None;
-
-        let response = match action {
-            Action::HttpGet { url, .. } => {
-                let substituted_url = substitute_string(url, variables);
-                if verbose {
-                    println!("  [DEBUG] Performing HTTP GET: {}", substituted_url);
-                }
-                self.client.get(&substituted_url).send()
-            }
-            // Action::HttpPost { url, body, .. } => {
-            //     let substituted_url = substitute_string(url, variables);
-            //     let substituted_body = body
-            //         .as_ref()
-            //         .map_or(String::new(), |b| substitute_string(b, variables));
-            //     if verbose {
-            //         println!("  [DEBUG] Performing HTTP POST: {}", substituted_url);
-            //         println!("  [DEBUG] Post body: {}", substituted_body);
-            //     }
-            //     self.client
-            //         .post(&substituted_url)
-            //         .body(substituted_body)
-            //         .send()
-            // }
-            _ => return, // Not a web action
-        };
-
-        match response {
-            Ok(res) => {
-                let status = res.status();
-                let body = res.text().unwrap_or_default();
-                if verbose {
-                    println!("  [DEBUG] Response status: {}", status);
-                    println!("  [DEBUG] Response body: {}", body);
-                }
-                self.last_response = Some(LastResponse { status, body });
-            }
-            Err(e) => {
-                let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
-                println!("{}", error_message);
-                // Store a failure state in the last response
-                self.last_response = Some(LastResponse {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    body: error_message,
-                });
-            }
-        }
-    }
-
-    pub fn execute_action2(
         &mut self,
         action: &Action,
         env_vars: &HashMap<String, String>,
@@ -97,15 +41,30 @@ impl WebBackend {
                     println!("[WEB_BACKEND] Performing HTTP GET to: {}", substituted_url);
                 }
 
-                let response = self.client.get(&substituted_url).send();
+                let response_result = self.agent.get(&substituted_url).call();
 
-                match response {
-                    Ok(res) => {
-                        let status = res.status();
-                        let body = res.text().unwrap_or_default();
+                match response_result {
+                    Ok(response) => {
+                        let status = response.status();
+                        let body = {
+                            let mut body_reader = response.into_body();
+                            let body = String::new();
+                            match body_reader.read_to_string() {
+                                Ok(_) => body,
+                                Err(e) => {
+                                    let error_message = format!(
+                                        "[WEB_BACKEND] Failed to read response body: {}",
+                                        e
+                                    );
+                                    println!("{}", error_message);
+                                    error_message
+                                }
+                            }
+                        };
                         if verbose {
-                            println!("[WEB_BACKEND] Response: Status={}, Body={}", status, body);
+                            println!("[WEB_BACKEND] Received response status: {}", status);
                         }
+
                         self.last_response = Some(LastResponse { status, body });
                         true
                     }
@@ -138,7 +97,7 @@ impl WebBackend {
 
         match condition {
             Condition::ResponseStatusIs(expected_status) => {
-                last_response.status.as_u16() == *expected_status
+                last_response.status == *expected_status
             }
             Condition::ResponseBodyContains { value } => last_response.body.contains(value),
             Condition::ResponseBodyMatches { regex, capture_as } => {

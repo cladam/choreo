@@ -465,7 +465,7 @@ impl TestRunner {
         }
 
         // Check if it's a web action
-        if web.execute_action2(&substituted_action, &self.env_vars, self.verbose) {
+        if web.execute_action(&substituted_action, &self.env_vars, self.verbose) {
             return;
         } else {
             println!(
