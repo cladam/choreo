@@ -15,6 +15,7 @@ pub struct LastResponse {
 #[derive(Debug)]
 pub struct WebBackend {
     agent: Agent,
+    headers: HashMap<String, String>,
     pub last_response: Option<LastResponse>,
 }
 
@@ -23,6 +24,7 @@ impl WebBackend {
     pub fn new() -> Self {
         Self {
             agent: Agent::new_with_defaults(),
+            headers: HashMap::new(),
             last_response: None,
         }
     }
@@ -35,14 +37,32 @@ impl WebBackend {
         verbose: bool,
     ) -> bool {
         match action {
+            Action::HttpSetHeader { key, value } => {
+                println!("Web action: {:?}", action);
+                println!("[WEB_BACKEND] Setting HTTP header: {}: {}", key, value);
+                let substituted_key = substitute_string(key, env_vars);
+                let substituted_value = substitute_string(value, env_vars);
+                if verbose {
+                    println!(
+                        "[WEB_BACKEND] Setting HTTP header: {}: {}",
+                        substituted_key, substituted_value
+                    );
+                }
+                self.headers.insert(substituted_key, substituted_value);
+                true
+            }
             Action::HttpGet { url, .. } => {
                 let substituted_url = substitute_string(url, env_vars);
                 if verbose {
                     println!("[WEB_BACKEND] Performing HTTP GET to: {}", substituted_url);
                 }
 
-                let response_result = self.agent.get(&substituted_url).call();
-
+                let mut request = self.agent.get(&substituted_url);
+                // Add any headers that have been set.
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+                let response_result = request.call();
                 match response_result {
                     Ok(response) => {
                         let status = response.status();
@@ -103,6 +123,30 @@ impl WebBackend {
                         }
                     },
                 }
+            }
+            Action::HttpPost { url, .. } => {
+                if verbose {
+                    println!("[WEB_BACKEND] HTTP POST action is not yet implemented.");
+                }
+                false
+            }
+            Action::HttpDelete { url, .. } => {
+                if verbose {
+                    println!("[WEB_BACKEND] HTTP DELETE action is not yet implemented.");
+                }
+                false
+            }
+            Action::HttpPut { url, .. } => {
+                if verbose {
+                    println!("[WEB_BACKEND] HTTP PUT action is not yet implemented.");
+                }
+                false
+            }
+            Action::HttpPatch { url, .. } => {
+                if verbose {
+                    println!("[WEB_BACKEND] HTTP PATCH action is not yet implemented.");
+                }
+                false
             }
             _ => false,
         }

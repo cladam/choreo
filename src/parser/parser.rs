@@ -584,20 +584,71 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
         Rule::web_action => {
             let mut inner = inner_action.into_inner();
             let _actor = inner.next().unwrap().as_str().to_string();
-            // The grammar is `identifier ~ "http_get" ~ string`, so "http_get" is implicit.
-            let url = inner
-                .next()
-                .unwrap()
-                .into_inner()
-                .next()
-                .unwrap()
-                .as_str()
-                .to_string();
-            Action::HttpGet { url }
+            println!("Building web action for actor: {}", _actor);
+            // The next pair determines the specific web action type.
+            let action_type = inner.next().unwrap();
+            let action_type_str = action_type.as_str();
+            println!("Web action type: {:?}", action_type);
+            // The action_type will have its own inner structure.
+
+            let mut action_inner = action_type.into_inner();
+            println!("Web action: {:?}", action_inner);
+            let method = action_type_str.split_whitespace().next().unwrap_or("");
+            println!("Web action method: {:?}", method);
+
+            match method {
+                "set_header" => {
+                    let key = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    let value = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpSetHeader { key, value }
+                }
+                "http_get" => {
+                    let url = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpGet { url }
+                }
+                // ... other methods
+                _ => panic!("Unknown web action method: {}", method),
+            }
         }
         _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),
     }
 }
+
+// The grammar is `identifier ~ "http_get" ~ string`, so "http_get" is implicit.
+//             let url = inner
+//                 .next()
+//                 .unwrap()
+//                 .into_inner()
+//                 .next()
+//                 .unwrap()
+//                 .as_str()
+//                 .to_string();
+//             Action::HttpGet { url }
+//         }
+//         _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),
+//     }
+// }
 
 fn build_value(pair: Pair<Rule>) -> Value {
     // The `value` rule is silent, so we need to inspect its inner pair.

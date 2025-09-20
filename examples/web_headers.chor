@@ -1,0 +1,15 @@
+# This example demonstrates how to set and verify custom HTTP headers in web requests.
+feature "Web Headers"
+actors: Web
+scenario "Setting and verifying custom headers" {
+    test HeaderEcho "Verify custom header is sent" {
+        given:
+            wait >= 0s
+        when:
+            Web set_header "X-Custom-Header" "test-value"
+            Web http_get "https://httpbin.org/headers"
+        then:
+            Web response_body_contains "X-Custom-Header"
+            Web response_body_contains "test-value"
+    }
+}

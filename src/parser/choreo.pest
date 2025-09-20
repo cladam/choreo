@@ -111,7 +111,15 @@ json_path_equals_condition        = { "json_path" ~ "at" ~ string ~ "equals" ~ v
 type_action                       = { identifier ~ "types" ~ string }
 press_action                      = { identifier ~ "presses" ~ string }
 run_action                        = { identifier ~ "runs" ~ string }
-web_action                        = { identifier ~ "http_get" ~ string }
+web_action = { identifier ~ web_action_type }
+web_action_type = {
+    ("set_header" ~ string ~ string) |
+    ("http_get" ~ string) |
+    ("http_post" ~ string ~ "with_body" ~ string) |
+    ("http_put" ~ string ~ "with_body" ~ string) |
+    ("http_patch" ~ string ~ "with_body" ~ string) |
+    ("http_delete" ~ string)
+}
 filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
 filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" }
 

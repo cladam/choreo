@@ -28,6 +28,7 @@ scenario "Testing various web conditions" {
         when:
             Web http_get "https://httpbin.org/json"
         then:
+            Web response_status_is 200
             Web response_body_contains "slideshow"
     }
 
@@ -37,6 +38,7 @@ scenario "Testing various web conditions" {
         when:
             Web http_get "https://httpbin.org/user-agent"
         then:
+            Web response_status_is 200
             Web response_body_matches "\"user-agent\":\\s*\"[^\"]+\""
     }
 
@@ -46,6 +48,7 @@ scenario "Testing various web conditions" {
         when:
             Web http_get "https://httpbin.org/json"
         then:
+            Web response_status_is 200
             Web json_body has_path "/slideshow/title"
     }
 
@@ -55,6 +58,7 @@ scenario "Testing various web conditions" {
         when:
             Web http_get "https://httpbin.org/json"
         then:
+            Web response_status_is 200
             Web json_path at "/slideshow/title" equals "Sample Slide Show"
     }
 }
