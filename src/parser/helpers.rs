@@ -208,7 +208,9 @@ pub fn check_condition(
         | Condition::ResponseBodyContains { .. }
         | Condition::ResponseBodyMatches { .. }
         | Condition::JsonBodyHasPath { .. }
-        | Condition::JsonPathEquals { .. } => web_backend.check_condition(condition, env_vars),
+        | Condition::JsonPathEquals { .. } => {
+            web_backend.check_condition(condition, env_vars, verbose)
+        }
         _ => false, // Other conditions not implemented yet
     }
 }

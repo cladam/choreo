@@ -447,7 +447,9 @@ impl TestRunner {
         last_exit_code: &mut Option<i32>,
         timeout_seconds: u64,
     ) {
-        println!("\n[EXECUTING ACTION] {:?}", action);
+        if self.verbose {
+            colours::info(&format!("[RUNNER] Executing action: {:?}", action));
+        }
         // Substitute variables in the action
         let substituted_action = substitute_variables_in_action(action, &self.env_vars);
 

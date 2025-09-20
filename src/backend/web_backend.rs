@@ -50,7 +50,9 @@ impl WebBackend {
                             let mut body_reader = response.into_body();
                             match body_reader.read_to_string() {
                                 Ok(res) => {
-                                    println!("[WEB_BACKEND] Received response: {}", res);
+                                    if verbose {
+                                        println!("[WEB_BACKEND] Received response body: {}", res);
+                                    }
                                     self.last_response = Some(LastResponse {
                                         status,
                                         body: res.clone(),
@@ -111,6 +113,7 @@ impl WebBackend {
         &self,
         condition: &Condition,
         variables: &mut HashMap<String, String>,
+        verbose: bool,
     ) -> bool {
         // If no request has been made yet, all web conditions fail.
         let last_response = match &self.last_response {
@@ -123,8 +126,10 @@ impl WebBackend {
                 last_response.status == *expected_status
             }
             Condition::ResponseBodyContains { value } => {
-                println!("[WEB_BACKEND] Received response body contains '{}'", value);
-                println!("[WEB_BACKEND] Full response body: {}", last_response.body);
+                if verbose {
+                    println!("[WEB_BACKEND] Received response body contains '{}'", value);
+                    println!("[WEB_BACKEND] Full response body: {}", last_response.body);
+                }
                 last_response.body.contains(value)
             }
             Condition::ResponseBodyMatches { regex, capture_as } => {
