@@ -107,6 +107,9 @@ jobs:
 
       - name: Run `API Health Check` example
         run: ./target/release/choreo run --file examples/health_check.chor
+
+      - name: Run `Web Conditions` example
+        run: ./target/release/choreo run --file examples/web_conditions.chor
               
       # These tests require installing medi on the runner
       #- name: Install medi for the next tests
