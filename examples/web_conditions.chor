@@ -1,0 +1,60 @@
+# Example test scenario using httpbin endpoints
+
+feature "Web Conditions"
+actors: Web
+
+scenario "Testing various web conditions" {
+    test StatusCodeTest "Test different HTTP status codes" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/status/200"
+        then:
+            Web response_status_is 200
+    }
+
+    test ErrorStatusTest "Test error status codes" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/status/404"
+        then:
+            Web response_status_is 404
+    }
+
+    test BodyContainsTest "Test response body contains text" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/json"
+        then:
+            Web response_body_contains "slideshow"
+    }
+
+    test BodyMatchesTest "Test response body regex matching" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/user-agent"
+        then:
+            Web response_body_matches "\"user-agent\":\\s*\"[^\"]+\""
+    }
+
+    test JsonPathTest "Test JSON path existence" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/json"
+        then:
+            Web json_body has_path "/slideshow/title"
+    }
+
+    test JsonValueTest "Test JSON path value equality" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/json"
+        then:
+            Web json_path at "/slideshow/title" equals "Sample Slide Show"
+    }
+}

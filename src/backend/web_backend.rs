@@ -68,15 +68,33 @@ impl WebBackend {
                         self.last_response = Some(LastResponse { status, body });
                         true
                     }
-                    Err(e) => {
-                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
-                        println!("{}", error_message);
-                        self.last_response = Some(LastResponse {
-                            status: StatusCode::INTERNAL_SERVER_ERROR,
-                            body: error_message,
-                        });
-                        false
-                    }
+                    Err(e) => match &e {
+                        ureq::Error::StatusCode(code) => {
+                            if verbose {
+                                println!(
+                                    "[WEB_BACKEND] HTTP request returned error status: {}",
+                                    code
+                                );
+                            }
+                            self.last_response = Some(LastResponse {
+                                status: StatusCode::from_u16(*code)
+                                    .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+                                body: format!("HTTP error with status code: {}", code),
+                            });
+                            true
+                        }
+                        _ => {
+                            let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
+                            if verbose {
+                                println!("{}", error_message);
+                            }
+                            self.last_response = Some(LastResponse {
+                                status: StatusCode::INTERNAL_SERVER_ERROR,
+                                body: error_message,
+                            });
+                            false
+                        }
+                    },
                 }
             }
             _ => false,

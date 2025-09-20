@@ -281,6 +281,24 @@ This is the reference for all available commands that can be used within the `te
 | `FileSystem file "..." is_empty`       | Passes if the file at the specified path is empty.               |
 | `FileSystem file "..." is_not_empty`   | Passes if the file at the specified path is not empty.           |
 
+### Web Commands
+
+#### Actions
+
+| Syntax               | Description                               |
+|:---------------------|:------------------------------------------|
+| `Web http_get "..."` | Sends a GET request to the specified URL. |
+
+#### Conditions
+
+| Syntax                                      | Description                                                                  |
+|:--------------------------------------------|:-----------------------------------------------------------------------------|
+| `Web response_status_is <num>`              | Passes if the last HTTP response had the specified status code.              |
+| `Web response_body_contains "..."`          | Passes if the last HTTP response body contains the specified substring.      |
+| `Web response_body_matches "..." [as JSON]` | Passes if the last HTTP response body matches the specified regex.           |
+| `Web json_body has_path "..."`              | Passes if the last HTTP response body (as JSON) has the specified JSON path. |
+| `Web json_path at "..." equals <value>`     | Passes if the value at the specified JSON path equals the given value.       |
+
 ## Variables
 
 `choreo` supports both environment variables and file-defined variables for making tests dynamic.
