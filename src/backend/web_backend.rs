@@ -46,11 +46,17 @@ impl WebBackend {
                 match response_result {
                     Ok(response) => {
                         let status = response.status();
-                        let body = {
+                        {
                             let mut body_reader = response.into_body();
-                            let body = String::new();
                             match body_reader.read_to_string() {
-                                Ok(_) => body,
+                                Ok(res) => {
+                                    println!("[WEB_BACKEND] Received response: {}", res);
+                                    self.last_response = Some(LastResponse {
+                                        status,
+                                        body: res.clone(),
+                                    });
+                                    res
+                                }
                                 Err(e) => {
                                     let error_message = format!(
                                         "[WEB_BACKEND] Failed to read response body: {}",
@@ -65,7 +71,6 @@ impl WebBackend {
                             println!("[WEB_BACKEND] Received response status: {}", status);
                         }
 
-                        self.last_response = Some(LastResponse { status, body });
                         true
                     }
                     Err(e) => match &e {
@@ -117,7 +122,11 @@ impl WebBackend {
             Condition::ResponseStatusIs(expected_status) => {
                 last_response.status == *expected_status
             }
-            Condition::ResponseBodyContains { value } => last_response.body.contains(value),
+            Condition::ResponseBodyContains { value } => {
+                println!("[WEB_BACKEND] Received response body contains '{}'", value);
+                println!("[WEB_BACKEND] Full response body: {}", last_response.body);
+                last_response.body.contains(value)
+            }
             Condition::ResponseBodyMatches { regex, capture_as } => {
                 if let Ok(re) = regex::Regex::new(regex) {
                     if let Some(captures) = re.captures(&last_response.body) {
@@ -147,12 +156,15 @@ impl WebBackend {
                 expected_value,
             } => {
                 if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
-                    // Find the value at the specified path.
                     if let Some(actual_value) = json_body.pointer(path) {
-                        // Compare the actual value with the expected value.
-                        // This is a simplified comparison; a real implementation
-                        // would handle different types (numbers, booleans, etc.).
-                        return &Value::String(actual_value.to_string()) == expected_value;
+                        // Convert the serde_json::Value to our AST Value for comparison.
+                        let our_value = match actual_value {
+                            JsonValue::String(s) => Value::String(s.clone()),
+                            JsonValue::Number(n) => Value::Number(n.as_f64().unwrap_or(0.0) as i32),
+                            // Add other type conversions as needed.
+                            _ => Value::String(actual_value.to_string()),
+                        };
+                        return &our_value == expected_value;
                     }
                 }
                 false
