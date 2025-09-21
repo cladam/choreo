@@ -213,18 +213,61 @@ impl WebBackend {
             }
             Action::HttpPost { url, body } => {
                 if verbose {
-                    println!("[WEB_BACKEND] HTTP POST action is not yet implemented.");
+                    println!("[WEB_BACKEND] Performing HTTP POST to: {}", url);
                 }
                 let substituted_url = substitute_string(url, env_vars);
                 let substituted_body = substitute_string(body, env_vars);
-                if verbose {
-                    println!("[WEB_BACKEND] Performing HTTP POST to: {}", substituted_url);
-                    println!("[WEB_BACKEND] With body: {}", substituted_body);
-                }
-                let start_time = std::time::Instant::now();
-                // Add any headers that have been set.
 
-                false
+                if verbose {
+                    println!("[WEB_BACKEND] POST URL: {}", substituted_url);
+                    println!("[WEB_BACKEND] POST body: {}", substituted_body);
+                }
+
+                let start_time = std::time::Instant::now();
+                let mut request = self.agent.post(&substituted_url);
+
+                // Apply headers
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+
+                // Send request and handle response
+                match request.send(&substituted_body) {
+                    Ok(response) => {
+                        let duration = start_time.elapsed();
+                        self.last_response =
+                            Some(response.into_body().read_to_string().map_or_else(
+                                |e| LastResponse {
+                                    status: StatusCode::INTERNAL_SERVER_ERROR,
+                                    body: format!("Failed to read response body: {}", e),
+                                    response_time_ms: duration.as_millis(),
+                                },
+                                |body| LastResponse {
+                                    status: StatusCode::OK,
+                                    body,
+                                    response_time_ms: duration.as_millis(),
+                                },
+                            ));
+
+                        if verbose {
+                            if let Some(ref resp) = self.last_response {
+                                println!(
+                                    "[WEB_BACKEND] POST completed: {} in {:.2}ms",
+                                    resp.body.as_str(),
+                                    duration.as_millis()
+                                );
+                            }
+                        }
+                        true // Successfully handled
+                    }
+                    Err(e) => {
+                        if verbose {
+                            println!("[WEB_BACKEND] POST failed: {}", e);
+                        }
+                        // You might want to store the error for later checking
+                        false
+                    }
+                }
             }
             Action::HttpDelete { url, .. } => {
                 if verbose {

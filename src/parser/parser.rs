@@ -756,6 +756,25 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         .to_string();
                     Action::HttpGet { url }
                 }
+                "http_post" => {
+                    let url = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    let body = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpPost { url, body }
+                }
                 // ... other methods
                 _ => panic!("Unknown web action method: {}", method),
             }
