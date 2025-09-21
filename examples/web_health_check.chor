@@ -1,0 +1,23 @@
+feature "API Health Check"
+
+actors: Web
+
+var url = "https://httpbin.org/status/200"
+var user_agent = "ChorusHealthCheck/1.0"
+var bearing_token = "choreo-token-xyz"
+# bearing_token should come from an environment variable or secret manager in real scenarios
+# Example: env: BEARING_TOKEN
+
+scenario "Health check for a web API endpoint" {
+    test HealthCheck "Verify the API endpoint is healthy" {
+        given:
+            wait >= 0s
+        when:
+            Web set_header "User-Agent" "${user_agent}"
+            Web set_header "Authorization" "Bearer ${bearing_token}"
+            Web http_get "${url}"
+        then:
+            Web response_status is_success
+            Web response_time is_below 2s
+    }
+}

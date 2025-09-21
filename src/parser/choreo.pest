@@ -105,7 +105,7 @@ json_output_at_includes_condition = { "json_output" ~ "at" ~ string ~ "includes"
 json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ string ~ "has_item_count" ~ number }
 
 // Web-specific condition parts
-response_status_is_condition      = { "response_status_is" ~ number }
+response_status_is_condition      = { "response_status_is" ~ ( number | string ) }
 response_status_is_success_condition = { "response_status" ~ "is_success" }
 response_status_is_error_condition = { "response_status" ~ "is_error" }
 response_status_is_in_condition = { "response_status" ~ "is_in" ~ "[" ~ number ~ ("," ~ number)* ~ "]" }

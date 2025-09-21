@@ -106,7 +106,7 @@ jobs:
         run: ./target/release/choreo run --file examples/variable_substitution.chor
 
       - name: Run `API Health Check` example
-        run: ./target/release/choreo run --file examples/health_check.chor
+        run: ./target/release/choreo run --file examples/web_health_check.chor
 
       - name: Run `Web Conditions` example
         run: ./target/release/choreo run --file examples/web_conditions.chor
