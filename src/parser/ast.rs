@@ -159,6 +159,12 @@ pub enum Condition {
     },
     // --- Web Conditions ---
     ResponseStatusIs(u16),
+    ResponseStatusIsSuccess,
+    ResponseStatusIsError,
+    ResponseStatusIsIn(Vec<u16>),
+    ResponseTimeIsBelow {
+        duration: f32,
+    },
     ResponseBodyContains {
         value: String,
     },

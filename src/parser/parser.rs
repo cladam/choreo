@@ -449,6 +449,33 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                 .unwrap();
             Condition::ResponseStatusIs(status)
         }
+        Rule::response_status_is_success_condition => Condition::ResponseStatusIsSuccess,
+        Rule::response_status_is_error_condition => Condition::ResponseStatusIsError,
+        Rule::response_status_is_in_condition => {
+            let statuses: Vec<u16> = inner_cond
+                .into_inner()
+                .filter(|p| p.as_rule() == Rule::number)
+                .map(|p| p.as_str().parse().unwrap())
+                .collect();
+            Condition::ResponseStatusIsIn(statuses)
+        }
+        Rule::response_time_is_below_condition => {
+            let mut inner = inner_cond.into_inner();
+            let duration_marker_str = inner.next().unwrap().as_str();
+
+            let duration = if duration_marker_str.ends_with("ms") {
+                let value_str = &duration_marker_str[..duration_marker_str.len() - 2];
+                value_str.parse::<f32>().unwrap() / 1000.0
+            } else if duration_marker_str.ends_with('s') {
+                let value_str = &duration_marker_str[..duration_marker_str.len() - 1];
+                value_str.parse::<f32>().unwrap()
+            } else {
+                // This case should not be reached if the grammar is correct
+                0.0
+            };
+
+            Condition::ResponseTimeIsBelow { duration }
+        }
         Rule::response_body_contains_condition => {
             let value = inner_cond
                 .into_inner()
@@ -584,17 +611,13 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
         Rule::web_action => {
             let mut inner = inner_action.into_inner();
             let _actor = inner.next().unwrap().as_str().to_string();
-            println!("Building web action for actor: {}", _actor);
             // The next pair determines the specific web action type.
             let action_type = inner.next().unwrap();
             let action_type_str = action_type.as_str();
-            println!("Web action type: {:?}", action_type);
             // The action_type will have its own inner structure.
 
             let mut action_inner = action_type.into_inner();
-            println!("Web action: {:?}", action_inner);
             let method = action_type_str.split_whitespace().next().unwrap_or("");
-            println!("Web action method: {:?}", method);
 
             match method {
                 "set_header" => {

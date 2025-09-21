@@ -11,6 +11,7 @@ scenario "Testing various web conditions" {
             Web http_get "https://httpbin.org/status/200"
         then:
             Web response_status_is 200
+            Web response_time is_below 1.8s # httpbin can be slow sometimes
     }
 
     test ErrorStatusTest "Test error status codes" {
@@ -20,6 +21,33 @@ scenario "Testing various web conditions" {
             Web http_get "https://httpbin.org/status/404"
         then:
             Web response_status_is 404
+    }
+
+    test SuccessStatusTest "Test response status is success" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/status/201"
+        then:
+            Web response_status is_success
+    }
+
+    test ErrorStatusConditionTest "Test response status is error" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/status/500"
+        then:
+            Web response_status is_error
+    }
+
+    test StatusInListTest "Test response status is in list" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/status/202"
+        then:
+            Web response_status is_in [200, 201, 202, 204]
     }
 
     test BodyContainsTest "Test response body contains text" {

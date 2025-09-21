@@ -9,6 +9,7 @@ use ureq::Agent;
 pub struct LastResponse {
     pub status: StatusCode,
     pub body: String,
+    pub response_time_ms: u128,
 }
 
 /// The backend responsible for handling web-based actions and conditions.
@@ -57,12 +58,15 @@ impl WebBackend {
                     println!("[WEB_BACKEND] Performing HTTP GET to: {}", substituted_url);
                 }
 
+                let start_time = std::time::Instant::now();
                 let mut request = self.agent.get(&substituted_url);
                 // Add any headers that have been set.
                 for (key, value) in &self.headers {
                     request = request.header(key, value);
                 }
                 let response_result = request.call();
+                let response_time_ms = start_time.elapsed().as_millis();
+
                 match response_result {
                     Ok(response) => {
                         let status = response.status();
@@ -76,6 +80,7 @@ impl WebBackend {
                                     self.last_response = Some(LastResponse {
                                         status,
                                         body: res.clone(),
+                                        response_time_ms,
                                     });
                                     res
                                 }
@@ -84,6 +89,11 @@ impl WebBackend {
                                         "[WEB_BACKEND] Failed to read response body: {}",
                                         e
                                     );
+                                    self.last_response = Some(LastResponse {
+                                        status,
+                                        body: error_message.clone(),
+                                        response_time_ms,
+                                    });
                                     println!("{}", error_message);
                                     error_message
                                 }
@@ -107,6 +117,7 @@ impl WebBackend {
                                 status: StatusCode::from_u16(*code)
                                     .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
                                 body: format!("HTTP error with status code: {}", code),
+                                response_time_ms,
                             });
                             true
                         }
@@ -118,6 +129,7 @@ impl WebBackend {
                             self.last_response = Some(LastResponse {
                                 status: StatusCode::INTERNAL_SERVER_ERROR,
                                 body: error_message,
+                                response_time_ms,
                             });
                             false
                         }
@@ -168,6 +180,31 @@ impl WebBackend {
         match condition {
             Condition::ResponseStatusIs(expected_status) => {
                 last_response.status == *expected_status
+            }
+            Condition::ResponseStatusIsSuccess => last_response.status.is_success(),
+            Condition::ResponseStatusIsError => {
+                last_response.status.is_client_error() || last_response.status.is_server_error()
+            }
+            Condition::ResponseStatusIsIn(statuses) => {
+                statuses.contains(&last_response.status.as_u16())
+            }
+            Condition::ResponseTimeIsBelow { duration } => {
+                if let Some(last_response) = &self.last_response {
+                    let actual_time_seconds = last_response.response_time_ms as f32 / 1000.0;
+                    let result = duration > &actual_time_seconds;
+                    if verbose {
+                        println!(
+                            "[WEB_BACKEND] Response time: {}ms ({:.3}s), expected below: {:.3}s -> {}",
+                            last_response.response_time_ms,
+                            actual_time_seconds,
+                            duration,
+                            result
+                        );
+                    }
+                    result
+                } else {
+                    false
+                }
             }
             Condition::ResponseBodyContains { value } => {
                 if verbose {

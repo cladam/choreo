@@ -300,6 +300,10 @@ This is the reference for all available commands that can be used within the `te
 | Syntax                                      | Description                                                                  |
 |:--------------------------------------------|:-----------------------------------------------------------------------------|
 | `Web response_status_is <num>`              | Passes if the last HTTP response had the specified status code.              |
+| `Web response_status is_success`            | Passes if the last HTTP response status code is in the 200-299 range.        |
+| `Web response_status is_error`              | Passes if the last HTTP response status code is in the 400-599 range.        |
+| `Web response_status is_in [num, num, num]` | Passes if the last HTTP response status code is in the specified list.       |
+| `Web response_time is_below 1s/200ms`       | Passes if the last HTTP response was received in under the specified time.   |
 | `Web response_body_contains "..."`          | Passes if the last HTTP response body contains the specified substring.      |
 | `Web response_body_matches "..." [as JSON]` | Passes if the last HTTP response body matches the specified regex.           |
 | `Web json_body has_path "..."`              | Passes if the last HTTP response body (as JSON) has the specified JSON path. |

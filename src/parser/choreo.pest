@@ -75,6 +75,10 @@ terminal_condition                = { "Terminal" ~ (
 ) }
 web_condition                     = { "Web" ~ (
     response_status_is_condition |
+    response_status_is_success_condition |
+    response_status_is_error_condition |
+    response_status_is_in_condition |
+    response_time_is_below_condition |
     response_body_contains_condition |
     response_body_matches_condition |
     json_body_has_path_condition |
@@ -102,6 +106,10 @@ json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ string ~ "has
 
 // Web-specific condition parts
 response_status_is_condition      = { "response_status_is" ~ number }
+response_status_is_success_condition = { "response_status" ~ "is_success" }
+response_status_is_error_condition = { "response_status" ~ "is_error" }
+response_status_is_in_condition = { "response_status" ~ "is_in" ~ "[" ~ number ~ ("," ~ number)* ~ "]" }
+response_time_is_below_condition = { "response_time" ~ "is_below" ~ wait_marker }
 response_body_contains_condition  = { "response_body_contains" ~ string }
 response_body_matches_condition   = { "response_body_matches" ~ string ~ ("as" ~ identifier)? }
 json_body_has_path_condition      = { "json_body" ~ "has_path" ~ string }
@@ -130,6 +138,7 @@ inner_double                      = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
 inner_single                      = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
 number                            = @{ ASCII_DIGIT+ }
 float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+duration                          = @{ ASCII_DIGIT+ ~ ("ms" | "s") }
 wait_unit                         = @{ "s" | "ms" }
 wait_marker                       = @{ float ~ wait_unit }
 value                             = { string | number }

@@ -205,6 +205,10 @@ pub fn check_condition(
             }
         }
         Condition::ResponseStatusIs(_)
+        | Condition::ResponseStatusIsSuccess
+        | Condition::ResponseStatusIsError
+        | Condition::ResponseStatusIsIn(_)
+        | Condition::ResponseTimeIsBelow { .. }
         | Condition::ResponseBodyContains { .. }
         | Condition::ResponseBodyMatches { .. }
         | Condition::JsonBodyHasPath { .. }
