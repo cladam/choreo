@@ -211,10 +211,19 @@ impl WebBackend {
                     },
                 }
             }
-            Action::HttpPost { url, .. } => {
+            Action::HttpPost { url, body } => {
                 if verbose {
                     println!("[WEB_BACKEND] HTTP POST action is not yet implemented.");
                 }
+                let substituted_url = substitute_string(url, env_vars);
+                let substituted_body = substitute_string(body, env_vars);
+                if verbose {
+                    println!("[WEB_BACKEND] Performing HTTP POST to: {}", substituted_url);
+                    println!("[WEB_BACKEND] With body: {}", substituted_body);
+                }
+                let start_time = std::time::Instant::now();
+                // Add any headers that have been set.
+
                 false
             }
             Action::HttpDelete { url, .. } => {

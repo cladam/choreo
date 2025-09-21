@@ -1,8 +1,8 @@
 # Choreo DSL Reference
 
-**choreo** is an executable Domain-Specific Language (DSL) for writing automated, behaviour-driven tests for
-command-line applications and system interactions. It uses a structured, human-readable format to define test scenarios
-that are easy to write, read, and maintain.
+**choreo** is an executable Domain-Specific Language (DSL) for writing "model clients" for your command-line
+applications and APIs. It uses a structured, human-readable format to define test scenarios that are easy to write,
+read, and maintain.
 
 This document serves as the official reference guide for the `.chor` file format and its syntax.
 
@@ -174,8 +174,8 @@ Each `test` block is structured using the standard BDD keywords to create a clea
 
 #### `given`:
 
-The `given` block sets up the context for a test. It can contain a mix of **actions** (to set up the environment) and *
-*conditions** (to check pre-requisites, including dependencies on other tests).
+The `given` block sets up the context for a test. It can contain a mix of **actions** (to set up the environment) and
+**conditions** (to check pre-requisites, including dependencies on other tests).
 
 **Example:**
 
