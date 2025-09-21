@@ -285,18 +285,18 @@ This is the reference for all available commands that can be used within the `te
 
 #### Actions
 
-| Syntax                                   | Description                                                                                                         |
-|:-----------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
-| `Web http_get "..."`                     | Sends a GET request to the specified URL.                                                                           |
-| `Web set_header "<key>" "<value>"`       | Sets a custom HTTP header (e.g., `Authorization`) for subsequent requests.                                          |
-| `Web clear_header "..."`                 | Clears a custom header previously set with `Web set_header`.                                                        |
-| `Web set_cookie "<key>" "<value>"`       | Sets a cookie for subsequent requests.                                                                              |
-| `Web clear_cookie "..."`                 | Clears a cookie previously set with `Web set_cookie`.                                                               |
-| `Web http_get "<url>"`                   | Sends a GET request to the specified URL.                                                                           |
-| `Web http_post "<url>" with_body "..."`  | Sends a POST request with the given body. If `Content-Type` header is `application/json`, the body is sent as JSON. |
-| `Web http_put "<url>" with_body "..."`   | Sends a PUT request with the given body.                                                                            |
-| `Web http_patch "<url>" with_body "..."` | Sends a PATCH request with the given body.                                                                          |
-| `Web http_delete "<url>"`                | Sends a DELETE request to the specified URL.                                                                        |
+| Syntax                                   | Description                                                                |
+|:-----------------------------------------|:---------------------------------------------------------------------------|
+| `Web http_get "..."`                     | Sends a GET request to the specified URL.                                  |
+| `Web set_header "<key>" "<value>"`       | Sets a custom HTTP header (e.g., `Authorization`) for subsequent requests. |
+| `Web clear_header "..."`                 | Clears a custom header previously set with `Web set_header`.               |
+| `Web set_cookie "<key>" "<value>"`       | Sets a cookie for subsequent requests.                                     |
+| `Web clear_cookie "..."`                 | Clears a cookie previously set with `Web set_cookie`.                      |
+| `Web http_get "<url>"`                   | Sends a GET request to the specified URL.                                  |
+| `Web http_post "<url>" with_body "..."`  | Sends a POST request with the given body.                                  |
+| `Web http_put "<url>" with_body "..."`   | Sends a PUT request with the given body.                                   |
+| `Web http_patch "<url>" with_body "..."` | Sends a PATCH request with the given body.                                 |
+| `Web http_delete "<url>"`                | Sends a DELETE request to the specified URL.                               |
 
 #### Conditions
 

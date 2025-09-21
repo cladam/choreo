@@ -168,11 +168,11 @@ Choreo is currently in the **alpha stage**. The core engine is functional, but i
 The journey ahead includes:
 
 * [ ] A `default_actor` setting to reduce verbosity in tests.
-* [ ] **More Actors**
+* [x] **More Actors**
     * `WebActor` for making and asserting against HTTP API calls.
 * [ ] Generate JUnit XML reports.
 * [ ] Revisit the vhs inspiration by adding an option to record the terminal session as a GIF.
-* [ ] An even richer vocabulary of built-in matchers and assertions.
+* [x] An even richer vocabulary of built-in matchers and assertions.
 * [ ] A dedicated editor with syntax highlighting and linting.
 * [ ] A website with tutorials, examples, and documentation.
 
