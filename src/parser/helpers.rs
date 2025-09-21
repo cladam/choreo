@@ -338,6 +338,42 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
         Action::DeleteDir { path } => Action::DeleteDir {
             path: substitute_string(path, state),
         },
+        Action::HttpGet { url } => Action::HttpGet {
+            url: substitute_string(url, state),
+        },
+        Action::HttpPost { url, body } => Action::HttpPost {
+            url: substitute_string(url, state),
+            body: substitute_string(body, state),
+        },
+        Action::HttpPut { url, body } => Action::HttpPut {
+            url: substitute_string(url, state),
+            body: substitute_string(body, state),
+        },
+        Action::HttpPatch { url, body } => Action::HttpPatch {
+            url: substitute_string(url, state),
+            body: substitute_string(body, state),
+        },
+        Action::HttpDelete { url } => Action::HttpDelete {
+            url: substitute_string(url, state),
+        },
+        Action::HttpSetHeader { key, value } => Action::HttpSetHeader {
+            key: substitute_string(key, state),
+            value: substitute_string(value, state),
+        },
+        Action::HttpClearHeader { key } => Action::HttpClearHeader {
+            key: substitute_string(key, state),
+        },
+        Action::HttpSetCookie { key, value } => Action::HttpSetCookie {
+            key: substitute_string(key, state),
+            value: substitute_string(value, state),
+        },
+        Action::HttpClearCookie { key } => Action::HttpClearCookie {
+            key: substitute_string(key, state),
+        },
+        Action::Press { actor, key } => Action::Press {
+            actor: actor.clone(),
+            key: substitute_string(key, state),
+        },
         _ => action.clone(),
     }
 }
@@ -353,6 +389,16 @@ pub fn is_synchronous(test_case: &TestCase) -> bool {
                 | Action::CreateDir { .. }
                 | Action::DeleteDir { .. }
                 | Action::HttpGet { .. }
+                | Action::HttpPost { .. }
+                | Action::HttpPut { .. }
+                | Action::HttpPatch { .. }
+                | Action::HttpDelete { .. }
+                | Action::HttpSetHeader { .. }
+                | Action::HttpClearHeader { .. }
+                | Action::HttpClearHeaders
+                | Action::HttpSetCookie { .. }
+                | Action::HttpClearCookie { .. }
+                | Action::HttpClearCookies
         )
     })
 }

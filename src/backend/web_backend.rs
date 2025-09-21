@@ -235,6 +235,7 @@ impl WebBackend {
                 match request.send(&substituted_body) {
                     Ok(response) => {
                         let duration = start_time.elapsed();
+                        let status = response.status();
                         self.last_response =
                             Some(response.into_body().read_to_string().map_or_else(
                                 |e| LastResponse {
@@ -243,7 +244,7 @@ impl WebBackend {
                                     response_time_ms: duration.as_millis(),
                                 },
                                 |body| LastResponse {
-                                    status: StatusCode::OK,
+                                    status,
                                     body,
                                     response_time_ms: duration.as_millis(),
                                 },
@@ -269,23 +270,153 @@ impl WebBackend {
                     }
                 }
             }
-            Action::HttpDelete { url, .. } => {
+            Action::HttpPut { url, body } => {
+                let substituted_url = substitute_string(url, env_vars);
+                let substituted_body = substitute_string(body, env_vars);
+
                 if verbose {
-                    println!("[WEB_BACKEND] HTTP DELETE action is not yet implemented.");
+                    println!("  [WEB] PUT {}", substituted_url);
                 }
-                false
+
+                let start_time = std::time::Instant::now();
+                let mut request = self.agent.put(&substituted_url);
+
+                // Add headers and cookies (same as POST)
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+
+                match request.send(substituted_body) {
+                    Ok(response) => {
+                        let duration = start_time.elapsed();
+                        let status = response.status();
+                        let body = response
+                            .into_body()
+                            .read_to_string()
+                            .unwrap_or_else(|e| format!("Failed to read response body: {}", e));
+                        if verbose {
+                            println!(
+                                "  [WEB] PUT completed with status {} in {}ms",
+                                status,
+                                duration.as_millis()
+                            );
+                            println!("  [WEB] Response body: {}", body);
+                        }
+                        self.last_response = Some(LastResponse {
+                            status,
+                            body,
+                            response_time_ms: duration.as_millis(),
+                        });
+                        true
+                    }
+                    Err(e) => {
+                        if verbose {
+                            println!("  [WEB] PUT request failed: {}", e);
+                        }
+                        false
+                    }
+                }
             }
-            Action::HttpPut { url, .. } => {
+            Action::HttpPatch { url, body } => {
+                let substituted_url = substitute_string(url, env_vars);
+                let substituted_body = substitute_string(body, env_vars);
+
                 if verbose {
-                    println!("[WEB_BACKEND] HTTP PUT action is not yet implemented.");
+                    println!(
+                        "[WEB_BACKEND] Performing HTTP PATCH to: {}",
+                        substituted_url
+                    );
                 }
-                false
+
+                let start_time = std::time::Instant::now();
+                let mut request = self.agent.patch(&substituted_url);
+
+                // Add headers
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+
+                match request.send(substituted_body) {
+                    Ok(response) => {
+                        let duration = start_time.elapsed();
+                        let status = response.status();
+                        let body = response
+                            .into_body()
+                            .read_to_string()
+                            .unwrap_or_else(|e| format!("Failed to read response body: {}", e));
+
+                        if verbose {
+                            println!(
+                                "[WEB_BACKEND] PATCH completed with status {} in {}ms",
+                                status,
+                                duration.as_millis()
+                            );
+                        }
+
+                        self.last_response = Some(LastResponse {
+                            status,
+                            body,
+                            response_time_ms: duration.as_millis(),
+                        });
+                        true
+                    }
+                    Err(e) => {
+                        if verbose {
+                            println!("[WEB_BACKEND] PATCH request failed: {}", e);
+                        }
+                        false
+                    }
+                }
             }
-            Action::HttpPatch { url, .. } => {
+            Action::HttpDelete { url } => {
+                let substituted_url = substitute_string(url, env_vars);
+
                 if verbose {
-                    println!("[WEB_BACKEND] HTTP PATCH action is not yet implemented.");
+                    println!(
+                        "[WEB_BACKEND] Performing HTTP DELETE to: {}",
+                        substituted_url
+                    );
                 }
-                false
+
+                let start_time = std::time::Instant::now();
+                let mut request = self.agent.delete(&substituted_url);
+
+                // Add headers
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+
+                match request.call() {
+                    Ok(response) => {
+                        let duration = start_time.elapsed();
+                        let status = response.status();
+                        let body = response
+                            .into_body()
+                            .read_to_string()
+                            .unwrap_or_else(|e| format!("Failed to read response body: {}", e));
+
+                        if verbose {
+                            println!(
+                                "[WEB_BACKEND] DELETE completed with status {} in {}ms",
+                                status,
+                                duration.as_millis()
+                            );
+                        }
+
+                        self.last_response = Some(LastResponse {
+                            status,
+                            body,
+                            response_time_ms: duration.as_millis(),
+                        });
+                        true
+                    }
+                    Err(e) => {
+                        if verbose {
+                            println!("[WEB_BACKEND] DELETE request failed: {}", e);
+                        }
+                        false
+                    }
+                }
             }
             _ => false,
         }

@@ -113,6 +113,9 @@ jobs:
 
       - name: Run `Web Headers` example
         run: ./target/release/choreo run --file examples/web_headers.chor
+
+      - name: Run `Web Methods` example
+        run: ./target/release/choreo run --file examples/web_methods.chor
       # These tests require installing medi on the runner
       #- name: Install medi for the next tests
       #  run: cargo install medi

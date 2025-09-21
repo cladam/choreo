@@ -775,6 +775,55 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         .to_string();
                     Action::HttpPost { url, body }
                 }
+                "http_put" => {
+                    let url = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    let body = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpPut { url, body }
+                }
+                "http_patch" => {
+                    let url = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    let body = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpPatch { url, body }
+                }
+                "http_delete" => {
+                    let url = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpDelete { url }
+                }
                 // ... other methods
                 _ => panic!("Unknown web action method: {}", method),
             }

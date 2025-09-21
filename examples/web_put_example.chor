@@ -1,0 +1,40 @@
+feature "HTTP GET then PUT workflow using httpbin"
+
+settings {
+    timeout_seconds = 30
+    stop_on_failure = true
+}
+
+background {
+    Web set_header "User-Agent" "choreo-test-runner/1.0"
+    Web set_header "Accept" "application/json"
+    Web set_cookie "session_id" "abc123"
+}
+
+actors: Web
+
+scenario "Retrieve and update data via REST API" {
+
+    test GetInitialData "retrieve the current state of a resource" {
+        given:
+            # No preconditions needed
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/json"
+        then:
+            Web response_status_is 200
+            Web response_body_contains "slideshow"
+            Web json_body has_path "/slideshow/title"
+    }
+
+    test UpdateDataWithPut "update the resource with new data" {
+        given:
+            Test has_succeeded GetInitialData
+            Web set_header "Content-Type" "application/json"
+        when:
+            Web http_put "https://httpbin.org/put" with_body "{\"updated\": true, \"timestamp\": \"2024-01-01\"}"
+        then:
+            Web response_status is_in [200, 204]
+            Web response_body_contains "updated"
+    }
+}

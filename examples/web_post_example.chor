@@ -1,0 +1,28 @@
+feature "HTTP GET then PUT workflow using httpbin"
+
+settings {
+    timeout_seconds = 30
+    stop_on_failure = true
+}
+
+background {
+    Web set_header "User-Agent" "choreo-test-runner/1.0"
+    Web set_header "Accept" "application/json"
+    Web set_cookie "session_id" "abc123"
+}
+
+actors: Web
+
+var FORM_DATA = "custname=test&custtel=1234567&custemail=test%40example.com&size=small&topping=cheese&delivery=11%3A15&comments=test"
+
+scenario "POST data via httpbin REST API" {
+    test PostRequestTest "Test POST request and response" {
+        given:
+            wait >= 0s
+        when:
+            Web set_header "Content-Type" "application/x-www-form-urlencoded"
+            Web http_post "http://httpbin.io/post" with_body "${FORM_DATA}"
+        then:
+            Web response_status_is 200
+    }
+}
