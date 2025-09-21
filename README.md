@@ -43,42 +43,11 @@ executable format specifically designed for testing the shell.
 
 ### Example Usage
 
-Here is a simple script that tests that `tee` correctly writes its input to both standard output and a
-file.
+<p align="center">
+  <img src="assets/chor_example.png" alt="choreo logo" width="800"/>
+</p>
 
-```bash
-# feature: "Tee Utility"
-# This test verifies that tee correctly writes its input to both
-# standard output and the specified file.
-
-feature: "Tee Utility"
-env: PWD
-actors: Terminal, FileSystem
-
-scenario "tee writes to both stdout and a file" {
-    test TeeWritesToBothDests "tee writes to both destinations" {
-        given:
-            # Ensure a clean state before the test.
-            FileSystem delete_file "tee_output.txt"
-        when:
-            # Use an env var to ensure the file is created in the correct place.
-            Terminal runs "cd $PWD; echo 'hello tee' | tee tee_output.txt"
-        then:
-            # Check both the terminal output and the file system.
-            Terminal output_contains "hello tee"
-            FileSystem file_exists "tee_output.txt"
-            FileSystem file_contains "tee_output.txt" "hello tee"
-    }
-
-    # This block runs after all tests in the scenario are complete.
-    after {
-        FileSystem delete_file "tee_output.txt"
-    }
-}
-```
-
-See [medi_env_workflow.chor](examples/medi_env_workflow.chor) for a more comprehensive example
-using [medi](https://github.com/cladam/medi) as the tools to test
+See [web_methods.chor](examples/web_methods.chor) for the above example in text format.
 
 ### Full Documentation
 
