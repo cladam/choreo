@@ -11,7 +11,7 @@ scenario "Testing various web conditions" {
             Web http_get "https://httpbin.org/status/200"
         then:
             Web response_status_is 200
-            Web response_time is_below 1.8s # httpbin can be slow sometimes
+            Web response_time is_below 2s # httpbin can be slow sometimes
     }
 
     test ErrorStatusTest "Test error status codes" {
@@ -58,6 +58,10 @@ scenario "Testing various web conditions" {
         then:
             Web response_status_is 200
             Web response_body_contains "slideshow"
+            Web json_response at "/slideshow/slides" is_an_array
+            Web json_response at "/slideshow/title" is_a_string
+            Web json_response at "/slideshow/slides" has_size 2
+            Web json_response at "/slideshow" is_an_object
     }
 
     test BodyMatchesTest "Test response body regex matching" {

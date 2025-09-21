@@ -297,17 +297,22 @@ This is the reference for all available commands that can be used within the `te
 
 #### Conditions
 
-| Syntax                                      | Description                                                                  |
-|:--------------------------------------------|:-----------------------------------------------------------------------------|
-| `Web response_status_is <num>`              | Passes if the last HTTP response had the specified status code.              |
-| `Web response_status is_success`            | Passes if the last HTTP response status code is in the 200-299 range.        |
-| `Web response_status is_error`              | Passes if the last HTTP response status code is in the 400-599 range.        |
-| `Web response_status is_in [num, num, num]` | Passes if the last HTTP response status code is in the specified list.       |
-| `Web response_time is_below 1s/200ms`       | Passes if the last HTTP response was received in under the specified time.   |
-| `Web response_body_contains "..."`          | Passes if the last HTTP response body contains the specified substring.      |
-| `Web response_body_matches "..." [as JSON]` | Passes if the last HTTP response body matches the specified regex.           |
-| `Web json_body has_path "..."`              | Passes if the last HTTP response body (as JSON) has the specified JSON path. |
-| `Web json_path at "..." equals <value>`     | Passes if the value at the specified JSON path equals the given value.       |
+| Syntax                                         | Description                                                                          |
+|:-----------------------------------------------|:-------------------------------------------------------------------------------------|
+| `Web response_status_is <num>`                 | Passes if the last HTTP response had the specified status code.                      |
+| `Web response_status is_success`               | Passes if the last HTTP response status code is in the 200-299 range.                |
+| `Web response_status is_error`                 | Passes if the last HTTP response status code is in the 400-599 range.                |
+| `Web response_status is_in [num, num, num]`    | Passes if the last HTTP response status code is in the specified list.               |
+| `Web response_time is_below 1s/200ms`          | Passes if the last HTTP response was received in under the specified time.           |
+| `Web response_body_contains "..."`             | Passes if the last HTTP response body contains the specified substring.              |
+| `Web response_body_matches "..." [as JSON]`    | Passes if the last HTTP response body matches the specified regex.                   |
+| `Web json_body has_path "..."`                 | Passes if the last HTTP response body (as JSON) has the specified JSON path.         |
+| `Web json_path at "..." equals <value>`        | Passes if the value at the specified JSON path equals the given value.               |
+| `Web json_response at "..." is_a_string`       | Passes if the value at the specified JSON path is a string.                          |
+| `Web json_response at "..." is_a_number`       | Passes if the value at the specified JSON path is a number.                          |
+| `Web json_response at "..." is_an_array`       | Passes if the value at the specified JSON path is an array.                          |
+| `Web json_response at "..." is_an_object`      | Passes if the value at the specified JSON path is an object.                         |
+| `Web json_response at "..." has_size <number>` | Passes if the value at the specified JSON path (array or string) has the given size. |
 
 ## Variables
 

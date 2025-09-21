@@ -495,6 +495,68 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             let capture_as = inner.next().map(|p| p.as_str().to_string());
             Condition::ResponseBodyMatches { regex, capture_as }
         }
+        Rule::json_value_is_string_condition => {
+            let path = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            Condition::JsonValueIsString { path }
+        }
+        Rule::json_value_is_number_condition => {
+            let path = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            Condition::JsonValueIsNumber { path }
+        }
+        Rule::json_value_is_array_condition => {
+            let path = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            Condition::JsonValueIsArray { path }
+        }
+        Rule::json_value_is_object_condition => {
+            let path = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            Condition::JsonValueIsObject { path }
+        }
+        Rule::json_value_has_size_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            let size_str = inner.next().unwrap().as_str();
+            let size: usize = size_str.parse().unwrap();
+            Condition::JsonValueHasSize { path, size }
+        }
         Rule::json_body_has_path_condition => {
             let path = inner_cond
                 .into_inner()

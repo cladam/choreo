@@ -82,8 +82,28 @@ web_condition                     = { "Web" ~ (
     response_body_contains_condition |
     response_body_matches_condition |
     json_body_has_path_condition |
-    json_path_equals_condition
+    json_path_equals_condition |
+    json_value_is_string_condition |
+    json_value_is_number_condition |
+    json_value_is_array_condition |
+    json_value_is_object_condition |
+    json_value_has_size_condition
 ) }
+
+
+// Json-specific condition parts
+json_value_is_string_condition = { "json_response" ~ "at" ~ string ~ "is_a_string" }
+json_value_is_number_condition = { "json_response" ~ "at" ~ string ~ "is_a_number" }
+json_value_is_array_condition = { "json_response" ~ "at" ~ string ~ "is_an_array" }
+json_value_is_object_condition = { "json_response" ~ "at" ~ string ~ "is_an_object" }
+json_value_has_size_condition = { "json_response" ~ "at" ~ string ~ "has_size" ~ number }
+output_is_valid_json_condition    = { "output_is_valid_json" }
+json_output_has_path_condition    = { "json_output" ~ "has_path" ~ string }
+json_output_at_equals_condition   = { "json_output" ~ "at" ~ string ~ "equals" ~ value }
+json_output_at_includes_condition = { "json_output" ~ "at" ~ string ~ "includes" ~ value }
+json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ string ~ "has_item_count" ~ number }
+json_body_has_path_condition      = { "json_body" ~ "has_path" ~ string }
+json_path_equals_condition        = { "json_path" ~ "at" ~ string ~ "equals" ~ value }
 
 
 // Terminal-specific condition parts
@@ -98,11 +118,6 @@ stderr_contains_condition         = { "stderr_contains" ~ string }
 output_starts_with_condition      = { "output_starts_with" ~ string }
 output_ends_with_condition        = { "output_ends_with" ~ string }
 output_equals_condition           = { "output_equals" ~ string }
-output_is_valid_json_condition    = { "output_is_valid_json" }
-json_output_has_path_condition    = { "json_output" ~ "has_path" ~ string }
-json_output_at_equals_condition   = { "json_output" ~ "at" ~ string ~ "equals" ~ value }
-json_output_at_includes_condition = { "json_output" ~ "at" ~ string ~ "includes" ~ value }
-json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ string ~ "has_item_count" ~ number }
 
 // Web-specific condition parts
 response_status_is_condition      = { "response_status_is" ~ ( number | string ) }
@@ -112,8 +127,6 @@ response_status_is_in_condition = { "response_status" ~ "is_in" ~ "[" ~ number ~
 response_time_is_below_condition = { "response_time" ~ "is_below" ~ wait_marker }
 response_body_contains_condition  = { "response_body_contains" ~ string }
 response_body_matches_condition   = { "response_body_matches" ~ string ~ ("as" ~ identifier)? }
-json_body_has_path_condition      = { "json_body" ~ "has_path" ~ string }
-json_path_equals_condition        = { "json_path" ~ "at" ~ string ~ "equals" ~ value }
 
 // Action Types
 type_action                       = { identifier ~ "types" ~ string }

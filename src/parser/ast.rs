@@ -119,6 +119,22 @@ pub enum Condition {
     OutputEquals(String),
     // --- JSON Conditions ---
     OutputIsValidJson,
+    JsonValueIsString {
+        path: String,
+    },
+    JsonValueIsNumber {
+        path: String,
+    },
+    JsonValueIsArray {
+        path: String,
+    },
+    JsonValueIsObject {
+        path: String,
+    },
+    JsonValueHasSize {
+        path: String,
+        size: usize,
+    },
     JsonOutputHasPath {
         path: String,
     },

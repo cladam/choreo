@@ -211,6 +211,11 @@ pub fn check_condition(
         | Condition::ResponseTimeIsBelow { .. }
         | Condition::ResponseBodyContains { .. }
         | Condition::ResponseBodyMatches { .. }
+        | Condition::JsonValueIsString { .. }
+        | Condition::JsonValueIsNumber { .. }
+        | Condition::JsonValueIsArray { .. }
+        | Condition::JsonValueIsObject { .. }
+        | Condition::JsonValueHasSize { .. }
         | Condition::JsonBodyHasPath { .. }
         | Condition::JsonPathEquals { .. } => {
             web_backend.check_condition(condition, env_vars, verbose)

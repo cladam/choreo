@@ -227,6 +227,51 @@ impl WebBackend {
                 }
                 false
             }
+            Condition::JsonValueIsString { path } => {
+                if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
+                    if let Some(value) = json_body.pointer(path) {
+                        return value.is_string();
+                    }
+                }
+                false
+            }
+            Condition::JsonValueIsNumber { path } => {
+                if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
+                    if let Some(value) = json_body.pointer(path) {
+                        return value.is_number();
+                    }
+                }
+                false
+            }
+            Condition::JsonValueIsArray { path } => {
+                if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
+                    if let Some(value) = json_body.pointer(path) {
+                        return value.is_array();
+                    }
+                }
+                false
+            }
+            Condition::JsonValueIsObject { path } => {
+                if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
+                    if let Some(value) = json_body.pointer(path) {
+                        return value.is_object();
+                    }
+                }
+                false
+            }
+            Condition::JsonValueHasSize { path, size } => {
+                if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
+                    if let Some(value) = json_body.pointer(path) {
+                        match value {
+                            JsonValue::Array(arr) => return arr.len() == *size,
+                            JsonValue::String(s) => return s.len() == *size,
+                            JsonValue::Object(obj) => return obj.len() == *size,
+                            _ => return false,
+                        }
+                    }
+                }
+                false
+            }
             Condition::JsonBodyHasPath { path } => {
                 // Try to parse the body as JSON. If it fails, the condition fails.
                 if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
