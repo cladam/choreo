@@ -135,6 +135,11 @@ run_action                        = { identifier ~ "runs" ~ string }
 web_action = { identifier ~ web_action_type }
 web_action_type = {
     ("set_header" ~ string ~ string) |
+    ("clear_header" ~ string) |
+    ("clear_headers") |
+    ("set_cookie" ~ string ~ string) |
+    ("clear_cookie" ~ string) |
+    ("clear_cookies") |
     ("http_get" ~ string) |
     ("http_post" ~ string ~ "with_body" ~ string) |
     ("http_put" ~ string ~ "with_body" ~ string) |

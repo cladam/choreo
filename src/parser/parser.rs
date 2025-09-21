@@ -680,6 +680,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
 
             let mut action_inner = action_type.into_inner();
             let method = action_type_str.split_whitespace().next().unwrap_or("");
+            //println!("Building web action method: {}", method);
 
             match method {
                 "set_header" => {
@@ -701,6 +702,49 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         .to_string();
                     Action::HttpSetHeader { key, value }
                 }
+                "clear_header" => {
+                    let key = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpClearHeader { key }
+                }
+                "clear_headers" => Action::HttpClearHeaders,
+                "set_cookie" => {
+                    let key = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    let value = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpSetCookie { key, value }
+                }
+                "clear_cookie" => {
+                    let key = action_inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .next()
+                        .unwrap()
+                        .as_str()
+                        .to_string();
+                    Action::HttpClearCookie { key }
+                }
+                "clear_cookies" => Action::HttpClearCookies,
                 "http_get" => {
                     let url = action_inner
                         .next()

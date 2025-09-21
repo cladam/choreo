@@ -211,6 +211,11 @@ pub enum Action {
     DeleteDir { path: String },
     // --- Web Actions ---
     HttpSetHeader { key: String, value: String },
+    HttpClearHeader { key: String },
+    HttpClearHeaders,
+    HttpSetCookie { key: String, value: String },
+    HttpClearCookie { key: String },
+    HttpClearCookies,
     HttpGet { url: String },
     HttpPost { url: String, body: String },
     HttpPut { url: String, body: String },

@@ -39,8 +39,6 @@ impl WebBackend {
     ) -> bool {
         match action {
             Action::HttpSetHeader { key, value } => {
-                println!("Web action: {:?}", action);
-                println!("[WEB_BACKEND] Setting HTTP header: {}: {}", key, value);
                 let substituted_key = substitute_string(key, env_vars);
                 let substituted_value = substitute_string(value, env_vars);
                 if verbose {
@@ -50,6 +48,75 @@ impl WebBackend {
                     );
                 }
                 self.headers.insert(substituted_key, substituted_value);
+                true
+            }
+            Action::HttpClearHeaders => {
+                if verbose {
+                    println!("[WEB_BACKEND] Clearing all HTTP headers");
+                }
+                self.headers.clear();
+                true
+            }
+            Action::HttpSetCookie { key, value } => {
+                let substituted_key = substitute_string(key, env_vars);
+                let substituted_value = substitute_string(value, env_vars);
+
+                // Handle multiple cookies by appending to existing Cookie header
+                let new_cookie = format!("{}={}", substituted_key, substituted_value);
+                match self.headers.get("Cookie") {
+                    Some(existing) => {
+                        let updated_cookies = format!("{}; {}", existing, new_cookie);
+                        self.headers.insert("Cookie".to_string(), updated_cookies);
+                    }
+                    None => {
+                        self.headers.insert("Cookie".to_string(), new_cookie);
+                    }
+                }
+
+                if verbose {
+                    println!(
+                        "[WEB_BACKEND] Added cookie: {}={}",
+                        substituted_key, substituted_value
+                    );
+                    println!(
+                        "[WEB_BACKEND] Current Cookie header: {}",
+                        self.headers.get("Cookie").unwrap_or(&"".to_string())
+                    );
+                }
+                true
+            }
+            Action::HttpClearCookie { key } => {
+                let substituted_key = substitute_string(key, env_vars);
+
+                if let Some(cookie_header) = self.headers.get("Cookie") {
+                    // Parse and filter out the specific cookie
+                    let cookies: Vec<&str> = cookie_header.split(';').collect();
+                    let filtered_cookies: Vec<&str> = cookies
+                        .into_iter()
+                        .filter(|cookie| {
+                            let cookie_trimmed = cookie.trim();
+                            !cookie_trimmed.starts_with(&format!("{}=", substituted_key))
+                        })
+                        .collect();
+
+                    if filtered_cookies.is_empty() {
+                        self.headers.remove("Cookie");
+                    } else {
+                        let new_cookie_header = filtered_cookies.join("; ");
+                        self.headers.insert("Cookie".to_string(), new_cookie_header);
+                    }
+                }
+
+                if verbose {
+                    println!("[WEB_BACKEND] Cleared cookie: {}", substituted_key);
+                }
+                true
+            }
+            Action::HttpClearCookies => {
+                if verbose {
+                    println!("[WEB_BACKEND] Clearing all HTTP cookies");
+                }
+                self.headers.remove("Cookie");
                 true
             }
             Action::HttpGet { url, .. } => {

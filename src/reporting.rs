@@ -119,5 +119,10 @@ fn format_action_for_report(action: &Action) -> String {
         Action::HttpPatch { url, .. } => format!("HTTP PATCH '{}'", url),
         Action::HttpDelete { url, .. } => format!("HTTP DELETE '{}'", url),
         Action::HttpSetHeader { key, value } => format!("HTTP set_header '{}: {}'", key, value),
+        Action::HttpClearHeader { key } => format!("HTTP clear_header '{}'", key),
+        Action::HttpClearHeaders => "HTTP clear_headers".to_string(),
+        Action::HttpSetCookie { key, value } => format!("HTTP set_cookie '{}: {}'", key, value),
+        Action::HttpClearCookie { key } => format!("HTTP clear_cookie '{}'", key),
+        Action::HttpClearCookies => "HTTP clear_cookies".to_string(),
     }
 }
