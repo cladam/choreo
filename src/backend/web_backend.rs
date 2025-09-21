@@ -50,6 +50,14 @@ impl WebBackend {
                 self.headers.insert(substituted_key, substituted_value);
                 true
             }
+            Action::HttpClearHeader { key } => {
+                let substituted_key = substitute_string(key, env_vars);
+                if verbose {
+                    println!("[WEB_BACKEND] Clearing HTTP header: {}", substituted_key);
+                }
+                self.headers.remove(&substituted_key);
+                true
+            }
             Action::HttpClearHeaders => {
                 if verbose {
                     println!("[WEB_BACKEND] Clearing all HTTP headers");
