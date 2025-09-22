@@ -47,7 +47,8 @@ executable format specifically designed for testing the shell.
   <img src="assets/chor_example.png" alt="choreo logo" width="800"/>
 </p>
 
-See [web_methods.chor](examples/web_methods.chor) for the above example in text format.
+See [web_health_check.chor](examples/web_health_check.chor) for the above example in text format. There are many more
+examples in the [examples](examples) directory.
 
 ### Full Documentation
 
