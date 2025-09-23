@@ -1,12 +1,10 @@
 :root {
-    --primary-color: #2c3e50; /* Dark Blue */
-    --secondary-color: #3498db; /* Bright Blue */
-    --accent-color: #e67e22; /* Orange for highlights */
-    --background-light: #f4f7f6;
-    --background-dark: #ecf0f1;
-    --text-color: #333;
-    --light-text-color: #7f8c8d;
-    --border-color: #ddd;
+    --sidebar-bg: #f8f9fa;       /* Light Gray */
+    --accent-orange: #e67e22;    /* Orange from logo */
+    --accent-teal: #4a919e;      /* Teal from logo */
+    --primary-text: #2c3e50;     /* Dark Blue/Gray */
+    --secondary-text: #7f8c8d;   /* Lighter Gray */
+    --border-color: #e5e5e5;
     --code-bg: #2d2d2d;
     --code-text: #f8f8f2;
     --nav-width: 280px;
@@ -29,54 +27,51 @@ body {
 }
 
 /* --- Sidebar Navigation --- */
+.sidebar-logo {
+    text-align: center;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+}
+.sidebar-logo img {
+    max-width: 75%;
+    height: auto;
+}
+
 .sidebar {
-    width: var(--nav-width);
-    background-color: var(--primary-color);
+    background-color: var(--sidebar-bg); /* Use light gray */
+    color: var(--primary-text);          /* Use dark text */
+    border-right: 1px solid var(--border-color); /* Add a subtle border */
+    box-shadow: none; /* Remove the old shadow */
+}
+
+.sidebar nav ul li a {
+    color: var(--secondary-text); /* Use lighter gray for non-active links */
+}
+.sidebar nav ul li a:hover {
+    background-color: var(--border-color);
+    color: var(--primary-text);
+}
+.sidebar nav ul li a.active {
+    background-color: var(--accent-teal); /* Use teal for the active link */
     color: white;
-    padding: 20px;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    position: fixed;
-    height: 100%;
-    overflow-y: auto;
-    transform: translateX(0);
-    transition: transform 0.3s ease-in-out;
-    z-index: 1000;
+}
+
+.main-content {
+    flex-grow: 1;
+    margin-left: var(--nav-width);
+    padding: 60px; /* Increased padding */
+    box-sizing: border-box;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--primary-text);
+}
+a {
+    color: var(--accent-teal);
 }
 
 .sidebar.hidden {
     transform: translateX(-100%);
-}
-
-.sidebar h2 {
-    text-align: center;
-    color: white;
-    margin-bottom: 30px;
-    font-weight: 700;
-    font-size: 1.8em;
-}
-
-.sidebar nav ul {
-    list-style: none;
-    padding: 0;
-}
-
-.sidebar nav ul li {
-    margin-bottom: 10px;
-}
-
-.sidebar nav ul li a {
-    color: #ecf0f1;
-    text-decoration: none;
-    display: block;
-    padding: 8px 15px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.sidebar nav ul li a:hover,
-.sidebar nav ul li a.active {
-    background-color: var(--secondary-color);
-    color: white;
 }
 
 /* --- Main Content Area --- */
