@@ -12,10 +12,8 @@
 
 body {
     display: grid;
-    grid-template-rows: auto 1fr; /* Header row, flexible content row */
     grid-template-columns: var(--nav-width) 1fr; /* Sidebar column, flexible content column */
     grid-template-areas:
-        "header header"
         "sidebar main";
     height: 100vh;
     margin: 0;
@@ -35,62 +33,9 @@ body {
     display: contents; /* This makes the grid see the children (.sidebar, .main-content) */
 }
 
-/* --- Header --- */
-.top-header {
-    grid-area: header; /* Assign to the 'header' grid area */
-    height: 65px;
-    background-color: white;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    padding: 0 30px;
-    box-sizing: border-box;
-    top: 0;
-    z-index: 1001; /* Keep it above other content */
-}
-
-.header-content {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    transition: margin-left 0.3s ease-in-out;
-}
-
 .search-bar {
     position: relative;
     color: var(--secondary-text);
-}
-
-.search-bar svg {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.search-bar input {
-    background-color: #f5f5f5;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 10px 15px 10px 40px; /* Left padding for icon */
-    font-size: 1em;
-    width: 300px;
-}
-
-.header-button {
-    background-color: var(--primary-text);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background-color 0.2s ease;
-}
-.header-button:hover {
-    background-color: #4a4a4a;
-    text-decoration: none;
 }
 
 /* --- Sidebar Navigation --- */
@@ -110,19 +55,19 @@ body {
 .sidebar-header {
     display: flex;
     align-items: center;
-    gap: 12px; /* Space between icon and text */
-    padding: 20px 25px;
-    margin-bottom: 15px;
+    gap: 15px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
 }
 
 .sidebar-header img {
-    height: 40px; /* Control icon size */
-    width: 40px;
+    height: 83.6833px;
+    width: 200px;
 }
 
 .sidebar-header h1 {
     font-size: 1.8em;
-    margin: 0; /* Remove default heading margin */
+    margin: 0;
     font-weight: 700;
     color: var(--primary-text);
 }
@@ -302,8 +247,21 @@ pre code {
     .hamburger {
         display: block;
         position: fixed;
-        top: 20px;
-        left: 20px;
+        top: 15px;
+        left: 15px;
+        z-index: 1003; /* Make sure it's on top of the sidebar */
+    }
+
+    .hamburger.active .bar:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+    }
+    
+    .hamburger.active .bar:nth-child(2) {
+        opacity: 0;
+    }
+    
+    .hamburger.active .bar:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
     }
 
     /* Adjust main content padding when sidebar is active */
