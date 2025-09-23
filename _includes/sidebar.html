@@ -6,26 +6,54 @@
   <nav class="sidebar-nav">
     <div class="nav-category">
       <h3 class="nav-category-title">Getting Started</h3>
-      <ul>
-        <li><a href="#introduction" class="active">Introduction</a></li>
-        <li><a href="#core-concepts">Core Concepts</a></li>
-      </ul>
+    <ul>
+      <li>
+        <a href="{{ '/' | relative_url }}" {% if page.url == "/" %}class="active"{% endif %}>
+          Introduction
+        </a>
+      </li>
+      <li>
+        <a href="{{ '/docs/core-concepts.html' | relative_url }}" {% if page.url == "/docs/core-concepts.html" %}class="active"{% endif %}>
+          Core Concepts
+        </a>
+      </li>
+    </ul>
     </div>
 
     <div class="nav-category">
       <h3 class="nav-category-title">Reference</h3>
       <ul>
-        <li><a href="#keywords-syntax">Keywords & Syntax</a></li>
-        <li><a href="#advanced-topics">Advanced Topics</a></li>
+        <li>
+          <a href="{{ '/docs/keywords-syntax.html' | relative_url }}" {% if page.url == "/docs/keywords-syntax.html" %}class="active"{% endif %}>
+            Keywords & Syntax
+          </a>
+        </li>
+        <li>
+          <a href="{{ '/docs/advanced-topics.html' | relative_url }}" {% if page.url == "/docs/advanced-topics.html" %}class="active"{% endif %}>
+            Advanced Topics
+          </a>
+        </li>
       </ul>
     </div>
 
     <div class="nav-category">
       <h3 class="nav-category-title">Examples</h3>
       <ul>
-        <li><a href="#examples-filesystem">FileSystem Examples</a></li>
-        <li><a href="#examples-terminal">Terminal Examples</a></li>
-        <li><a href="#examples-web">Web Examples</a></li>
+        <li>
+          <a href="{{ '/docs/filesystem-examples.html' | relative_url }}" {% if page.url == "/docs/filesystem-examples.html" %}class="active"{% endif %}>
+            FileSystem Examples
+          </a>
+        </li>
+        <li>
+          <a href="{{ '/docs/terminal-examples.html' | relative_url }}" {% if page.url == "/docs/terminal-examples.html" %}class="active"{% endif %}>
+            Terminal Examples
+          </a>
+        </li>
+        <li>
+          <a href="{{ '/docs/web-examples.html' | relative_url }}" {% if page.url == "/docs/web-examples.html" %}class="active"{% endif %}>
+            Web Examples
+          </a>
+        </li>
       </ul>
     </div>
   </nav>
