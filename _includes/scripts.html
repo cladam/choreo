@@ -1,0 +1,49 @@
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.getElementById('hamburger');
+            const mainContent = document.getElementById('main-content');
+            const navLinks = document.querySelectorAll('.sidebar nav ul li a');
+
+            hamburger.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+                document.body.classList.toggle('sidebar-open');
+            });
+
+            // Close sidebar when a navigation link is clicked (for mobile)
+            navLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) { // Adjust breakpoint as needed
+                        sidebar.classList.remove('active');
+                        document.body.classList.remove('sidebar-open');
+                    }
+                });
+            });
+
+            // Highlight active navigation link based on scroll position
+            const sections = document.querySelectorAll('section');
+            const observerOptions = {
+                root: null,
+                rootMargin: "0px 0px -50% 0px", // Highlight when section is roughly in the middle
+                threshold: 0.3 // When 30% of the section is visible
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                        });
+                        const correspondingLink = document.querySelector(`.sidebar nav ul li a[href="#${entry.target.id}"]`);
+                        if (correspondingLink) {
+                            correspondingLink.classList.add('active');
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>

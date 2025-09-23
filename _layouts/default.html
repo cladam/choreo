@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+  {% include head.html %}
+  <body>
+    <div class="container">
+      {% include sidebar.html %}
+      <div class="main-content" id="main-content">
+        {{ content }}
+      </div>
+    </div>
+    {% include scripts.html %}
+  </body>
+</html>
