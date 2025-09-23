@@ -56,17 +56,17 @@ module Rouge
         #rule %r/\b(Web|Terminal|FileSystem|true|false)\b/, Name::Builtin
         #rule %r/\b(wait|set_header|set_cookie|http_get|http_post|clear_header|clear_cookie|run|type|wait_for_text|create_file|delete_file|append_to_file|response_status_is|response_time_is_below|response_header_is|response_body_is|response_body_contains|expect_exit_code|stdout_contains|stderr_contains|stdout_not_contains|stderr_not_contains|file_exists|file_not_exists|file_contains|file_not_contains|is_success|timeout_seconds|stop_on_filure|shell_path|report_path|expected_failures)\b/, Name::Function
 
+        # Numbers and time values
+        rule %r/\b\d+(?:s|ms)?\b/, Num
+      
         # Variable usage
-        rule %r/\$\{.*?}/, Name::Variable
-
+        rule %r/\$\{[^}]*\}/, Name::Variable
+      
         # Strings in double quotes
         rule %r/"/, Str::Double, :string
-
-        # Numbers and time values
-        rule %r/\b\d+s?\b/, Num
-
+      
         # Punctuation and operators
-        rule %r/[{}=:]|>=/, Punctuation
+        rule %r/[{}=:]|>=|<=/, Punctuation
 
         # Any other text
         rule %r/[a-zA-Z_][a-zA-Z0-9_]*/, Text
