@@ -3,9 +3,21 @@ layout: default
 title: Web Examples
 ---
 
-# Web actor
+# The Web Actor
 
-The `Web` actor has a set of actions and conditions 
+The `Web` actor is a powerful component in `choreo` designed for testing HTTP-based services, such as REST APIs. It allows you to send HTTP requests, manage headers and cookies, and assert conditions on the responses you receive.
+
+## Setup
+
+To use the `Web` actor in your tests, you must first declare it in the actors list at the top of your `.chor` file.
+
+```
+actor: Web
+```
+
+### Example 1: API Health Check
+
+This example shows a simple health check that sends an authenticated `GET` request to an API endpoint and verifies the response.
 
 ```
 feature "API Health Check"
