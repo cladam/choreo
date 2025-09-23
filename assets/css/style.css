@@ -147,7 +147,7 @@ a {
     max-width: 900px;
     flex-grow: 1;
     padding: 40px; /* Re-adjust padding a bit */
-    max-width: 900px; /* Give the content a max-width for readability */
+    max-width: 1024px; /* Give the content a max-width for readability */
     box-sizing: border-box;
 }
 
