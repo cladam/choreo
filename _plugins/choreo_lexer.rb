@@ -3,7 +3,7 @@ require 'rouge'
 module Rouge
   module Lexers
     class Choreo < Rouge::RegexLexer
-      title "Choreo"
+      title "choreo"
       desc "A DSL for behavior-driven testing (github.com/cladam/choreo)"
       tag 'choreo'
       filenames '*.chor'
@@ -38,14 +38,16 @@ module Rouge
         # Comments
         rule %r/#.*$/, Comment::Single
 
-        # Punctuation and operators
-        rule %r/[{}=:]|>=/, Punctuation
+        # Whitespace
+        rule %r/\s+/, Text::Whitespace
 
-        # Use the arrays defined above to find and tokenise keywords
-        rule %r/\b(#{KEYWORD_DECLARATION.join('|')})\b/, Keyword::Declaration
-        rule %r/\b(?:given|when|then)\b/, Keyword
-        rule %r/\b(?:Web|Terminal|FileSystem|true|false)\b/, Name::Builtin
-        rule %r/\b(#{COMMANDS_AND_ASSERTIONS.join('|')})\b/, Name::Function
+        # Keywords - MUST come before the generic text rule
+        rule %r/\b(feature|actors|settings|background|scenario|after|test|var)\b/, Keyword::Declaration
+        rule %r/\b(given|when|then)\b/, Keyword
+
+        # Built-ins and commands
+        rule %r/\b(Web|Terminal|FileSystem|true|false)\b/, Name::Builtin
+        rule %r/\b(wait|set_header|set_cookie|http_get|http_post|clear_header|clear_cookie|run|type|wait_for_text|create_file|delete_file|append_to_file|response_status_is|response_time_is_below|response_header_is|response_body_is|response_body_contains|expect_exit_code|stdout_contains|stderr_contains|stdout_not_contains|stderr_not_contains|file_exists|file_not_exists|file_contains|file_not_contains|is_success)\b/, Name::Function
 
         # Variable usage
         rule %r/\$\{.*?}/, Name::Variable
@@ -56,8 +58,8 @@ module Rouge
         # Numbers and time values
         rule %r/\b\d+s?\b/, Num
 
-        # Whitespace
-        rule %r/\s+/, Text::Whitespace
+        # Punctuation and operators
+        rule %r/[{}=:]|>=/, Punctuation
 
         # Any other text
         rule %r/[a-zA-Z_][a-zA-Z0-9_]*/, Text
