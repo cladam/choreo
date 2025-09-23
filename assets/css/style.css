@@ -16,7 +16,7 @@ body {
     padding: 0;
     line-height: 1.6;
     color: var(--text-color);
-    background-color: var(--background-light);
+    background-color: #FCFCFC;
     display: flex;
     min-height: 100vh;
 }
@@ -26,7 +26,81 @@ body {
     width: 100%;
 }
 
+/* --- Header --- */
+.top-header {
+    width: 100%;
+    height: 65px;
+    background-color: white;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+    position: sticky; /* Makes it stick to the top */
+    top: 0;
+    z-index: 1001; /* Keep it above other content */
+}
+
+.header-content {
+    width: 100%;
+    max-width: 1400px; /* Optional: constrain width on very large screens */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-left: var(--nav-width); /* Align with main content */
+    transition: margin-left 0.3s ease-in-out;
+}
+
+.search-bar {
+    position: relative;
+    color: var(--secondary-text);
+}
+
+.search-bar svg {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.search-bar input {
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px 15px 10px 40px; /* Left padding for icon */
+    font-size: 1em;
+    width: 300px;
+}
+
+.header-button {
+    background-color: var(--primary-text);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+.header-button:hover {
+    background-color: #4a4a4a;
+    text-decoration: none;
+}
+
 /* --- Sidebar Navigation --- */
+.nav-category {
+    margin-bottom: 20px;
+}
+
+.nav-category-title {
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--secondary-text);
+    padding: 0 25px;
+    margin-bottom: 10px;
+}
+
 .sidebar-header {
     display: flex;
     align-items: center;
@@ -57,18 +131,28 @@ body {
 }
 
 .sidebar {
-    background-color: var(--sidebar-bg); /* Use light gray */
-    color: var(--primary-text);          /* Use dark text */
-    border-right: 1px solid var(--border-color); /* Add a subtle border */
-    box-shadow: none; /* Remove the old shadow */
+    background-color: var(--sidebar-bg);
+    color: var(--primary-text);
+    border-right: 1px solid var(--border-color);
+    box-shadow: none;
+    height: 100vh; 
+    position: fixed; 
+    top: 0;
+    left: 0;
+    padding-top: 65px;
+    box-sizing: border-box;
 }
 
-.sidebar nav ul li a {
-    color: var(--secondary-text); /* Use lighter gray for non-active links */
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
 }
+
 .sidebar nav ul li a:hover {
     background-color: var(--border-color);
     color: var(--primary-text);
+    padding: 8px 25px; /* Adjust padding */
+    font-weight: 500;
 }
 .sidebar nav ul li a.active {
     background-color: var(--accent-teal); /* Use teal for the active link */
@@ -78,7 +162,8 @@ body {
 .main-content {
     flex-grow: 1;
     margin-left: var(--nav-width);
-    padding: 60px; /* Increased padding */
+    padding: 40px; /* Re-adjust padding a bit */
+    max-width: 900px; /* Give the content a max-width for readability */
     box-sizing: border-box;
 }
 
@@ -174,15 +259,22 @@ pre code {
 
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
-    .sidebar {
-        width: 250px;
-        transform: translateX(-100%);
-        box-shadow: none; /* Remove shadow when hidden */
+    /* Adjust header for mobile */
+    .header-content {
+        margin-left: 0;
+    }
+    .search-bar {
+        display: none; /* Hide search on mobile for simplicity */
     }
 
+    /* Make the sidebar appear above the content */
+    .sidebar {
+        padding-top: 20px; /* Remove top padding for mobile view */
+        transform: translateX(-100%);
+        z-index: 1002;
+    }
     .sidebar.active {
         transform: translateX(0);
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     }
 
     .main-content {
