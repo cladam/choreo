@@ -1,23 +1,24 @@
 ---
 layout: default
-title: Choreo DSL Documentation
+title: choreo DSL Documentation
 ---
 
-<div class="hamburger" id="hamburger">
-    <span class="bar"></span>
-    <span class="bar"></span>
-    <span class="bar"></span>
-</div>
+### Overview
 
-<div class="header">
-    <h1>choreo DSL Documentation</h1>
-</div>
+`choreo` is a test runner and executable Domain-Specific Language (DSL) designed for behavior-driven testing of command-line applications. It brings the power and expressiveness of a BDD framework like Cucumber to the shell, allowing you to write automated, human-readable tests for any command-line tool or system interaction.
 
-<section id="introduction">
-    <h2>Introduction to `choreo`</h2>
-    <p>Welcome to the official documentation for choreo...</p>
-    </section>
+The tests are written in a structured, Gherkin-inspired format, making them easy to read and maintain. Each `.chor` file is a self-contained, executable test, eliminating the need for separate "step definition" files.
 
-<footer>
-    <p>&copy; 2025 Claes Adamsson. All rights reserved.</p>
-</footer>
+### Key Features:
+
+* **Human-Readable BDD Syntax:** Utilises a `given-when-then` structure within `test` blocks for clear and descriptive tests.
+* **Executable Scripts:** `.chor` files are complete, runnable tests without needing separate "step definition" files.
+* **Stateful Scenarios:** Capture variables from command output and reuse them in subsequent steps, allowing for complex, stateful test scenarios.
+* **Multi-Actor System:** Interact with and assert against multiple parts of a system in a single test, including a "Terminal" for checking `stdout`, `stderr`, and exit codes, and a "FileSystem" for managing files and directories.
+* **Configurable Test Runner:** Provides a settings block to control test behavior such as timeouts and custom shell paths.
+* **CI-Friendly Reporting:** Generates standard JSON reports for easy integration with CI/CD pipelines.
+
+### Technologies Used:
+
+* **Rust:** `choreo` is written in Rust, using `pest` for parsing the grammar, `portable-pty` for the pseudo terminal and `ureq` for HTTP requests. 
+* **Gherkin-inspired DSL:** The testing language is inspired by Gherkin, the language used by Cucumber, making it easy to learn and use for those familiar with BDD.
