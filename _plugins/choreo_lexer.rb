@@ -10,14 +10,15 @@ class Choreo < Rouge::RegexLexer
   mimetypes 'text/x-choreo'
 
   state :root do
-    rule %r/\s+/, Text::Whitespace
+    # Whitespace and Comments
+    rule %r/\s+/m, Text::Whitespace
     rule %r/#.*$/, Comment::Single
 
     # Keywords that start a block or declaration
     rule %r/^(feature|actors|settings|background|scenario|after|var|test)\b/, Keyword::Declaration
 
     # Step keywords with a colon
-    rule %r/\b(given|when|then)\b:/, Keyword
+    rule %r/^\s*(given|when|then):/m, Keyword
 
     # Built-in actors and literal values
     rule %r/\b(Web|Terminal|FileSystem|true|false)\b/, Name::Builtin
@@ -34,14 +35,14 @@ class Choreo < Rouge::RegexLexer
     # Numbers and time values
     rule %r/\b\d+s?\b/, Num
     
-    # Any other text that isn't a keyword but might be a variable name or other identifier
+    # Any other text (variable names, test names etc.)
     rule %r/[a-zA-Z_][a-zA-Z0-9_]*/, Text
   end
 
   # State for handling content inside strings
   state :string do
     rule %r/"/, Str::Double, :pop!
-    rule %r/\$\{.*?}/, Name::Variable # Interpolation
+    rule %r/\$\{.*?}/, Name::Variable
     rule %r/[^"]+/, Str::Double
   end
 end
