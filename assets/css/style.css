@@ -56,8 +56,13 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 25px 30px;
-    margin-bottom: 20px;
+    
+    /* Updated styles for the container */
+    margin: 20px; /* Gives it space from the sidebar edges */
+    padding: 15px; /* Adjusts padding inside the border */
+    background-color: white;
+    border: 1px solid var(--accent-teal);
+    border-radius: 8px; /* Softens the corners */
 }
 
 .sidebar-header img {
