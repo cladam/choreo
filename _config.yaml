@@ -1,0 +1,16 @@
+# -- Site Settings --
+title: Choreo DSL Documentation
+description: "The official documentation for choreo, a powerful DSL for writing executable tests."
+url: "https://cladam.github.io"
+baseurl: "/choreo"
+
+# -- Build Settings --
+markdown: kramdown # The Markdown converter
+kramdown:
+  input: GFM # Use GitHub Flavored Markdown
+  syntax_highlighter: rouge # Use Rouge for syntax highlighting
+
+# -- Plugins --
+# Add any Jekyll plugins here. jekyll-feed is a good default.
+plugins:
+  - jekyll-feed
