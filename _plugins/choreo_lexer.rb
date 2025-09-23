@@ -40,10 +40,11 @@ class Choreo < Rouge::RegexLexer
     rule %r/[{}=:]|>=/, Punctuation
 
     # Use the arrays defined above to find and tokenise keywords
-    rule %r/\b(#{KEYWORD_DECLARATION.join('|')})\b/, Keyword::Declaration
-    rule %r/\b(#{KEYWORD_STEP.join('|')})\b/, Keyword
-    rule %r/\b(#{BUILTIN_LITERAL.join('|')})\b/, Name::Builtin
+    rule %r/\b(?:feature|actors|settings|background|scenario|after|test|var)\b/, Keyword::Declaration
+    rule %r/\b(?:given|when|then)\b/, Keyword
+    rule %r/\b(?:Web|Terminal|FileSystem|true|false)\b/, Name::Builtin
     rule %r/\b(#{COMMANDS_AND_ASSERTIONS.join('|')})\b/, Name::Function
+
 
     # Variable usage
     rule %r/\$\{.*?}/, Name::Variable
