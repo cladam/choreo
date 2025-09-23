@@ -15,7 +15,6 @@ body {
     grid-template-columns: var(--nav-width) 1fr; /* Sidebar column, flexible content column */
     grid-template-areas:
         "sidebar main";
-    height: 100vh;
     margin: 0;
     font-family: 'Inter', sans-serif;
     line-height: 1.6;
@@ -96,10 +95,8 @@ body {
     background-color: var(--sidebar-bg);
     border-right: 1px solid var(--border-color);
     padding: 25px 0;
-    height: 100vh; /* Make it full viewport height */
     position: sticky; /* Stick to the top of the viewport */
     top: 0;
-    overflow-y: auto; /* Allow sidebar to scroll if content is long */
     box-sizing: border-box;
 }
 
@@ -148,7 +145,6 @@ a {
     grid-area: main; /* Assign to the 'main' grid area */
     padding: 40px;
     max-width: 900px;
-    overflow-y: auto; /* Allow main content to scroll independently */
     flex-grow: 1;
     padding: 40px; /* Re-adjust padding a bit */
     max-width: 900px; /* Give the content a max-width for readability */
