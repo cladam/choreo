@@ -23,17 +23,34 @@ module Rouge
       BUILTIN_LITERAL = %w(
         Web Terminal FileSystem true false
       ).freeze
-
-      # All commands AND assertions, styled consistently as functions
-      COMMANDS_AND_ASSERTIONS = %w(
-        wait set_header set_cookie http_get http_post http_put http_patch clear_header clear_cookie
-        run type wait_for_text create_file delete_file append_to_file
-        response_status_is response_time_is_below response_header_is response_body_is
-        response_body_contains expect_exit_code stdout_contains stderr_contains
-        stdout_not_contains stderr_not_contains file_exists file_not_exists
-        file_contains file_not_contains is_success response_status response_time
-        is_below timeout_seconds stop_on_failure shell_path report_path expected_failures
+      
+      # Terminal commands (actions and conditions)
+      TERMINAL_COMMANDS = %w(
+        runs types presses last_command succeeded failed exit_code_is output_contains 
+        stdout_is_empty stderr_is_empty stderr_contains output_starts_with output_ends_with 
+        output_equals output_matches output_is_valid_json json_output has_path
       ).freeze
+      
+      # FileSystem commands (actions and conditions)  
+      FILESYSTEM_COMMANDS = %w(
+        create_dir create_file with_content delete_dir delete_file dir_exists 
+        dir_does_not_exist file_exists file_does_not_exist file_contains is_empty 
+        is_not_empty
+      ).freeze
+      
+      # Web commands (actions and conditions)
+      WEB_COMMANDS = %w(
+        http_get http_post http_put http_patch http_delete set_header clear_header 
+        set_cookie clear_cookie response_status_is response_status is_success is_error 
+        is_in response_time is_below response_body_contains response_body_matches 
+        json_body json_path json_response has_path equals is_a_string is_a_number 
+        is_an_array is_an_object has_size
+      ).freeze
+      
+      # Combined array for the lexer rule
+      COMMANDS_AND_ASSERTIONS = (TERMINAL_COMMANDS + FILESYSTEM_COMMANDS + WEB_COMMANDS + %w(
+        wait timeout_seconds stop_on_failure shell_path report_path expected_failures
+      )).freeze
 
       state :root do
         # Comments
