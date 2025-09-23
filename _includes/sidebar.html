@@ -1,13 +1,33 @@
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <a href="#"><img src="{{ '/assets/choreo-icon.png' | relative_url }}" alt="choreo DSL Logo"></a>
+  <div class="sidebar-header">
+    <img src="{{ '/assets/images/choreo-icon.png' | relative_url }}" alt="Choreo Icon">
+    <h1>choreo</h1>
   </div>
-  <nav>
-    <ul>
-      <li><a href="#introduction">Introduction</a></li>
-      <li><a href="#core-concepts">Core Concepts</a></li>
-      <li><a href="#reference">Reference</a></li>
-      <li><a href="#examples">Examples</a></li>
-    </ul>
+  
+  <nav class="sidebar-nav">
+    <div class="nav-category">
+      <h3 class="nav-category-title">Getting Started</h3>
+      <ul>
+        <li><a href="#introduction" class="active">Introduction</a></li>
+        <li><a href="#core-concepts">Core Concepts</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-category">
+      <h3 class="nav-category-title">Reference</h3>
+      <ul>
+        <li><a href="#keywords-syntax">Keywords & Syntax</a></li>
+        <li><a href="#advanced-topics">Advanced Topics</a></li>
+      </ul>
+    </div>
+
+    <div class="nav-category">
+      <h3 class="nav-category-title">Examples</h3>
+      <ul>
+        <li><a href="#examples-filesystem">FileSystem Examples</a></li>
+        <li><a href="#examples-terminal">Terminal Examples</a></li>
+        <li><a href="#examples-web">Web Examples</a></li>
+      </ul>
+    </div>
   </nav>
 </aside>
