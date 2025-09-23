@@ -27,6 +27,25 @@ body {
 }
 
 /* --- Sidebar Navigation --- */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Space between icon and text */
+    padding: 20px 25px;
+    margin-bottom: 15px;
+}
+
+.sidebar-header img {
+    height: 40px; /* Control icon size */
+    width: 40px;
+}
+
+.sidebar-header h1 {
+    font-size: 1.8em;
+    margin: 0; /* Remove default heading margin */
+    font-weight: 700;
+    color: var(--primary-text);
+}
 .sidebar-logo {
     text-align: center;
     padding: 10px 15px;
