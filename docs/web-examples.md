@@ -60,3 +60,57 @@ scenario "Health check for a web API endpoint" {
 
 }
 ```
+
+### Example 2: Comprehensive Web Conditions
+
+This example demonstrates a variety of web conditions against the `httpbin.org` service, testing status codes, response bodies, and JSON structures.
+
+```choreo
+feature "Web Conditions"
+actors: Web
+
+scenario "Testing various web conditions" {
+    test StatusCodeTest "Test different HTTP status codes" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/status/200"
+        then:
+            Web response_status_is 200
+            Web response_time is_below 2s
+    }
+
+    test SuccessStatusTest "Test response status is success" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/status/201"
+        then:
+            Web response_status is_success
+    }
+
+    test BodyContainsTest "Test response body contains text and has correct JSON structure" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/json"
+        then:
+            Web response_status_is 200
+            Web response_body_contains "slideshow"
+            Web json_response at "/slideshow/slides" is_an_array
+            Web json_response at "/slideshow/title" is_a_string
+            Web json_response at "/slideshow/slides" has_size 2
+            Web json_response at "/slideshow" is_an_object
+    }
+
+    test JsonValueTest "Test JSON path value equality" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/json"
+        then:
+            Web response_status_is 200
+            Web json_path at "/slideshow/title" equals "Sample Slide Show"
+    }
+}
+```
