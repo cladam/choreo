@@ -8,8 +8,28 @@ on:
     branches: [ "main" ]
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*' # Trigger on version tags like v0.1.0
+    paths-ignore:
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - '_config.yml'
+      - '_layouts/**'
+      - '_includes/**'
+      - '_plugins/**'
+      - 'assets/**'
+      - 'index.md'
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - '_config.yml'
+      - '_layouts/**'
+      - '_includes/**'
+      - '_plugins/**'
+      - 'assets/**'
+      - 'index.md'
   workflow_dispatch:
 
 env:
