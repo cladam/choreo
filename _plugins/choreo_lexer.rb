@@ -24,14 +24,10 @@ class Choreo < Rouge::RegexLexer
     Web Terminal FileSystem true false
   ).freeze
 
-  # Actor commands (actions)
-  COMMANDS = %w(
+  # All commands AND assertions, styled consistently as functions
+  COMMANDS_AND_ASSERTIONS = %w(
     wait set_header set_cookie http_get http_post clear_header clear_cookie
     run type wait_for_text create_file delete_file append_to_file
-  ).freeze
-
-  # Assertions (conditions)
-  ASSERTIONS = %w(
     response_status_is response_time_is_below response_header_is response_body_is
     response_body_contains expect_exit_code stdout_contains stderr_contains
     stdout_not_contains stderr_not_contains file_exists file_not_exists
@@ -42,15 +38,14 @@ class Choreo < Rouge::RegexLexer
     # Comments
     rule %r/#.*$/, Comment::Single
 
-    # Punctuation and operators
-    rule %r/[{}=]/, Punctuation
+    # Punctuation and operators (ADDED : and >=)
+    rule %r/[{}=:]|>=/, Punctuation
 
     # Use the arrays defined above to find and tokenise keywords
     rule %r/\b(#{KEYWORD_DECLARATION.join('|')})\b/, Keyword::Declaration
     rule %r/\b(#{KEYWORD_STEP.join('|')})\b/, Keyword
     rule %r/\b(#{BUILTIN_LITERAL.join('|')})\b/, Name::Builtin
-    rule %r/\b(#{COMMANDS.join('|')})\b/, Name::Function
-    rule %r/\b(#{ASSERTIONS.join('|')})\b/, Name::Decorator # Often a green color
+    rule %r/\b(#{COMMANDS_AND_ASSERTIONS.join('|')})\b/, Name::Function
 
     # Variable usage
     rule %r/\$\{.*?}/, Name::Variable
