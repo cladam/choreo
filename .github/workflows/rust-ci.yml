@@ -18,6 +18,8 @@ on:
       - '_plugins/**'
       - 'assets/**'
       - 'index.md'
+      - 'Gemfile'
+      - 'Gemfile.lock'
   pull_request:
     branches: [ "main" ]
     paths-ignore:
@@ -30,6 +32,8 @@ on:
       - '_plugins/**'
       - 'assets/**'
       - 'index.md'
+      - 'Gemfile'
+      - 'Gemfile.lock'
   workflow_dispatch:
 
 env:
