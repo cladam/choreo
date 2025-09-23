@@ -186,26 +186,31 @@ a {
 
 /* --- Content Styling --- */
 
-code {
-    font-family: 'Fira Code', monospace;
-    background-color: var(--code-bg);
-    color: var(--code-text);
-    padding: 2px 5px;
-    border-radius: 4px;
-}
-
 pre {
-    background-color: var(--code-bg);
-    color: var(--code-text);
-    padding: 15px;
+    background-color: #f6f8fa; /* Light gray background */
+    border: 1px solid var(--border-color); /* Subtle border */
     border-radius: 8px;
+    padding: 16px;
     overflow-x: auto;
     margin-bottom: 1.5em;
 }
 
+/* For inline `code` snippets */
+code {
+    font-family: 'Fira Code', monospace;
+    background-color: rgba(65, 132, 146, 0.1); /* Subtle teal background */
+    color: var(--accent-teal); /* Teal text color */
+    padding: 3px 6px;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+/* This resets the inline style for code inside a <pre> block */
 pre code {
     background: none;
+    color: inherit; /* Inherit the dark text color from the <pre> tag */
     padding: 0;
+    font-size: 1em; /* Reset font size */
 }
 
 /* --- Responsive Design --- */
