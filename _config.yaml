@@ -1,8 +1,10 @@
 # -- Site Settings --
-title: Choreo DSL Documentation
+title: choreo DSL Documentation
 description: "The official documentation for choreo, a powerful DSL for writing executable tests."
 url: "https://cladam.github.io"
 baseurl: "/choreo"
+icon: "https://github.com/choreo/assets/choreo-icon.png"
+logo: "https://github.com/choreo/assets/choreo-logo.png"
 
 # -- Build Settings --
 markdown: kramdown # The Markdown converter
@@ -14,3 +16,4 @@ kramdown:
 # Add any Jekyll plugins here. jekyll-feed is a good default.
 plugins:
   - jekyll-feed
+permalink: pretty
