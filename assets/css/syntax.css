@@ -15,7 +15,7 @@ pre.highlight {
 .highlight .h, .highlight { color: #24292f; } 
 
 /* Keywords (feature, scenario, given, when, then) */
-.highlight .k, .highlight .kn { color: #8250df; font-weight: bold; }
+.highlight .k, .highlight .kn, .highlight .kd { color: #8250df; font-weight: bold; }
 
 /* Built-ins & Literals (Web, Terminal, true, 5, 2s) */
 .highlight .nb, .highlight .mi, .highlight .mf { color: #0550ae; }
