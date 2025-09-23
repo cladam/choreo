@@ -9,45 +9,33 @@ class Choreo < Rouge::RegexLexer
   filenames '*.chor'
   mimetypes 'text/x-choreo'
 
-  # --- Word Lists ---
-  KEYWORD_DECLARATION = %w(
-    feature actors settings background scenario after test var
-  ).freeze
-
-  KEYWORD_STEP = %w(
-    given when then
-  ).freeze
-
-  BUILTIN_LITERAL = %w(
-    Web Terminal FileSystem true false
-  ).freeze
-
-  COMMANDS_AND_ASSERTIONS = %w(
-    wait set_header set_cookie http_get http_post clear_header clear_cookie
-    run type wait_for_text create_file delete_file append_to_file
-    response_status_is response_time_is_below response_header_is response_body_is
-    response_body_contains expect_exit_code stdout_contains stderr_contains
-    stdout_not_contains stderr_not_contains file_exists file_not_exists
-    file_contains file_not_contains
-  ).freeze
-
-  # --- Main Lexer State ---
   state :root do
+    # Whitespace and Comments
     rule %r/\s+/m, Text::Whitespace
     rule %r/#.*$/, Comment::Single
 
-    # Match all keywords, commands, and built-ins first
-    rule %r/\b(#{KEYWORD_DECLARATION.join('|')})\b/, Keyword::Declaration
-    rule %r/\b(#{KEYWORD_STEP.join('|')})\b(?=:)/, Keyword
-    rule %r/\b(#{BUILTIN_LITERAL.join('|')})\b/, Name::Builtin
-    rule %r/\b(#{COMMANDS_AND_ASSERTIONS.join('|')})\b/, Name::Function
+    # Keywords that start a block or declaration
+    rule %r/^(feature|actors|settings|background|scenario|after|var|test)\b/, Keyword::Declaration
 
-    # Then, match other elements
+    # Step keywords with a colon
+    rule %r/^\s*(given|when|then):/m, Keyword
+
+    # Built-in actors and literal values
+    rule %r/\b(Web|Terminal|FileSystem|true|false)\b/, Name::Builtin
+    
+    # All commands and assertions
+    rule %r/\b(wait|set_header|set_cookie|http_get|http_post|clear_header|clear_cookie|run|type|wait_for_text|create_file|delete_file|append_to_file|response_status_is|response_time_is_below|response_header_is|response_body_is|response_body_contains|expect_exit_code|stdout_contains|stderr_contains|stdout_not_contains|stderr_not_contains|file_exists|file_not_exists|file_contains|file_not_contains)\b/, Name::Function
+
+    # Punctuation and operators
     rule %r/[{}=:]|>=/, Punctuation
+
+    # Strings, which can contain variables
     rule %r/"/, Str::Double, :string
+
+    # Numbers and time values
     rule %r/\b\d+s?\b/, Num
     
-    # Finally, match any remaining text
+    # Any other text (variable names, test names etc.)
     rule %r/[a-zA-Z_][a-zA-Z0-9_]*/, Text
   end
 
