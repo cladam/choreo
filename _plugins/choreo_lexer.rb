@@ -31,39 +31,30 @@ class Choreo < Rouge::RegexLexer
     file_contains file_not_contains
   ).freeze
 
-  # --- Main Lexer States ---
+  # --- Main Lexer State ---
   state :root do
     rule %r/\s+/m, Text::Whitespace
     rule %r/#.*$/, Comment::Single
 
-    # These keywords are matched first, before general text
-    prepended
-
-    # Punctuation and operators
-    rule %r/[{}=:]|>=/, Punctuation
-
-    # Strings, which can contain variables
-    rule %r/"/, Str::Double, :string
-
-    # Numbers and time values
-    rule %r/\b\d+s?\b/, Num
-    
-    # General text, variable names, test names etc.
-    rule %r/[a-zA-Z_][a-zA-Z0-9_]*/, Text
-  end
-  
-  # The 'keywords' state is checked before the rest of the 'root' state
-  state :keywords do
+    # Match all keywords, commands, and built-ins first
     rule %r/\b(#{KEYWORD_DECLARATION.join('|')})\b/, Keyword::Declaration
     rule %r/\b(#{KEYWORD_STEP.join('|')})\b(?=:)/, Keyword
     rule %r/\b(#{BUILTIN_LITERAL.join('|')})\b/, Name::Builtin
     rule %r/\b(#{COMMANDS_AND_ASSERTIONS.join('|')})\b/, Name::Function
+
+    # Then, match other elements
+    rule %r/[{}=:]|>=/, Punctuation
+    rule %r/"/, Str::Double, :string
+    rule %r/\b\d+s?\b/, Num
+    
+    # Finally, match any remaining text
+    rule %r/[a-zA-Z_][a-zA-Z0-9_]*/, Text
   end
 
   # State for handling content inside strings
   state :string do
     rule %r/"/, Str::Double, :pop!
-    rule %r/\$\{.*?}/, Name::Variable # Interpolation
+    rule %r/\$\{.*?}/, Name::Variable
     rule %r/[^"]+/, Str::Double
   end
 end
