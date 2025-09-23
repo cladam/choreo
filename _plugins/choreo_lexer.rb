@@ -37,7 +37,7 @@ class Choreo < Rouge::RegexLexer
     rule %r/#.*$/, Comment::Single
 
     # These keywords are matched first, before general text
-    prepend :keywords
+    prepended :keywords
 
     # Punctuation and operators
     rule %r/[{}=:]|>=/, Punctuation
