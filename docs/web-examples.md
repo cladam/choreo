@@ -19,7 +19,7 @@ actor: Web
 
 This example shows a simple health check that sends an authenticated `GET` request to an API endpoint and verifies the response.
 
-```
+```choreo
 feature "API Health Check"
 
 actors: Web
