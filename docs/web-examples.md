@@ -11,8 +11,8 @@ The `Web` actor is a powerful component in `choreo` designed for testing HTTP-ba
 
 To use the `Web` actor in your tests, you must first declare it in the actors list at the top of your `.chor` file.
 
-```
-actor: Web
+```choreo
+actors: Web
 ```
 
 ### Example 1: API Health Check
