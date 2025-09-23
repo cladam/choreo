@@ -154,30 +154,32 @@ body {
 }
 
 .sidebar nav ul {
-    list-style: none;
+    list-style-type: none;
     padding: 0;
+    margin: 0;
 }
 
+/* This styles the base link */
+.sidebar nav ul li a {
+    color: var(--primary-text);
+    text-decoration: none;
+    display: block; /* Makes the entire area clickable */
+    padding: 8px 25px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+/* This styles the hover state */
 .sidebar nav ul li a:hover {
     background-color: var(--border-color);
     color: var(--primary-text);
-    padding: 8px 25px; /* Adjust padding */
-    font-weight: 500;
-}
-.sidebar nav ul li a.active {
-    background-color: var(--accent-teal); /* Use teal for the active link */
-    color: white;
 }
 
-.main-content {
-    grid-area: main; /* Assign to the 'main' grid area */
-    padding: 40px;
-    max-width: 900px;
-    overflow-y: auto; /* Allow main content to scroll independently */
-    flex-grow: 1;
-    padding: 40px; /* Re-adjust padding a bit */
-    max-width: 900px; /* Give the content a max-width for readability */
-    box-sizing: border-box;
+/* This styles the active link */
+.sidebar nav ul li a.active {
+    background-color: var(--accent-teal);
+    color: white;
+    font-weight: 700;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -193,9 +195,13 @@ a {
 
 /* --- Main Content Area --- */
 .main-content {
-    flex-grow: 1;
-    margin-left: var(--nav-width); /* Push content away from fixed sidebar */
+    grid-area: main; /* Assign to the 'main' grid area */
     padding: 40px;
+    max-width: 900px;
+    overflow-y: auto; /* Allow main content to scroll independently */
+    flex-grow: 1;
+    padding: 40px; /* Re-adjust padding a bit */
+    max-width: 900px; /* Give the content a max-width for readability */
     box-sizing: border-box;
 }
 
@@ -224,29 +230,11 @@ a {
     width: 25px;
     height: 3px;
     margin: 5px auto;
-    background-color: var(--primary-color);
+    background-color: var(--primary-text); /* Use the correct variable */
     transition: all 0.3s ease-in-out;
 }
 
 /* --- Content Styling --- */
-h1, h2, h3, h4, h5, h6 {
-    color: var(--primary-color);
-    margin-top: 1.5em;
-    margin-bottom: 0.8em;
-}
-
-p {
-    margin-bottom: 1em;
-}
-
-a {
-    color: var(--secondary-color);
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
 
 code {
     font-family: 'Fira Code', monospace;
