@@ -67,3 +67,6 @@ class Choreo < Rouge::RegexLexer
     rule %r/[^"]+/, Str::Double
   end
 end
+
+# Register the lexer with Rouge
+Rouge::Lexer.register(Choreo)
