@@ -9,22 +9,35 @@ class Choreo < Rouge::RegexLexer
   filenames '*.chor'
   mimetypes 'text/x-choreo'
 
+  # --- Word Lists ---
+  KEYWORD_DECLARATION = %w(
+    feature actors settings background scenario after test var
+  ).freeze
+
+  KEYWORD_STEP = %w(
+    given when then
+  ).freeze
+
+  BUILTIN_LITERAL = %w(
+    Web Terminal FileSystem true false
+  ).freeze
+
+  COMMANDS_AND_ASSERTIONS = %w(
+    wait set_header set_cookie http_get http_post clear_header clear_cookie
+    run type wait_for_text create_file delete_file append_to_file
+    response_status_is response_time_is_below response_header_is response_body_is
+    response_body_contains expect_exit_code stdout_contains stderr_contains
+    stdout_not_contains stderr_not_contains file_exists file_not_exists
+    file_contains file_not_contains
+  ).freeze
+
+  # --- Main Lexer States ---
   state :root do
-    # Whitespace and Comments
     rule %r/\s+/m, Text::Whitespace
     rule %r/#.*$/, Comment::Single
 
-    # Keywords that start a block or declaration
-    rule %r/^(feature|actors|settings|background|scenario|after|var|test)\b/, Keyword::Declaration
-
-    # Step keywords with a colon
-    rule %r/^\s*(given|when|then):/m, Keyword
-
-    # Built-in actors and literal values
-    rule %r/\b(Web|Terminal|FileSystem|true|false)\b/, Name::Builtin
-    
-    # All commands and assertions
-    rule %r/\b(wait|set_header|set_cookie|http_get|http_post|clear_header|clear_cookie|run|type|wait_for_text|create_file|delete_file|append_to_file|response_status_is|response_time_is_below|response_header_is|response_body_is|response_body_contains|expect_exit_code|stdout_contains|stderr_contains|stdout_not_contains|stderr_not_contains|file_exists|file_not_exists|file_contains|file_not_contains)\b/, Name::Function
+    # These keywords are matched first, before general text
+    prepend :keywords
 
     # Punctuation and operators
     rule %r/[{}=:]|>=/, Punctuation
@@ -35,14 +48,22 @@ class Choreo < Rouge::RegexLexer
     # Numbers and time values
     rule %r/\b\d+s?\b/, Num
     
-    # Any other text (variable names, test names etc.)
+    # General text, variable names, test names etc.
     rule %r/[a-zA-Z_][a-zA-Z0-9_]*/, Text
+  end
+  
+  # The 'keywords' state is checked before the rest of the 'root' state
+  state :keywords do
+    rule %r/\b(#{KEYWORD_DECLARATION.join('|')})\b/, Keyword::Declaration
+    rule %r/\b(#{KEYWORD_STEP.join('|')})\b(?=:)/, Keyword
+    rule %r/\b(#{BUILTIN_LITERAL.join('|')})\b/, Name::Builtin
+    rule %r/\b(#{COMMANDS_AND_ASSERTIONS.join('|')})\b/, Name::Function
   end
 
   # State for handling content inside strings
   state :string do
     rule %r/"/, Str::Double, :pop!
-    rule %r/\$\{.*?}/, Name::Variable
+    rule %r/\$\{.*?}/, Name::Variable # Interpolation
     rule %r/[^"]+/, Str::Double
   end
 end
