@@ -17,8 +17,8 @@ pre.highlight {
 /* Keywords (feature, scenario, given, when, then) */
 .highlight .k, .highlight .kn, .highlight .kd { color: #8250df; font-weight: bold; }
 
-/* Built-ins & Literals (Web, Terminal, true, 5, 2s) */
-.highlight .nb, .highlight .mi, .highlight .mf { color: #0550ae; }
+/* Built-ins & Literals (Web, Terminal, true) and Numbers (5, 2s) */
+.highlight .nb, .highlight .mi, .highlight .mf, .highlight .m { color: #0550ae; }
 
 /* Functions & Assertions (set_header, response_is_success) */
 .highlight .nf { color: #116875; }
