@@ -11,14 +11,18 @@
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    display: grid;
+    grid-template-rows: auto 1fr; /* Header row, flexible content row */
+    grid-template-columns: var(--nav-width) 1fr; /* Sidebar column, flexible content column */
+    grid-template-areas:
+        "header header"
+        "sidebar main";
+    height: 100vh;
     margin: 0;
-    padding: 0;
+    font-family: 'Inter', sans-serif;
     line-height: 1.6;
     color: var(--text-color);
     background-color: #FCFCFC;
-    display: flex;
-    min-height: 100vh;
 }
 
 .container {
@@ -26,29 +30,31 @@ body {
     width: 100%;
 }
 
+.main-container {
+    grid-area: main; /* Assign the content area */
+    display: contents; /* This makes the grid see the children (.sidebar, .main-content) */
+}
+
 /* --- Header --- */
 .top-header {
-    width: 100%;
+    grid-area: header; /* Assign to the 'header' grid area */
     height: 65px;
     background-color: white;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0 20px;
+    padding: 0 30px;
     box-sizing: border-box;
-    position: sticky; /* Makes it stick to the top */
     top: 0;
     z-index: 1001; /* Keep it above other content */
 }
 
 .header-content {
     width: 100%;
-    max-width: 1400px; /* Optional: constrain width on very large screens */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-left: var(--nav-width); /* Align with main content */
+    width: 100%;
     transition: margin-left 0.3s ease-in-out;
 }
 
@@ -136,10 +142,14 @@ body {
     border-right: 1px solid var(--border-color);
     box-shadow: none;
     height: 100vh; 
-    position: fixed; 
+    grid-area: sidebar; /* Assign to the 'sidebar' grid area */
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    padding: 25px 0;
+    height: 100vh; /* Make it full viewport height */
+    position: sticky; /* Stick to the top of the viewport */
     top: 0;
-    left: 0;
-    padding-top: 65px;
+    overflow-y: auto; /* Allow sidebar to scroll if content is long */
     box-sizing: border-box;
 }
 
@@ -160,8 +170,11 @@ body {
 }
 
 .main-content {
+    grid-area: main; /* Assign to the 'main' grid area */
+    padding: 40px;
+    max-width: 900px;
+    overflow-y: auto; /* Allow main content to scroll independently */
     flex-grow: 1;
-    margin-left: var(--nav-width);
     padding: 40px; /* Re-adjust padding a bit */
     max-width: 900px; /* Give the content a max-width for readability */
     box-sizing: border-box;
@@ -259,6 +272,14 @@ pre code {
 
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
+    body {
+        /* Revert to a single-column layout on mobile */
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "header"
+            "main";
+    }
+    
     /* Adjust header for mobile */
     .header-content {
         margin-left: 0;
@@ -269,12 +290,20 @@ pre code {
 
     /* Make the sidebar appear above the content */
     .sidebar {
-        padding-top: 20px; /* Remove top padding for mobile view */
+        /* The sidebar will now be hidden off-screen until toggled */
+        position: fixed; /* Use fixed positioning for the mobile overlay */
+        top: 0;
+        left: 0;
+        height: 100%;
         transform: translateX(-100%);
         z-index: 1002;
     }
     .sidebar.active {
         transform: translateX(0);
+    }
+
+    .header-content {
+        justify-content: flex-end; /* Push button to the right since search is hidden */
     }
 
     .main-content {
