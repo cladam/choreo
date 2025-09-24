@@ -232,7 +232,7 @@ This is the reference for all available commands that can be used within the `te
 
 | Syntax                          | Description                                                                                                         |
 |:--------------------------------|:--------------------------------------------------------------------------------------------------------------------|
-| `Test has_succeeded <TestName>` | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
+| `test has_succeeded <TestName>` | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
 
 ### Terminal Commands
 
