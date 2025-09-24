@@ -263,8 +263,8 @@ pre code {
     .hamburger {
         display: block;
         position: fixed;
-        top: 15px;
-        left: 15px;
+        top: 5px;
+        left: 5px;
         z-index: 1003; /* Make sure it's on top of the sidebar */
     }
 
