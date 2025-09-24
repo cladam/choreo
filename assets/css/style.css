@@ -1,9 +1,11 @@
 :root {
-    --sidebar-bg: #f8f9fa;       /* Light Gray */
-    --accent-orange: #e67e22;    /* Orange from logo */
-    --accent-teal: #4a919e;      /* Teal from logo */
-    --primary-text: #2c3e50;     /* Dark Blue/Gray */
-    --secondary-text: #7f8c8d;   /* Lighter Gray */
+    --sidebar-bg: #f8f9fa; /* Light Gray */
+    --accent-orange: #e67e22; /* Orange from logo */
+    --accent-teal: #4a919e; /* Teal from logo */
+    --primary-text: #2c3e50; /* Dark Blue/Gray */
+    --secondary-text: #7f8c8d; /* Lighter Gray */
+    --primary-color: #2980b9; /* Blue for links and highlights */
+    --text-color: #333333; /* General text color */
     --border-color: #e5e5e5;
     --code-bg: #2d2d2d;
     --code-text: #f8f8f2;
@@ -55,7 +57,7 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
-    
+
     /* Updated styles for the container */
     margin: 20px; /* Gives it space from the sidebar edges */
     padding: 15px; /* Adjusts padding inside the border */
@@ -75,11 +77,13 @@ body {
     font-weight: 700;
     color: var(--primary-text);
 }
+
 .sidebar-logo {
     text-align: center;
     padding: 10px 15px;
     margin-bottom: 20px;
 }
+
 .sidebar-logo img {
     max-width: 75%;
     height: auto;
@@ -90,7 +94,7 @@ body {
     color: var(--primary-text);
     border-right: 1px solid var(--border-color);
     box-shadow: none;
-    height: 100vh; 
+    height: 100vh;
     grid-area: sidebar; /* Assign to the 'sidebar' grid area */
     background-color: var(--sidebar-bg);
     border-right: 1px solid var(--border-color);
@@ -132,6 +136,7 @@ body {
 h1, h2, h3, h4, h5, h6 {
     color: var(--primary-text);
 }
+
 a {
     color: var(--accent-teal);
 }
@@ -218,11 +223,12 @@ pre code {
             "header"
             "main";
     }
-    
+
     /* Adjust header for mobile */
     .header-content {
         margin-left: 0;
     }
+
     .search-bar {
         display: none; /* Hide search on mobile for simplicity */
     }
@@ -233,10 +239,12 @@ pre code {
         position: fixed; /* Use fixed positioning for the mobile overlay */
         top: 0;
         left: 0;
-        height: 100%;
+        bottom: 0;
+        overflow-y: auto;
         transform: translateX(-100%);
         z-index: 1002;
     }
+
     .sidebar.active {
         transform: translateX(0);
     }
@@ -261,11 +269,11 @@ pre code {
     .hamburger.active .bar:nth-child(1) {
         transform: translateY(8px) rotate(45deg);
     }
-    
+
     .hamburger.active .bar:nth-child(2) {
         opacity: 0;
     }
-    
+
     .hamburger.active .bar:nth-child(3) {
         transform: translateY(-8px) rotate(-45deg);
     }

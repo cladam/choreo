@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-  {% include head.html %}
-  <body>
-    <main class="main-container">
-      {% include sidebar.html %}
-      <div class="main-content" id="main-content">
+{% include head.html %}
+<body>
+<div class="hamburger" id="hamburger">
+    <span class="bar"></span>
+    <span class="bar"></span>
+    <span class="bar"></span>
+</div>
+<main class="main-container">
+    {% include sidebar.html %}
+    <div class="main-content" id="main-content">
         {{ content }}
-      </div>
-    </main>
-
-    {% include scripts.html %}
-  </body>
+    </div>
+</main>
+{% include scripts.html %}
+</body>
 </html>
