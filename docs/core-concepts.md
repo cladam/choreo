@@ -86,7 +86,7 @@ context, the action, and the expected outcome in a clear, logical flow.
 - `when`: Describes the key action that is being tested. ("When I send a POST request to the login endpoint...")
 - `then`: Contains the assertions that verify the outcome. ("Then the API should respond with a 200 OK status...")
 
-### How choreo Works
+## How choreo Works
 
 When you run a Choreo test, an internal **parser** reads your human-readable `.chor` file and translates each step into
 a command.

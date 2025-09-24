@@ -1,3 +1,8 @@
+---
+layout: default
+title: Web Backend
+---
+
 ## WebBackend
 
 The `WebBackend` class is a specialised backend for handling web requests and responses. It extends the functionality of
