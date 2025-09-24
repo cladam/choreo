@@ -3,7 +3,7 @@ layout: default
 title: Grammar & Parser
 ---
 
-## Grammar & Parser
+# Grammar & Parser
 
 The heart of the choreo DSL is its parser, which is responsible for taking the human-readable text from a `.chor` file
 and transforming it into a structured, executable format. This process is powered by `pest`, a powerful parser generator
