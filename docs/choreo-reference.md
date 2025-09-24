@@ -55,7 +55,7 @@ should contain exactly one `feature`.
 
 **Example:**
 
-```
+```choreo
 feature "User account management via the CLI"
 ```
 
@@ -73,7 +73,7 @@ A block for configuring the behavior of the choreo test runner for the current f
 
 **Example:**
 
-```
+```choreo
 settings {
   timeout_seconds = 10  
   stop_on_failure = true  
