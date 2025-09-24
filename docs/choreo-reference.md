@@ -189,7 +189,7 @@ given:
     # Action: Ensure a clean state  
     FileSystem delete_file "data.txt"  
     # Condition: This test can only run after the setup test has passed  
-    Test has_succeeded InitialSetup
+    test has_succeeded InitialSetup
 ```
 
 #### `when`:
