@@ -44,7 +44,7 @@ module Rouge
         set_cookie clear_cookie response_status_is response_status is_success is_error 
         is_in response_time is_below response_body_contains response_body_matches 
         json_body json_path json_response has_path equals is_a_string is_a_number 
-        is_an_array is_an_object has_size
+        is_an_array is_an_object has_size at
       ).freeze
       
       # Combined array for the lexer rule
