@@ -240,6 +240,8 @@ pre code {
         top: 0;
         left: 0;
         bottom: 0;
+        padding: 60px 20px 20px 20px; /* Top, Right, Bottom, Left padding */
+        box-sizing: border-box;
         overflow-y: auto;
         transform: translateX(-100%);
         z-index: 1002;
