@@ -3,4 +3,4 @@ layout: default
 title: Terminal Examples
 ---
 
-# content
+# The Terminal Actor

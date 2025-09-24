@@ -37,20 +37,46 @@
     </div>
 
     <div class="nav-category">
+      <h3 class="nav-category-title">Architecture</h3>
+      <ul>
+          <li>
+              <a href="{{ '/docs/grammar-and-parser' | relative_url }}" {% if page.url == "/docs/grammar-and-parser" %}class="active"{% endif %}>
+                Grammar & Parser
+              </a>
+          </li>
+          <li>
+              <a href="{{ '/docs/backend-filesystem' | relative_url }}" {% if page.url == "/docs/backend-filesystem" %}class="active"{% endif %}>
+                  FileSystem Backend
+              </a>
+          </li>
+          <li>
+              <a href="{{ '/docs/backend-terminal' | relative_url }}" {% if page.url == "/docs/backend-terminal" %}class="active"{% endif %}>
+                  Terminal Backend
+              </a>
+          </li>
+          <li>
+              <a href="{{ '/docs/backend-web' | relative_url }}" {% if page.url == "/docs/backend-web" %}class="active"{% endif %}>
+                  Web Backend
+              </a>
+          </li>
+      </ul>
+    </div>
+
+    <div class="nav-category">
       <h3 class="nav-category-title">Examples</h3>
       <ul>
         <li>
-          <a href="{{ '/docs/filesystem-examples' | relative_url }}" {% if page.url == "/docs/filesystem-examples" %}class="active"{% endif %}>
+          <a href="{{ '/docs/examples-filesystem' | relative_url }}" {% if page.url == "/docs/examples-filesystem" %}class="active"{% endif %}>
             FileSystem Examples
           </a>
         </li>
         <li>
-          <a href="{{ '/docs/terminal-examples' | relative_url }}" {% if page.url == "/docs/terminal-examples" %}class="active"{% endif %}>
+          <a href="{{ '/docs/examples-terminal' | relative_url }}" {% if page.url == "/docs/examples-terminal" %}class="active"{% endif %}>
             Terminal Examples
           </a>
         </li>
         <li>
-          <a href="{{ '/docs/web-examples' | relative_url }}" {% if page.url == "/docs/web-examples" %}class="active"{% endif %}>
+          <a href="{{ '/docs/examples-web' | relative_url }}" {% if page.url == "/docs/examples-web" %}class="active"{% endif %}>
             Web Examples
           </a>
         </li>
