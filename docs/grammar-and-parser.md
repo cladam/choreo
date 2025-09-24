@@ -3,20 +3,43 @@ layout: default
 title: Grammar & Parser
 ---
 
-## choreo parser
+## Grammar & Parser
 
-`src/parser.rs` is responsible for parsing choreo into a structured format. It uses the `pest` parser generator library
-to transform the text-based DSL into an **Abstract Syntax Tree (AST)**, defined in `src/ast.rs`.
+The heart of the choreo DSL is its parser, which is responsible for taking the human-readable text from a `.chor` file
+and transforming it into a structured, executable format. This process is powered by `pest`, a powerful parser generator
+for Rust.
 
-### High-Level Description
+## The Grammar (`choreo.pest`)
 
-The parser's main goal is to function as a **translator and architect**. It reads a string written in the `choreo`
-language and translates it into a **`TestSuite`** struct—a structured, predictable blueprint of the test.
+The entire syntax of the choreo language is formally defined in a single grammar file written in `pest`'s parsing
+expression grammar (PEG) syntax. This file, `choreo.pest`, acts as a definitive blueprint for the language, defining
+every
+valid token, from keywords like feature to the structure of a test block.
 
-This process serves two critical functions:
+Using a formal grammar file ensures that the parsing is consistent, robust, and easy to maintain. See the full grammar
+[here](../src/resources/choreo.pest).
 
-1. **Validation**: It checks the script's syntax against the formal grammar (`src/resources/choreo.pest`). If the syntax
-   is invalid,
-   the parser rejects the input and returns a detailed error, ensuring that only valid commands are ever executed.
-2. **Structuring**: It organises the validated script into a hierarchy of Rust `struct`s and `enum`s.
-   This allows the test runner to work with a clean, type-safe representation of the test logic instead of raw text.
+## The Parser Logic
+
+The `pest` tool uses the `choreo.pest` grammar to generate a Rust module that can parse choreo syntax. The core of the
+choreo test runner uses this generated module to perform two key steps:
+
+- **Generate an Abstract Syntax Tree (AST)**: The parser first reads a .chor file and builds a tree-like structure that
+  represents the code's hierarchy—features, scenarios, steps, and their relationships.
+
+- **Walk the AST**: The runner then "walks" this tree, interpreting each node and converting it into a series of
+  commands and assertions. For example, it identifies the declared actors and ensures that the steps in a scenario are
+  valid for those actors.
+
+This two-step process separates the understanding of the language from the execution, making the system clean and
+modular.
+
+## From Text to Execution
+
+Once the parser has successfully transformed the `.chor` file into a structured set of instructions, this in-memory
+representation is passed to the declared backends (like `Web` or `Terminal`). The backends are then responsible for
+executing these instructions and asserting that the outcomes match the conditions defined in your test.
+
+This architecture makes sure that the logic for understanding the `choreo` language is completely decoupled from the
+logic of interacting with the system under test.
+
