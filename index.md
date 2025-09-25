@@ -45,5 +45,5 @@ graph TD
     F --> I[Test Result]
     G --> I
     H --> I
-    I -- JSON Report --> J[JSON Report]
+    I --> J[JSON Report]
   ```
