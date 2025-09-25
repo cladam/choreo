@@ -214,6 +214,38 @@ pre code {
     font-size: 1em; /* Reset font size */
 }
 
+/* --- Site Footer --- */
+.site-footer {
+    width: 100%;
+    padding: 40px 0;
+    margin-top: 60px;
+    text-align: center;
+    border-top: 1px solid var(--border-color);
+    color: var(--secondary-text);
+    font-size: 0.9em;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 20px;
+}
+
+.footer-links a {
+    color: var(--secondary-text);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: var(--primary-text);
+    text-decoration: none;
+}
+
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
     body {

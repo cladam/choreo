@@ -26,7 +26,7 @@ scenario "Successful login attempt" {
             Terminal run "login --user admin --pass secret123"
         when:
             # Check the output for a success message
-            Terminal wait_for_text "Welcome, admin!"
+            Terminal output_contains "Welcome, admin!"
         then:
             # The command should exit cleanly
             Terminal expect_exit_code 0
