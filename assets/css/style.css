@@ -14,9 +14,11 @@
 
 body {
     display: grid;
-    grid-template-columns: var(--nav-width) 1fr; /* Sidebar column, flexible content column */
+    grid-template-rows: 1fr auto;
+    grid-template-columns: var(--nav-width) 1fr;
     grid-template-areas:
-        "sidebar main";
+        "sidebar main"
+        "footer footer";
     margin: 0;
     font-family: 'Inter', sans-serif;
     line-height: 1.6;
@@ -216,6 +218,7 @@ pre code {
 
 /* --- Site Footer --- */
 .site-footer {
+    grid-area: footer;
     width: 100%;
     padding: 40px 0;
     margin-top: 60px;
