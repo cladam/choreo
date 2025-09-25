@@ -28,7 +28,7 @@ is a self-contained, executable test, eliminating the need for separate "step de
 * **Open Source:** Fully open-source and available on [GitHub]("https://github.com/cladam/choreo")
   and [Crates.io](https://crates.io/crates/choreo).
 
-  ```mermaid
+```mermaid
 graph TD
     A[Plain Text (.chor file)] --> B[Parser]
     B -- Pest --> C{Abstract Syntax Tree}
