@@ -20,19 +20,7 @@ The entire process can be visualised as a clear data flow:
 Plain Text (`.chor` file) -> Parser (Pest) -> Abstract Syntax Tree (AST) -> Runner -> Backends (`Web`, `Terminal`,
 `FileSystem`) -> Test Result (JSON Report)
 
-```mermaid
-graph TD
-    A[Plain Text .chor file] --> B[Parser]
-    B --> C{AST}
-    C --> D[Runner]
-    D --> E[Backends]
-    E --> F[Web]
-    E --> G[Terminal]
-    E --> H[FileSystem]
-    F --> I[JSON Report]
-    G --> I
-    H --> I
-```
+![Data Flow Diagram](../assets/images/choreo-flow.png)
 
 ## Component Breakdown
 
