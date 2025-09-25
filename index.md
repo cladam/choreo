@@ -27,3 +27,23 @@ is a self-contained, executable test, eliminating the need for separate "step de
 * **Extensible Architecture:** Designed to allow for future expansion with additional actors and custom commands.
 * **Open Source:** Fully open-source and available on [GitHub]("https://github.com/cladam/choreo")
   and [Crates.io](https://crates.io/crates/choreo).
+
+  ```mermaid
+  graph TD;
+    A[Plain Text (.chor file)] --> B(Parser);
+    B -- Pest --> C{Abstract Syntax Tree};
+    C --> D(Runner);
+    D --> E{Backends};
+    subgraph Backends
+        F[Web]
+        G[Terminal]
+        H[FileSystem]
+    end
+    E --> F;
+    E --> G;
+    E --> H;
+    F --> I([Test Result]);
+    G --> I;
+    H --> I;
+    I -- JSON Report --> I;
+  ```
