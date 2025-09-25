@@ -21,23 +21,17 @@ Plain Text (`.chor` file) -> Parser (Pest) -> Abstract Syntax Tree (AST) -> Runn
 `FileSystem`) -> Test Result (JSON Report)
 
 ```mermaid
-graph TD;
-    A[Plain Text (.chor file)] --> B(Parser);
-    B -- Pest --> C{Abstract Syntax Tree};
-    C --> D(Runner);
-    D --> E{Backends};
-    subgraph Backends
-        F[Web]
-        G[Terminal]
-        H[FileSystem]
-    end
-    E --> F;
-    E --> G;
-    E --> H;
-    F --> I([Test Result]);
-    G --> I;
-    H --> I;
-    I -- JSON Report --> I;
+graph TD
+    A[Plain Text .chor file] --> B[Parser]
+    B --> C{AST}
+    C --> D[Runner]
+    D --> E[Backends]
+    E --> F[Web]
+    E --> G[Terminal]
+    E --> H[FileSystem]
+    F --> I[JSON Report]
+    G --> I
+    H --> I
 ```
 
 ## Component Breakdown
