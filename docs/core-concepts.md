@@ -7,17 +7,19 @@ title: Core Concepts
 
 The `choreo` DSL is designed to be readable and structured.
 Every test file follows a consistent hierarchy of concepts that describe a feature, its actors, and specific test
-scenarios.
-This page breaks down those fundamental building blocks.
+scenarios. This page breaks down those fundamental building blocks.
 
 ## The Anatomy of a `.chor` File
 
-Think of a `.chor` file as a script for a play. It has a main theme (**feature**), a cast of characters (**actors**),
-and a series of scenes (**scenarios**) where actions (**tests**) take place.
+Think of a `.chor` file as a script for a play. It has a main theme (**feature**) and a cast of characters (**actors**).
+The play is broken into scenes (**scenarios**), and each scene contains one or more specific sequences of action (*
+*tests**).
+Finally, the `given`, `when`, `then` **steps** act as the stage directions and dialogue that describe the plot of each
+test.
 
 ```choreo
 feature "User Authentication"
-actors: Terminal
+actors Terminal
 
 scenario "Successful login attempt" {
     test "Verify login grants access" {
@@ -61,9 +63,8 @@ actors: Terminal, FileSystem
 
 ## 3. Scenarios & Tests: The "How"
 
-A `scenario` is a single, concrete example of a `feature`'s behavior. A `feature` can have multiple scenarios. For
-example,
-a "User Authentication" `feature` might have scenarios for both a successful login and a failed login.
+A `scenario` is a single, concrete example of a `feature`'s behaviour. A `feature` can have multiple scenarios. For
+example, a "User Authentication" `feature` might have scenarios for both a successful login and a failed login.
 
 Inside a scenario, you define one or more test blocks. Each test block is an individual, runnable test case with a clear
 success condition.
@@ -79,8 +80,7 @@ scenario "Handling invalid credentials" {
 ## 4. Steps: The Action (Given, When, Then)
 
 Each `test` is made up of steps that follow the popular **Given-When-Then** BDD structure. This format helps describe
-the
-context, the action, and the expected outcome in a clear, logical flow.
+the context, the action, and the expected outcome in a clear, logical flow.
 
 - `given`: Sets up the initial state or preconditions. ("Given I have a user in the database...")
 - `when`: Describes the key action that is being tested. ("When I send a POST request to the login endpoint...")
