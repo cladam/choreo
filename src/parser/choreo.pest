@@ -11,12 +11,24 @@ grammar                           = { SOI ~ statement* ~ EOI }
 statement                         = { feature_def | settings_def | env_def | var_def | actors_def | background_def | scenario_def }
 
 // Setting up the test suite.
-settings_def                      = { "settings" ~ "{" ~ setting+ ~ "}" }
+//settings_def                      = { "settings" ~ "{" ~ setting+ ~ "}" }
+settings_def = {
+    ("setting:" ~ setting ~ ("," ~ setting)*) |
+    ("settings" ~ "{" ~ setting+ ~ "}")
+}
 setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ (value | binary_op) }
 background_def                    = { "background" ~ "{" ~ (action | condition)+ ~ "}" }
-env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
+//env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
+env_def = {
+    ("env:" ~ identifier ~ ("," ~ identifier)*) |
+    ("env" ~ "{" ~ identifier+ ~ "}")
+}
 var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
-actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
+//actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
+actors_def = {
+    ("actors:" ~ identifier ~ ("," ~ identifier)*) |
+    ("actors" ~ "{" ~ identifier+ ~ "}")
+}
 feature_def                       = { "feature" ~ string }
 scenario_def                      = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
 after_block                       = { "after" ~ "{" ~ action+ ~ "}" }

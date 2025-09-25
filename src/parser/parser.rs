@@ -1,7 +1,7 @@
 // parser.rs
 use crate::parser::ast::{
-    Action, Condition, GivenStep, ReportFormat, Scenario, Statement, TestCase, TestSuite,
-    TestSuiteSettings, Value,
+    Action, Condition, GivenStep, ReportFormat, Scenario, SettingSpan, Span, Statement, TestCase,
+    TestSuite, TestSuiteSettings, Value,
 };
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
@@ -60,14 +60,40 @@ fn build_actors_def(pair: Pair<Rule>) -> Statement {
 
 // Helper function for settings
 fn build_settings_def(pair: Pair<Rule>) -> Statement {
+    let span = pair.as_span();
     let mut settings = TestSuiteSettings::default();
+    let mut setting_spans = SettingSpan {
+        timeout_seconds_span: None,
+        report_path_span: None,
+        shell_path_span: None,
+        stop_on_failure_span: None,
+        expected_failures_span: None,
+    };
+
+    // Store the span information
+    settings.span = Some(Span {
+        start: span.start(),
+        end: span.end(),
+        line: span.start_pos().line_col().0,
+        column: span.start_pos().line_col().1,
+    });
+
     for setting_pair in pair.into_inner() {
+        let setting_span = setting_pair.as_span();
         let mut inner = setting_pair.into_inner();
         let key = inner.next().unwrap().as_str();
         let value_pair = inner.next().unwrap();
 
+        let span_info = Span {
+            start: setting_span.start(),
+            end: setting_span.end(),
+            line: setting_span.start_pos().line_col().0,
+            column: setting_span.start_pos().line_col().1,
+        };
+
         match key {
             "timeout_seconds" => {
+                setting_spans.timeout_seconds_span = Some(span_info);
                 if let Value::Number(n) = build_value(value_pair) {
                     settings.timeout_seconds = n as u64;
                 } else {
@@ -75,6 +101,7 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                 }
             }
             "report_path" => {
+                setting_spans.stop_on_failure_span = Some(span_info);
                 if let Value::String(s) = build_value(value_pair) {
                     settings.report_path = s;
                 } else {
@@ -82,6 +109,7 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                 }
             }
             "report_format" => {
+                setting_spans.report_path_span = Some(span_info);
                 if let Value::String(s) = build_value(value_pair) {
                     settings.report_format = match s.as_str() {
                         "json" => ReportFormat::Json,
@@ -93,6 +121,7 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                 }
             }
             "stop_on_failure" => {
+                setting_spans.stop_on_failure_span = Some(span_info);
                 if value_pair.as_rule() == Rule::binary_op {
                     settings.stop_on_failure = value_pair.as_str().parse().unwrap();
                 } else {
@@ -100,6 +129,7 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                 }
             }
             "shell_path" => {
+                setting_spans.shell_path_span = Some(span_info);
                 if let Value::String(s) = build_value(value_pair) {
                     settings.shell_path = Some(s);
                 } else {
@@ -107,6 +137,7 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                 }
             }
             "expected_failures" => {
+                setting_spans.expected_failures_span = Some(span_info);
                 if let Value::Number(n) = build_value(value_pair) {
                     settings.expected_failures = n as usize;
                 } else {
@@ -116,6 +147,9 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
             _ => { /* Ignore unknown settings */ }
         }
     }
+
+    // Only set setting_spans if at least one field is Some
+    settings.setting_spans = Some(setting_spans);
     Statement::SettingsDef(settings)
 }
 

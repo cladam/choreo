@@ -31,6 +31,23 @@ pub enum ReportFormat {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+    pub line: usize,
+    pub column: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SettingSpan {
+    pub timeout_seconds_span: Option<Span>,
+    pub report_path_span: Option<Span>,
+    pub shell_path_span: Option<Span>,
+    pub stop_on_failure_span: Option<Span>,
+    pub expected_failures_span: Option<Span>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct TestSuiteSettings {
     pub timeout_seconds: u64,
     pub report_format: ReportFormat,
@@ -38,6 +55,8 @@ pub struct TestSuiteSettings {
     pub stop_on_failure: bool,
     pub shell_path: Option<String>,
     pub expected_failures: usize,
+    pub span: Option<Span>,
+    pub setting_spans: Option<SettingSpan>,
 }
 
 impl Default for TestSuiteSettings {
@@ -49,6 +68,8 @@ impl Default for TestSuiteSettings {
             stop_on_failure: false,
             shell_path: Option::from("/bin/sh".to_string()),
             expected_failures: 0,
+            span: None,
+            setting_spans: None,
         }
     }
 }

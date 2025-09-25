@@ -1,0 +1,20 @@
+# A test suite for your application
+
+# I use this file to dev and test the linter
+
+feature "My Application Feature"
+
+#setting: timeout_seconds = 30
+
+settings {
+  # Set a custom timeout for this test suite.
+  timeout_seconds = 0
+  # Specify the output directory for reports.
+  report_path = "test_results/"
+  # (report_format defaults to "json" if not specified)
+  # Stop the entire run as soon as one test fails.
+  stop_on_failure = true
+  # Specify the shell to use for the Terminal actor, defaults to bash.
+  shell_path = "/bin/bash"
+  expected_failures = 1
+}

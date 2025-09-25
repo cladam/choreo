@@ -49,6 +49,14 @@ impl DiagnosticCodes {
         code: "E008",
         message: "JSON path cannot be empty",
     };
+    pub const REPORT_PATH_EMPTY: DiagnosticRule = DiagnosticRule {
+        code: "E009",
+        message: "Report path cannot be empty",
+    };
+    pub const SHELL_PATH_EMPTY: DiagnosticRule = DiagnosticRule {
+        code: "E010",
+        message: "Shell path cannot be empty",
+    };
 
     // Warning codes (W) - Potential issues
     pub const SCENARIO_NO_TESTS: DiagnosticRule = DiagnosticRule {
@@ -67,6 +75,22 @@ impl DiagnosticCodes {
         code: "W004",
         message: "Wait time exceeds 5 minutes",
     };
+    pub const TIMEOUT_EXCESSIVE: DiagnosticRule = DiagnosticRule {
+        code: "W005",
+        message: "timeout exceeds 5 minutes",
+    };
+    pub const SHELL_PATH_RELATIVE: DiagnosticRule = DiagnosticRule {
+        code: "W006",
+        message: "Shell path should be absolute",
+    };
+    pub const EXPECTED_FAILURES_HIGH: DiagnosticRule = DiagnosticRule {
+        code: "W007",
+        message: "Expected failures count seems unusually high",
+    };
+    pub const STOP_ON_FAILURE_ENABLED: DiagnosticRule = DiagnosticRule {
+        code: "W008",
+        message: "Stop on failure is enabled - tests will halt on first failure",
+    };
 
     // Info codes (I) - Informational
     pub const BEST_PRACTICE_SUGGESTION: DiagnosticRule = DiagnosticRule {
@@ -75,12 +99,12 @@ impl DiagnosticCodes {
     };
 }
 
-struct Diagnostic {
-    rule_id: String,
-    message: String,
-    line: usize,
-    column: usize,
-    severity: Severity,
+pub struct Diagnostic {
+    pub rule_id: String,
+    pub message: String,
+    pub line: usize,
+    pub column: usize,
+    pub severity: Severity,
 }
 
 #[derive(Debug, PartialEq)]
@@ -88,6 +112,17 @@ pub enum Severity {
     Warning,
     Error,
     Info,
+}
+
+// Add this convenience function at the module level
+pub fn lint(suite: &TestSuite) -> Vec<String> {
+    let mut linter = Linter::new();
+    let diagnostics = linter.lint(suite);
+
+    diagnostics
+        .iter()
+        .map(|d| format!("[{}] {}", d.rule_id, d.message))
+        .collect()
 }
 
 pub trait Visitor {
@@ -112,17 +147,119 @@ impl Visitor for Linter {
             Statement::Scenario(scenario) => self.visit_scenario(scenario),
             Statement::TestCase(test) => self.visit_test_case(test),
             Statement::SettingsDef(settings) => {
+                let default_span = settings
+                    .span
+                    .as_ref()
+                    .map(|s| (s.line, s.column))
+                    .unwrap_or((0, 0));
+
                 if settings.timeout_seconds == 0 {
+                    let (line, column) = settings
+                        .setting_spans
+                        .as_ref()
+                        .and_then(|spans| spans.timeout_seconds_span.as_ref())
+                        .map(|span| (span.line, span.column))
+                        .unwrap_or(default_span);
+
                     self.add_diagnostic(
                         &DiagnosticCodes::TIMEOUT_ZERO,
                         &format!(
-                            "{}: {}",
+                            "{}: {} (line: {}, column: {})",
                             DiagnosticCodes::TIMEOUT_ZERO.code,
-                            DiagnosticCodes::TIMEOUT_ZERO.message
+                            DiagnosticCodes::TIMEOUT_ZERO.message,
+                            line,
+                            column
+                        ),
+                        line,
+                        column,
+                        Severity::Error,
+                    );
+                }
+
+                if settings.timeout_seconds > 300 {
+                    self.add_diagnostic(
+                        &DiagnosticCodes::TIMEOUT_EXCESSIVE,
+                        &format!(
+                            "{}: {}",
+                            DiagnosticCodes::TIMEOUT_EXCESSIVE.code,
+                            DiagnosticCodes::TIMEOUT_EXCESSIVE.message
                         ),
                         0,
                         0,
                         Severity::Error,
+                    );
+                }
+                // Validate report_path
+                if settings.report_path.is_empty() {
+                    self.add_diagnostic(
+                        &DiagnosticCodes::REPORT_PATH_EMPTY,
+                        &format!(
+                            "{}: {}",
+                            DiagnosticCodes::REPORT_PATH_EMPTY.code,
+                            DiagnosticCodes::REPORT_PATH_EMPTY.message
+                        ),
+                        0,
+                        0,
+                        Severity::Error,
+                    );
+                }
+                // Validate shell_path
+                if let Some(shell_path) = &settings.shell_path {
+                    if shell_path.is_empty() {
+                        self.add_diagnostic(
+                            &DiagnosticCodes::SHELL_PATH_EMPTY,
+                            &format!(
+                                "{}: {}",
+                                DiagnosticCodes::SHELL_PATH_EMPTY.code,
+                                DiagnosticCodes::SHELL_PATH_EMPTY.message
+                            ),
+                            0,
+                            0,
+                            Severity::Error,
+                        );
+                    }
+                    if !shell_path.starts_with('/') {
+                        self.add_diagnostic(
+                            &DiagnosticCodes::SHELL_PATH_RELATIVE,
+                            &format!(
+                                "{}: {}",
+                                DiagnosticCodes::SHELL_PATH_RELATIVE.code,
+                                DiagnosticCodes::SHELL_PATH_RELATIVE.message
+                            ),
+                            0,
+                            0,
+                            Severity::Warning,
+                        );
+                    }
+                }
+
+                // Warn if stop_on_failure is enabled
+                if settings.stop_on_failure {
+                    self.add_diagnostic(
+                        &DiagnosticCodes::STOP_ON_FAILURE_ENABLED,
+                        &format!(
+                            "{}: {}",
+                            DiagnosticCodes::STOP_ON_FAILURE_ENABLED.code,
+                            DiagnosticCodes::STOP_ON_FAILURE_ENABLED.message
+                        ),
+                        0,
+                        0,
+                        Severity::Warning,
+                    );
+                }
+
+                // Validate expected_failures
+                if settings.expected_failures > 100 {
+                    self.add_diagnostic(
+                        &DiagnosticCodes::EXPECTED_FAILURES_HIGH,
+                        &format!(
+                            "{}: {}",
+                            DiagnosticCodes::EXPECTED_FAILURES_HIGH.code,
+                            DiagnosticCodes::EXPECTED_FAILURES_HIGH.message
+                        ),
+                        0,
+                        0,
+                        Severity::Warning,
                     );
                 }
             }
