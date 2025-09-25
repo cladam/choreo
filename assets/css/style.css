@@ -290,6 +290,13 @@ pre code {
         justify-content: flex-end; /* Push button to the right since search is hidden */
     }
 
+    .main-content {
+        max-width: 100%;
+        padding: 30px 20px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
     .hamburger {
         display: block;
         position: fixed;
