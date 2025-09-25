@@ -92,7 +92,7 @@ When you run a Choreo test, an internal **parser** reads your human-readable `.c
 a command.
 These commands are then executed by the declared **actors**, which act as the bridge between your test and the system.
 For a deeper look at the parser and backend implementations, see
-our [Architecture documentation](architecture-overview.md).
+our [Architecture documentation](../architecture-overview).
 
 ## Summary
 
