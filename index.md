@@ -28,16 +28,3 @@ is a self-contained, executable test, eliminating the need for separate "step de
 * **Open Source:** Fully open-source and available on [GitHub]("https://github.com/cladam/choreo")
   and [Crates.io](https://crates.io/crates/choreo).
 
-```mermaid
-graph TD
-    A[Plain Text .chor file] --> B[Parser]
-    B --> C{AST}
-    C --> D[Runner]
-    D --> E[Backends]
-    E --> F[Web]
-    E --> G[Terminal]
-    E --> H[FileSystem]
-    F --> I[JSON Report]
-    G --> I
-    H --> I
-  ```

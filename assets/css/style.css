@@ -292,7 +292,8 @@ pre code {
 
     .main-content {
         margin-left: 0; /* No margin on small screens */
-        padding: 20px;
+        max-width: 100%; /* Add this line to override the desktop width */
+        padding: 30px 20px; /* Adjust padding for mobile */
     }
 
     .hamburger {
