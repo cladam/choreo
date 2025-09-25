@@ -37,6 +37,13 @@ pub enum Commands {
         #[arg(short, long, default_value = "test.chor")]
         file: String,
     },
+    /// Lint a choreography test suite file.
+    /// Provides suggestions for improving test definitions.
+    Lint {
+        /// Path to the choreography test suite file.
+        #[arg(short, long, default_value = "test.chor")]
+        file: String,
+    },
     /// Update choreo to the latest version.
     #[command(name = "update", hide = true)] // Hidden from help
     Update,

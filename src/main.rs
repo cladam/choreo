@@ -3,7 +3,7 @@ use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
 use choreo::parser::ast::Statement;
-use choreo::parser::parser;
+use choreo::parser::{linter, parser};
 use choreo::runner::TestRunner;
 use clap::Parser;
 use colored::Colorize;
@@ -159,6 +159,24 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
             match parser::parse(&source) {
                 Ok(_) => {
                     colours::success("Test suite is valid.");
+                    Ok(())
+                }
+                Err(e) => Err(AppError::ParseError(e.to_string())),
+            }
+        }
+        Commands::Lint { file } => {
+            let source = fs::read_to_string(&file)?;
+            match parser::parse(&source) {
+                Ok(suite) => {
+                    let warnings = linter::lint(&suite);
+                    if warnings.is_empty() {
+                        colours::success("No linting issues found.");
+                    } else {
+                        colours::warn(&format!("Found {} linting issue(s):", warnings.len()));
+                        for warning in warnings {
+                            println!("- {}", warning);
+                        }
+                    }
                     Ok(())
                 }
                 Err(e) => Err(AppError::ParseError(e.to_string())),

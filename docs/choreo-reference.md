@@ -119,13 +119,13 @@ env: API_TOKEN, GITHUB_USER
 
 #### `actors`
 
-Declares the different systems or components that the test will interact with. The two currently supported actors are
-`Terminal` and `FileSystem`.
+Declares the different systems or components that the test will interact with. The three currently supported actors are
+`Terminal`, `FileSystem` and `Web`. You must declare at least one actor per file.
 
 **Example:**
 
 ```choreo
-actors: Terminal, FileSystem
+actors: Terminal, FileSystem, Web
 ```
 
 #### `scenario`

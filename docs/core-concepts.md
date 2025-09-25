@@ -13,7 +13,7 @@ This page breaks down those fundamental building blocks.
 ## The Anatomy of a `.chor` File
 
 Think of a `.chor` file as a script for a play. It has a main theme (**feature**), a cast of characters (**actors**),
-and a series of scenes (**scenarios**) where actions (**steps**) happen.
+and a series of scenes (**scenarios**) where actions (**tests**) take place.
 
 ```choreo
 feature "User Authentication"
