@@ -290,12 +290,6 @@ pre code {
         justify-content: flex-end; /* Push button to the right since search is hidden */
     }
 
-    .main-content {
-        margin-left: 0; /* No margin on small screens */
-        max-width: 100%; /* Add this line to override the desktop width */
-        padding: 30px 20px; /* Adjust padding for mobile */
-    }
-
     .hamburger {
         display: block;
         position: fixed;
