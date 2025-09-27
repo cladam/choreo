@@ -21,13 +21,15 @@ background_def                    = { "background" ~ "{" ~ (action | condition)+
 //env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
 env_def = {
     ("env:" ~ identifier ~ ("," ~ identifier)*) |
-    ("env" ~ "{" ~ identifier+ ~ "}")
+    ("env" ~ "{" ~ identifier+ ~ "}") |
+    ("env" ~ identifier)
 }
 var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
 //actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 actors_def = {
     ("actors:" ~ identifier ~ ("," ~ identifier)*) |
-    ("actors" ~ "{" ~ identifier+ ~ "}")
+    ("actors" ~ "{" ~ identifier+ ~ "}") |
+    ("actor" ~ identifier)
 }
 feature_def                       = { "feature" ~ string }
 scenario_def                      = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
@@ -35,7 +37,7 @@ after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
 
 // Defining a test case.
 test                              = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
-given_block                       = { "given:" ~ (action | condition)+ }
+given_block                       = { "given:" ~ (action | condition)* }
 when_block                        = { "when:"  ~ action+ }
 then_block                        = { "then:"  ~ condition+ }
 

@@ -1,0 +1,50 @@
+[
+  {
+    "uri": "test.chor",
+    "keyword": "Feature",
+    "name": "My Application Feature",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "A basic scenario",
+        "steps": [
+          {
+            "name": "MyTest",
+            "description": "Testing for the linter",
+            "result": {
+              "status": "passed",
+              "durationInMs": 55
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "FileSystem delete_file 'temp_data/initial.txt'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          },
+          {
+            "name": "FileSystem delete_dir 'temp_data'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ]
+      },
+      {
+        "keyword": "Scenario",
+        "name": "A basic scenario",
+        "steps": [],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 1,
+      "failures": 0,
+      "totalTimeInSeconds": 0.055242
+    }
+  }
+]

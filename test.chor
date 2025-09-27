@@ -3,18 +3,48 @@
 # I use this file to dev and test the linter
 
 feature "My Application Feature"
+actor FileSystem
+actor Terminal
+
+var TEST = "test"
+env HOME
 
 #setting: timeout_seconds = 30
 
 settings {
   # Set a custom timeout for this test suite.
-  timeout_seconds = 0
+  timeout_seconds = 30
   # Specify the output directory for reports.
-  report_path = "test_results/"
+  report_path = "./test_reports"
   # (report_format defaults to "json" if not specified)
   # Stop the entire run as soon as one test fails.
   stop_on_failure = true
   # Specify the shell to use for the Terminal actor, defaults to bash.
   shell_path = "/bin/bash"
-  expected_failures = 1
+  expected_failures = 101
+}
+
+scenario "A basic scenario" {
+
+    test MyTest "Testing for the linter" {
+
+        given:
+            wait >= 0s
+        when:
+            FileSystem create_dir "temp_data"
+            FileSystem create_file "temp_data/initial.txt" with_content "setup data"
+            Terminal runs "cat temp_data/initial.txt"
+        then:
+            Terminal output_contains "setup data"
+    }
+
+    after {
+        FileSystem delete_file "temp_data/initial.txt"
+        FileSystem delete_dir "temp_data"
+    }
+
+}
+
+scenario "A basic scenario" {
+
 }

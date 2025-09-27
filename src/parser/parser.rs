@@ -1,7 +1,7 @@
 // parser.rs
 use crate::parser::ast::{
-    Action, Condition, GivenStep, ReportFormat, Scenario, SettingSpan, Span, Statement, TestCase,
-    TestSuite, TestSuiteSettings, Value,
+    Action, Condition, GivenStep, ReportFormat, Scenario, ScenarioSpan, SettingSpan, Span,
+    Statement, TestCase, TestCaseSpan, TestSuite, TestSuiteSettings, Value,
 };
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
@@ -65,6 +65,7 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
     let mut setting_spans = SettingSpan {
         timeout_seconds_span: None,
         report_path_span: None,
+        report_format_span: None,
         shell_path_span: None,
         stop_on_failure_span: None,
         expected_failures_span: None,
@@ -101,15 +102,20 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
                 }
             }
             "report_path" => {
-                setting_spans.stop_on_failure_span = Some(span_info);
+                setting_spans.report_path_span = Some(span_info);
                 if let Value::String(s) = build_value(value_pair) {
+                    if s.trim().is_empty() {
+                        panic!(
+                            "'report_path' setting cannot be an empty or whitespace-only string."
+                        );
+                    }
                     settings.report_path = s;
                 } else {
                     panic!("'report_path' setting must be a string");
                 }
             }
             "report_format" => {
-                setting_spans.report_path_span = Some(span_info);
+                setting_spans.report_format_span = Some(span_info);
                 if let Value::String(s) = build_value(value_pair) {
                     settings.report_format = match s.as_str() {
                         "json" => ReportFormat::Json,
@@ -131,6 +137,11 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
             "shell_path" => {
                 setting_spans.shell_path_span = Some(span_info);
                 if let Value::String(s) = build_value(value_pair) {
+                    if s.trim().is_empty() {
+                        panic!(
+                            "'shell_path' setting cannot be an empty or whitespace-only string."
+                        );
+                    }
                     settings.shell_path = Some(s);
                 } else {
                     panic!("'shell_path' setting must be a string");
@@ -193,45 +204,120 @@ fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
 }
 
 fn build_scenario(pair: Pair<Rule>) -> Statement {
+    let span = pair.as_span();
     let mut inner = pair.into_inner();
-    let name = inner
-        .next()
-        .unwrap()
-        .into_inner()
-        .next()
-        .unwrap()
-        .as_str()
-        .to_string();
-    let mut tests = Vec::new();
-    let mut after = Vec::new();
+    let mut scenario = Scenario::default();
+    let mut scenario_spans = ScenarioSpan {
+        name_span: None,
+        tests_span: None,
+        after_span: None,
+    };
+
+    scenario.span = Some(Span {
+        start: span.start(),
+        end: span.end(),
+        line: span.start_pos().line_col().0,
+        column: span.start_pos().line_col().1,
+    });
+
+    // The first inner pair is the scenario name (a string).
+    let name_pair = inner.next().unwrap();
+    scenario_spans.name_span = Some(Span {
+        start: name_pair.as_span().start(),
+        end: name_pair.as_span().end(),
+        line: name_pair.as_span().start_pos().line_col().0,
+        column: name_pair.as_span().start_pos().line_col().1,
+    });
+    scenario.name = unescape_string(name_pair.into_inner().next().unwrap().as_str());
+
     for item in inner {
+        let item_span = item.as_span();
+        let span_info = Span {
+            start: item_span.start(),
+            end: item_span.end(),
+            line: item_span.start_pos().line_col().0,
+            column: item_span.start_pos().line_col().1,
+        };
+
         match item.as_rule() {
-            Rule::test => tests.push(build_test_case(item)),
+            Rule::test => {
+                scenario_spans.tests_span = Some(span_info);
+                scenario.tests.push(build_test_case(item));
+            }
             Rule::after_block => {
-                after = build_actions(item.into_inner());
+                scenario_spans.after_span = Some(span_info);
+                scenario.after = build_actions(item.into_inner());
             }
             _ => {}
         }
     }
-    Statement::Scenario(Scenario { name, tests, after })
+
+    scenario.scenario_span = Some(scenario_spans);
+    Statement::Scenario(scenario)
 }
 
 /// Builds a TestCase from a parsed Pair.
 pub fn build_test_case(pair: Pair<Rule>) -> TestCase {
+    let span = pair.as_span();
     let mut inner = pair.into_inner();
-    let name = inner.next().unwrap().as_str().to_string();
-    let description = inner
-        .next()
-        .unwrap()
+    let mut testcase_spans = TestCaseSpan {
+        name_span: None,
+        description_span: None,
+        given_span: None,
+        when_span: None,
+        then_span: None,
+    };
+
+    let name_pair = inner.next().unwrap();
+    let name = name_pair.as_str().to_string();
+    testcase_spans.name_span = Some(Span {
+        start: name_pair.as_span().start(),
+        end: name_pair.as_span().end(),
+        line: name_pair.as_span().start_pos().line_col().0,
+        column: name_pair.as_span().start_pos().line_col().1,
+    });
+
+    let description_pair = inner.next().unwrap();
+    let description_span = description_pair.as_span();
+    let description = description_pair
         .into_inner()
         .next()
         .unwrap()
         .as_str()
         .to_string();
+    testcase_spans.description_span = Some(Span {
+        start: description_span.start(),
+        end: description_span.end(),
+        line: description_span.start_pos().line_col().0,
+        column: description_span.start_pos().line_col().1,
+    });
 
     let given_block = inner.next().expect("Missing given block in test case");
+    let given_span = given_block.as_span();
+    testcase_spans.given_span = Some(Span {
+        start: given_span.start(),
+        end: given_span.end(),
+        line: given_span.start_pos().line_col().0,
+        column: given_span.start_pos().line_col().1,
+    });
+
     let when_block = inner.next().expect("Missing when block in test case");
+    let when_span = when_block.as_span();
+    testcase_spans.when_span = Some(Span {
+        start: when_span.start(),
+        end: when_span.end(),
+        line: when_span.start_pos().line_col().0,
+        column: when_span.start_pos().line_col().1,
+    });
+
     let then_block = inner.next().expect("Missing then block in test case");
+    let then_span = then_block.as_span();
+    testcase_spans.then_span = Some(Span {
+        start: then_span.start(),
+        end: then_span.end(),
+        line: then_span.start_pos().line_col().0,
+        column: then_span.start_pos().line_col().1,
+    });
 
     TestCase {
         name,
@@ -239,6 +325,13 @@ pub fn build_test_case(pair: Pair<Rule>) -> TestCase {
         given: build_given_steps(given_block.into_inner()),
         when: build_actions(when_block.into_inner()),
         then: build_conditions(then_block.into_inner()),
+        span: Some(Span {
+            start: span.start(),
+            end: span.end(),
+            line: span.start_pos().line_col().0,
+            column: span.start_pos().line_col().1,
+        }),
+        testcase_spans: Some(testcase_spans),
     }
 }
 
@@ -859,7 +952,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                     Action::HttpDelete { url }
                 }
                 // ... other methods
-                _ => panic!("Unknown web action method: {}", method),
+                _ => panic!("Unknown action method: {}", method),
             }
         }
         _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),

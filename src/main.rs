@@ -109,8 +109,12 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                                 given: steps.clone(),
                                 when: vec![],
                                 then: vec![],
+                                span: None,
+                                testcase_spans: None,
                             }],
                             after: vec![],
+                            scenario_span: None,
+                            span: None,
                         };
                         scenarios.insert(0, bg_scenario); // Ensure background is first
                     }

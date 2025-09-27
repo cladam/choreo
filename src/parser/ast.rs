@@ -39,9 +39,17 @@ pub struct Span {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct ScenarioSpan {
+    pub name_span: Option<Span>,
+    pub tests_span: Option<Span>,
+    pub after_span: Option<Span>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct SettingSpan {
     pub timeout_seconds_span: Option<Span>,
     pub report_path_span: Option<Span>,
+    pub report_format_span: Option<Span>,
     pub shell_path_span: Option<Span>,
     pub stop_on_failure_span: Option<Span>,
     pub expected_failures_span: Option<Span>,
@@ -81,6 +89,31 @@ pub struct TestCase {
     pub given: Vec<GivenStep>,
     pub when: Vec<Action>,
     pub then: Vec<Condition>,
+    pub span: Option<Span>,
+    pub testcase_spans: Option<TestCaseSpan>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TestCaseSpan {
+    pub name_span: Option<Span>,
+    pub description_span: Option<Span>,
+    pub given_span: Option<Span>,
+    pub when_span: Option<Span>,
+    pub then_span: Option<Span>,
+}
+
+impl Default for TestCase {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            description: String::new(),
+            given: Vec::new(),
+            when: Vec::new(),
+            then: Vec::new(),
+            span: None,
+            testcase_spans: None,
+        }
+    }
 }
 
 // All possible top-level statements in a .chor file.
@@ -101,6 +134,20 @@ pub struct Scenario {
     pub name: String,
     pub tests: Vec<TestCase>,
     pub after: Vec<Action>,
+    pub span: Option<Span>,
+    pub scenario_span: Option<ScenarioSpan>,
+}
+
+impl Default for Scenario {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            tests: Vec::new(),
+            after: Vec::new(),
+            span: None,
+            scenario_span: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -242,6 +289,12 @@ pub enum Action {
     HttpPut { url: String, body: String },
     HttpPatch { url: String, body: String },
     HttpDelete { url: String },
+}
+
+impl Action {
+    pub fn is_filesystem_creation(&self) -> bool {
+        matches!(self, Self::CreateFile { .. } | Self::CreateDir { .. })
+    }
 }
 
 // Primitive values.

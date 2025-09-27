@@ -2,6 +2,8 @@
 
 feature "Advanced Terminal Matchers"
 
+setting: shell_path = "/bin/bash"
+
 actors: Terminal
 
 scenario "Verifying precise terminal output" {
