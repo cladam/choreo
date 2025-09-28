@@ -60,12 +60,12 @@ action                            = { type_action | press_action | run_action | 
 wait_condition                    = { "wait" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ wait_marker }
 state_condition                   = { "Test" ~ "has_succeeded" ~ identifier }
 // --- Filesystem Conditions ---
-file_is_not_empty_condition       = { "file" ~ string ~ "is_not_empty" }
-file_is_empty_condition           = { "file" ~ string ~ "is_empty" }
+file_is_not_empty_condition       = { "file" ~ non_empty_string ~ "is_not_empty" }
+file_is_empty_condition           = { "file" ~ non_empty_string ~ "is_empty" }
 filesystem_condition_keyword      = @{ "file_exists" | "file_does_not_exist" | "dir_exists" | "dir_does_not_exist" | "file_contains" }
 filesystem_condition              = { "FileSystem" ~ (
-    (filesystem_condition_keyword ~ string ~ "with_content" ~ string) |
-    (filesystem_condition_keyword ~ string) |
+    (filesystem_condition_keyword ~ non_empty_string ~ "with_content" ~ string) |
+    (filesystem_condition_keyword ~ non_empty_string) |
     file_is_not_empty_condition |
     file_is_empty_condition
 ) }
@@ -106,32 +106,32 @@ web_condition                     = { "Web" ~ (
 
 
 // Json-specific condition parts
-json_value_is_string_condition = { "json_response" ~ "at" ~ string ~ "is_a_string" }
-json_value_is_number_condition = { "json_response" ~ "at" ~ string ~ "is_a_number" }
-json_value_is_array_condition = { "json_response" ~ "at" ~ string ~ "is_an_array" }
-json_value_is_object_condition = { "json_response" ~ "at" ~ string ~ "is_an_object" }
-json_value_has_size_condition = { "json_response" ~ "at" ~ string ~ "has_size" ~ number }
+json_value_is_string_condition = { "json_response" ~ "at" ~ non_empty_string ~ "is_a_string" }
+json_value_is_number_condition = { "json_response" ~ "at" ~ non_empty_string ~ "is_a_number" }
+json_value_is_array_condition = { "json_response" ~ "at" ~ non_empty_string ~ "is_an_array" }
+json_value_is_object_condition = { "json_response" ~ "at" ~ non_empty_string ~ "is_an_object" }
+json_value_has_size_condition = { "json_response" ~ "at" ~ non_empty_string ~ "has_size" ~ number }
 output_is_valid_json_condition    = { "output_is_valid_json" }
-json_output_has_path_condition    = { "json_output" ~ "has_path" ~ string }
-json_output_at_equals_condition   = { "json_output" ~ "at" ~ string ~ "equals" ~ value }
-json_output_at_includes_condition = { "json_output" ~ "at" ~ string ~ "includes" ~ value }
-json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ string ~ "has_item_count" ~ number }
-json_body_has_path_condition      = { "json_body" ~ "has_path" ~ string }
-json_path_equals_condition        = { "json_path" ~ "at" ~ string ~ "equals" ~ value }
+json_output_has_path_condition    = { "json_output" ~ "has_path" ~ non_empty_string }
+json_output_at_equals_condition   = { "json_output" ~ "at" ~ non_empty_string ~ "equals" ~ value }
+json_output_at_includes_condition = { "json_output" ~ "at" ~ non_empty_string ~ "includes" ~ value }
+json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ non_empty_string ~ "has_item_count" ~ number }
+json_body_has_path_condition      = { "json_body" ~ "has_path" ~ non_empty_string }
+json_path_equals_condition        = { "json_path" ~ "at" ~ non_empty_string ~ "equals" ~ value }
 
 
 // Terminal-specific condition parts
-output_contains_condition         = { "output_contains" ~ string }
-output_matches_condition          = { "output_matches" ~ string ~ ("as" ~ identifier)? }
+output_contains_condition         = { "output_contains" ~ non_empty_string }
+output_matches_condition          = { "output_matches" ~ non_empty_string ~ ("as" ~ identifier)? }
 last_command_succeeded_cond       = { "last_command" ~ "succeeded" }
 last_command_failed_cond          = { "last_command" ~ "failed" }
 last_command_exit_code_is_cond    = { "last_command" ~ "exit_code_is" ~ number }
 stdout_is_empty_condition         = { "stdout_is_empty" }
 stderr_is_empty_condition         = { "stderr_is_empty" }
-stderr_contains_condition         = { "stderr_contains" ~ string }
-output_starts_with_condition      = { "output_starts_with" ~ string }
-output_ends_with_condition        = { "output_ends_with" ~ string }
-output_equals_condition           = { "output_equals" ~ string }
+stderr_contains_condition         = { "stderr_contains" ~ non_empty_string }
+output_starts_with_condition      = { "output_starts_with" ~ non_empty_string }
+output_ends_with_condition        = { "output_ends_with" ~ non_empty_string }
+output_equals_condition           = { "output_equals" ~ non_empty_string }
 
 // Web-specific condition parts
 response_status_is_condition      = { "response_status_is" ~ ( number | string ) }
@@ -139,13 +139,13 @@ response_status_is_success_condition = { "response_status" ~ "is_success" }
 response_status_is_error_condition = { "response_status" ~ "is_error" }
 response_status_is_in_condition = { "response_status" ~ "is_in" ~ "[" ~ number ~ ("," ~ number)* ~ "]" }
 response_time_is_below_condition = { "response_time" ~ "is_below" ~ wait_marker }
-response_body_contains_condition  = { "response_body_contains" ~ string }
+response_body_contains_condition  = { "response_body_contains" ~ non_empty_string }
 response_body_matches_condition   = { "response_body_matches" ~ string ~ ("as" ~ identifier)? }
 
 // Action Types
 type_action                       = { identifier ~ "types" ~ string }
-press_action                      = { identifier ~ "presses" ~ string }
-run_action                        = { identifier ~ "runs" ~ string }
+press_action                      = { identifier ~ "presses" ~ non_empty_string }
+run_action                        = { identifier ~ "runs" ~ non_empty_string }
 web_action = { identifier ~ web_action_type }
 web_action_type = {
     ("set_header" ~ string ~ string) |
@@ -154,20 +154,30 @@ web_action_type = {
     ("set_cookie" ~ string ~ string) |
     ("clear_cookie" ~ string) |
     ("clear_cookies") |
-    ("http_get" ~ string) |
-    ("http_post" ~ string ~ "with_body" ~ string) |
-    ("http_put" ~ string ~ "with_body" ~ string) |
-    ("http_patch" ~ string ~ "with_body" ~ string) |
-    ("http_delete" ~ string)
+    ("http_get" ~ non_empty_string) |
+    ("http_post" ~ non_empty_string ~ "with_body" ~ string) |
+    ("http_put" ~ non_empty_string ~ "with_body" ~ string) |
+    ("http_patch" ~ non_empty_string ~ "with_body" ~ string) |
+    ("http_delete" ~ non_empty_string)
 }
 filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
 filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" }
 
 // The basic building blocks of the choreo language.
 identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
-string                            = ${ "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
-inner_double                      = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
-inner_single                      = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
+
+//string                            = ${ "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
+//inner_double                      = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
+//inner_single                      = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
+//non_empty_content                 = ${ "\"" ~ within_double+ ~ "\"" | "'" ~ within_single+ ~ "'" }
+string                              = ${ "\"" ~ within_double ~ "\"" | "'" ~ within_single ~ "'" }
+within_double                       = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
+within_single                       = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
+non_empty_string                    = ${ "\"" ~ within_double_non_empty ~ "\"" | "'" ~ within_single_non_empty ~ "'" }
+within_double_non_empty              = @{ ( "\\" ~ ANY | !"\"" ~ ANY )+ }
+within_single_non_empty              = @{ ( "\\" ~ ANY | !"'" ~ ANY )+ }
+//within_double                      = @{ !("\"" | "\\") ~ ANY | "\\" ~ ("\"" | "\\" | "n" | "t" | "r") }
+//within_single                      = @{ !("'" | "\\") ~ ANY | "\\" ~ ("'" | "\\" | "n" | "t" | "r") }
 number                            = @{ ASCII_DIGIT+ }
 float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 duration                          = @{ ASCII_DIGIT+ ~ ("ms" | "s") }

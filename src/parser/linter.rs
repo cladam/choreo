@@ -37,16 +37,12 @@ impl DiagnosticCodes {
         code: "E003",
         message: "File path cannot be empty",
     };
-    pub const WAIT_TIME_NON_POSITIVE: DiagnosticRule = DiagnosticRule {
-        code: "E004",
-        message: "Wait time must be positive",
-    };
     pub const INVALID_HTTP_STATUS: DiagnosticRule = DiagnosticRule {
-        code: "E005",
+        code: "E004",
         message: "Invalid HTTP status code",
     };
     pub const JSON_PATH_EMPTY: DiagnosticRule = DiagnosticRule {
-        code: "E006",
+        code: "E005",
         message: "JSON path cannot be empty",
     };
 
@@ -250,7 +246,7 @@ impl Visitor for Linter {
 
         // No need to lint report_format or report_path, as the parser catches errors earlier
 
-        // shell_path errors are catched in the parser as well
+        // shell_path errors are caught in the parser as well
 
         // Warn if stop_on_failure is enabled
         if settings.stop_on_failure {
@@ -360,6 +356,19 @@ impl Visitor for Linter {
     fn visit_test_case(&mut self, test: &TestCase) {
         let (line, column) = test.span.as_ref().map_or((0, 0), |s| (s.line, s.column));
         println!("Test: {}", test.name);
+
+        for step in &test.given {
+            match step {
+                GivenStep::Action(a) => self.visit_action(a),
+                GivenStep::Condition(c) => self.visit_condition(c),
+            }
+        }
+        for action in &test.when {
+            self.visit_action(action);
+        }
+        for condition in &test.then {
+            self.visit_condition(condition);
+        }
     }
 
     fn visit_given_step(&mut self, step: &GivenStep) {
@@ -367,11 +376,178 @@ impl Visitor for Linter {
     }
 
     fn visit_action(&mut self, action: &Action) {
-        todo!()
+        // A helper closure to find variables in a string.
+        let mut find_vars = |s: &str| {
+            let re = regex::Regex::new(r"\$\{(\w+)}").unwrap();
+            for cap in re.captures_iter(s) {
+                self.used_vars.insert(cap[1].to_string());
+            }
+        };
+
+        match action {
+            Action::Run { command, .. } => find_vars(command),
+            Action::Type { content, .. } => find_vars(content),
+            Action::CreateFile { path, content } => {
+                find_vars(path);
+                find_vars(content);
+            }
+            Action::DeleteFile { path }
+            | Action::CreateDir { path }
+            | Action::DeleteDir { path } => {
+                find_vars(path);
+            }
+            Action::HttpSetHeader { key, value } | Action::HttpSetCookie { key, value } => {
+                find_vars(key);
+                find_vars(value);
+            }
+            Action::HttpGet { url } | Action::HttpDelete { url } => {
+                find_vars(url);
+                find_vars(url);
+                if !url.starts_with("http://") && !url.starts_with("https://") {
+                    self.add_diagnostic(
+                        &DiagnosticCodes::HTTP_URL_NO_PROTOCOL,
+                        &format!(
+                            "{}: {}",
+                            DiagnosticCodes::HTTP_URL_NO_PROTOCOL.code,
+                            DiagnosticCodes::HTTP_URL_NO_PROTOCOL.message,
+                        ),
+                        0,
+                        0,
+                        Severity::Warning,
+                    );
+                }
+            }
+            Action::HttpPost { url, .. }
+            | Action::HttpPut { url, .. }
+            | Action::HttpPatch { url, .. } => {
+                find_vars(url);
+            }
+            // Other actions...
+            _ => {}
+        }
     }
 
     fn visit_condition(&mut self, condition: &Condition) {
-        todo!()
+        // A helper closure to find variables in a string.
+        let mut find_cond_vars = |s: &str| {
+            let re = regex::Regex::new(r"\$\{(\w+)}").unwrap();
+            for cap in re.captures_iter(s) {
+                self.used_vars.insert(cap[1].to_string());
+            }
+        };
+
+        const VALID_HTTP_STATUS_RANGE: std::ops::RangeInclusive<u16> = 100..=599;
+
+        match condition {
+            Condition::Wait { wait, .. } => {
+                // W004: Excessive wait time
+                if *wait > 300.0 {
+                    // 5 minutes
+                    self.add_diagnostic(
+                        &DiagnosticCodes::WAIT_TIME_EXCESSIVE,
+                        &format!(
+                            "{}: {} ({:.1}s)",
+                            DiagnosticCodes::WAIT_TIME_EXCESSIVE.code,
+                            DiagnosticCodes::WAIT_TIME_EXCESSIVE.message,
+                            wait
+                        ),
+                        0,
+                        0,
+                        Severity::Warning,
+                    );
+                }
+            }
+
+            Condition::OutputContains { text, .. }
+            | Condition::StderrContains(text)
+            | Condition::OutputStartsWith(text)
+            | Condition::OutputEndsWith(text)
+            | Condition::OutputEquals(text) => {
+                find_cond_vars(text);
+            }
+
+            Condition::OutputMatches { regex, .. } => {
+                find_cond_vars(regex);
+            }
+
+            Condition::JsonPathEquals {
+                path,
+                expected_value: value,
+            } => {
+                find_cond_vars(path);
+                if let Value::String(s) = value {
+                    find_cond_vars(s);
+                }
+            }
+
+            Condition::JsonValueIsString { path }
+            | Condition::JsonValueIsNumber { path }
+            | Condition::JsonValueIsArray { path }
+            | Condition::JsonValueIsObject { path }
+            | Condition::JsonBodyHasPath { path } => {
+                find_cond_vars(path);
+            }
+            Condition::JsonValueHasSize { path, .. }
+            | Condition::JsonOutputAtEquals { path, .. }
+            | Condition::JsonOutputAtIncludes { path, .. }
+            | Condition::JsonOutputAtHasItemCount { path, .. } => {
+                find_cond_vars(path);
+            }
+
+            Condition::FileExists { path }
+            | Condition::FileDoesNotExist { path }
+            | Condition::DirExists { path }
+            | Condition::DirDoesNotExist { path }
+            | Condition::FileIsEmpty { path }
+            | Condition::FileIsNotEmpty { path } => {
+                find_cond_vars(path);
+            }
+
+            Condition::ResponseStatusIs(status) => {
+                // E005: Invalid HTTP status code
+                if !VALID_HTTP_STATUS_RANGE.contains(status) {
+                    self.add_diagnostic(
+                        &DiagnosticCodes::INVALID_HTTP_STATUS,
+                        &format!(
+                            "{}: {} ({})",
+                            DiagnosticCodes::INVALID_HTTP_STATUS.code,
+                            DiagnosticCodes::INVALID_HTTP_STATUS.message,
+                            status
+                        ),
+                        0,
+                        0,
+                        Severity::Error,
+                    );
+                }
+            }
+            Condition::ResponseStatusIsIn(statuses) => {
+                for status in statuses {
+                    if !VALID_HTTP_STATUS_RANGE.contains(status) {
+                        self.add_diagnostic(
+                            &DiagnosticCodes::INVALID_HTTP_STATUS,
+                            &format!(
+                                "{}: {} ({})",
+                                DiagnosticCodes::INVALID_HTTP_STATUS.code,
+                                DiagnosticCodes::INVALID_HTTP_STATUS.message,
+                                status
+                            ),
+                            0,
+                            0,
+                            Severity::Error,
+                        );
+                    }
+                }
+            }
+            Condition::ResponseBodyContains { value } => {
+                find_cond_vars(value);
+            }
+            Condition::ResponseBodyMatches { regex, .. } => {
+                find_cond_vars(regex);
+            }
+
+            // Other conditions...
+            _ => {}
+        }
     }
 
     fn visit_background(&mut self, steps: &Vec<GivenStep>) {

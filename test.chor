@@ -3,8 +3,11 @@
 # I use this file to dev and test the linter
 
 feature "My Application Feature"
-actor FileSystem
-actor Terminal
+actors {
+    Web
+    Terminal
+    FileSystem
+}
 
 var TEST = "test"
 env HOME
@@ -29,13 +32,27 @@ scenario "A basic scenario" {
     test MyTest "Testing for the linter" {
 
         given:
-            wait >= 0s
+            wait >= 301s
         when:
             FileSystem create_dir "temp_data"
             FileSystem create_file "temp_data/initial.txt" with_content "setup data"
             Terminal runs "cat temp_data/initial.txt"
         then:
             Terminal output_contains "setup data"
+    }
+
+    test GetInitialData "retrieve the current state of a resource" {
+        given:
+            # No preconditions needed
+            wait >= 0s
+        when:
+            Web http_get "https://httpbin.org/json"
+        then:
+            #Web response_status_is 200
+            Web response_time is_below 1ms
+            Web response_status is_in [200, 204, 600, 99]
+            Web response_body_contains "slideshow"
+            Web json_body has_path "/slideshow/title"
     }
 
     after {
