@@ -426,6 +426,11 @@ impl Visitor for Linter {
             Statement::Scenario(scenario) => self.visit_scenario(scenario),
             Statement::TestCase(test) => self.visit_test_case(test),
             Statement::SettingsDef(settings) => self.visit_settings(settings),
+            Statement::BackgroundDef(steps) => self.visit_background(steps),
+            Statement::FeatureDef(name) => self.visit_feature_def(name),
+            Statement::ActorDef(actors) => self.visit_actor_def(actors),
+            Statement::EnvDef(vars) => self.visit_env_def(vars),
+            Statement::VarDef(name, value) => self.visit_var_def(name, value),
             _ => {}
         }
     }
@@ -619,7 +624,10 @@ impl Visitor for Linter {
     }
 
     fn visit_given_step(&mut self, step: &GivenStep) {
-        todo!()
+        match step {
+            GivenStep::Action(a) => self.visit_action(&a),
+            GivenStep::Condition(c) => self.visit_condition(&c),
+        }
     }
 
     fn visit_action(&mut self, action: &Action) {
@@ -795,44 +803,119 @@ impl Visitor for Linter {
     }
 
     fn visit_env_def(&mut self, vars: &Vec<String>) {
-        // Potential linting rules:
-        // - Check for empty environment variable names
-        // - Warn about sensitive variable names
         for var in vars {
-            if var.trim().is_empty() {
-                // Add appropriate diagnostic
+            // Check for standard naming convention
+            if !var
+                .chars()
+                .all(|c| c.is_uppercase() || c.is_numeric() || c == '_')
+            {
+                self.add_diagnostic(
+                    &DiagnosticCodes::BEST_PRACTICE_SUGGESTION,
+                    &format!(
+                        "Environment variable '{}' should use SCREAMING_SNAKE_CASE",
+                        var
+                    ),
+                    0,
+                    Severity::Info,
+                );
+            }
+
+            // Warn about potentially missing common environment variables
+            if var == "PATH" || var == "HOME" {
+                self.add_diagnostic(
+                    &DiagnosticCodes::BEST_PRACTICE_SUGGESTION,
+                    &format!(
+                        "Environment variable '{}' is system-critical. Ensure it's available.",
+                        var
+                    ),
+                    0,
+                    Severity::Info,
+                );
             }
         }
     }
 
     fn visit_var_def(&mut self, name: &String, value: &Value) {
-        // Potential linting rules:
-        // - Check for empty variable names
-        // - Track variable usage (for W010: UNUSED_VARIABLE)
-        if name.trim().is_empty() {
-            // Add appropriate diagnostic
+        // Check for naming convention (SCREAMING_SNAKE_CASE for variables)
+        if !name
+            .chars()
+            .all(|c| c.is_uppercase() || c.is_numeric() || c == '_')
+        {
+            self.add_diagnostic(
+                &DiagnosticCodes::BEST_PRACTICE_SUGGESTION,
+                &format!(
+                    "Variable '{}' should use SCREAMING_SNAKE_CASE naming convention",
+                    name
+                ),
+                0,
+                Severity::Info,
+            );
+        }
+
+        // Check for potentially sensitive variable names
+        let sensitive_keywords = ["PASSWORD", "SECRET", "TOKEN", "KEY", "API_KEY"];
+        if sensitive_keywords
+            .iter()
+            .any(|&keyword| name.to_uppercase().contains(keyword))
+        {
+            self.add_diagnostic(
+                &DiagnosticCodes::HARDCODED_CREDENTIALS,
+                &format!("Variable '{}' appears to contain sensitive data", name),
+                0,
+                Severity::Warning,
+            );
         }
     }
 
     fn visit_actor_def(&mut self, actors: &Vec<String>) {
-        // Potential linting rules:
-        // - Check for empty actor names
-        // - Check for duplicate actors
-        // - Validate actor naming conventions
+        const VALID_ACTORS: &[&str] = &["Web", "Terminal", "FileSystem"];
+
+        let mut seen_actors = HashSet::new();
+
         for actor in actors {
-            if actor.trim().is_empty() {
-                // Add appropriate diagnostic
+            println!("actor: {}", actor);
+            // Check for duplicate actors
+            if !seen_actors.insert(actor.clone()) {
+                self.add_diagnostic(
+                    &DiagnosticCodes::DUPLICATE_SCENARIO_NAME, // Reusing similar rule
+                    &format!("Duplicate actor '{}' found", actor),
+                    0,
+                    Severity::Warning,
+                );
+            }
+
+            // Check if actor is valid
+            if !VALID_ACTORS.contains(&actor.as_str()) {
+                self.add_diagnostic(
+                    &DiagnosticCodes::BEST_PRACTICE_SUGGESTION,
+                    &format!(
+                        "Unknown actor '{}'. Valid actors are: {}",
+                        actor,
+                        VALID_ACTORS.join(", ")
+                    ),
+                    0,
+                    Severity::Error,
+                );
+            }
+
+            // Check naming convention (PascalCase)
+            if !actor.chars().next().unwrap_or(' ').is_uppercase() {
+                self.add_diagnostic(
+                    &DiagnosticCodes::BEST_PRACTICE_SUGGESTION,
+                    &format!(
+                        "Actor '{}' should follow PascalCase naming convention",
+                        actor
+                    ),
+                    0,
+                    Severity::Info,
+                );
             }
         }
     }
 
     fn visit_feature_def(&mut self, name: &String) {
-        // Potential linting rules:
-        // - Check for empty feature names
-        // - Validate feature naming conventions
-        if name.trim().is_empty() {
-            // Add appropriate diagnostic
-        }
+        println!("feature: {}", name);
+        // No specific rules really, a feature is just a string, maybe naming convention and no rude names :)
     }
 }
 

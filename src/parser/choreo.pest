@@ -24,7 +24,12 @@ env_def = {
     ("env" ~ "{" ~ identifier+ ~ "}") |
     ("env" ~ identifier)
 }
-var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
+var_def = {
+    ("var:" ~ identifier ~ ("," ~ identifier)*) |
+    ("var" ~ "{" ~ identifier+ ~ "}") |
+    ("var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value)
+}
+//var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
 //actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 actors_def = {
     ("actors:" ~ identifier ~ ("," ~ identifier)*) |
