@@ -42,7 +42,7 @@ env:
   EVAR: "## My medi note from an environment variable"
 
 jobs:
-  validate-examples:
+  lint-examples:
     name: Validate Examples
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +56,7 @@ jobs:
         run: |
           for file in examples/*.chor; do
             echo "Validating $file"
-            ./target/release/choreo validate --file "$file"
+            ./target/release/choreo lint --file "$file"
           done
 
   build-and-test:
