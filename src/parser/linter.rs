@@ -2,15 +2,7 @@ use crate::parser::ast::{
     Action, Condition, GivenStep, Scenario, Statement, TestCase, TestSuite, TestSuiteSettings,
     Value,
 };
-use std::collections::HashSet;
-
-// A simplified example of the structure
-struct Linter {
-    diagnostics: Vec<Diagnostic>,
-    defined_vars: HashSet<String>,
-    used_vars: HashSet<String>,
-    seen_scenario_names: HashSet<String>,
-}
+use std::collections::{HashMap, HashSet};
 
 // The E, W and I codes are inspired by ESLint's conventions.
 // E: Error - A serious issue that likely prevents correct execution.
@@ -29,21 +21,18 @@ impl DiagnosticCodes {
         code: "E001",
         message: "Timeout cannot be zero",
     };
-    pub const RUN_COMMAND_EMPTY: DiagnosticRule = DiagnosticRule {
-        code: "E002",
-        message: "Run command cannot be empty",
-    };
-    pub const FILE_PATH_EMPTY: DiagnosticRule = DiagnosticRule {
-        code: "E003",
-        message: "File path cannot be empty",
-    };
     pub const INVALID_HTTP_STATUS: DiagnosticRule = DiagnosticRule {
-        code: "E004",
+        code: "E002",
         message: "Invalid HTTP status code",
     };
-    pub const JSON_PATH_EMPTY: DiagnosticRule = DiagnosticRule {
-        code: "E005",
-        message: "JSON path cannot be empty",
+    pub const INVALID_HEADER_NAME: DiagnosticRule = DiagnosticRule {
+        code: "E003",
+        message:
+            "Invalid HTTP header name. Header names cannot contain spaces or special characters.",
+    };
+    pub const INVALID_JSON_BODY: DiagnosticRule = DiagnosticRule {
+        code: "E004",
+        message: "Request body is not valid JSON, but Content-Type is 'application/json'.",
     };
 
     // Warning codes (W) - Potential issues
@@ -71,10 +60,7 @@ impl DiagnosticCodes {
         code: "W006",
         message: "Expected failures count seems unusually high",
     };
-    pub const STOP_ON_FAILURE_ENABLED: DiagnosticRule = DiagnosticRule {
-        code: "W007",
-        message: "Stop on failure is enabled - tests will halt on first failure",
-    };
+
     pub const DUPLICATE_SCENARIO_NAME: DiagnosticRule = DiagnosticRule {
         code: "W008",
         message: "Scenario name is duplicated. All scenario names in a feature should be unique.",
@@ -87,11 +73,44 @@ impl DiagnosticCodes {
         code: "W010",
         message: "Variable is defined but never used.",
     };
+    pub const HTTP_URL_IS_LOCALHOST: DiagnosticRule = DiagnosticRule {
+        code: "W011",
+        message: "URL points to localhost. This may not be accessible in all environments.",
+    };
+    pub const HTTP_URL_IS_PLACEHOLDER: DiagnosticRule = DiagnosticRule {
+        code: "W012",
+        message: "URL uses a placeholder domain (e.g. example.com). Is this intentional?",
+    };
+    pub const SUSPICIOUS_HEADER_TYPO: DiagnosticRule = DiagnosticRule {
+        code: "W013",
+        message: "HTTP header contains a common typo.",
+    };
+    pub const CONFLICTING_HEADER: DiagnosticRule = DiagnosticRule { code: "W014", message: "Conflicting HTTP header. A header like 'Content-Type' should only be set once per request." };
+    pub const LARGE_REQUEST_BODY: DiagnosticRule = DiagnosticRule {
+        code: "W015",
+        message: "HTTP request body is very large and may cause performance issues or timeouts.",
+    };
+    pub const HARDCODED_CREDENTIALS: DiagnosticRule = DiagnosticRule {
+        code: "W016",
+        message: "Potential hardcoded credentials found in URL or header. Use variables instead.",
+    };
+    pub const INSECURE_HTTP_URL: DiagnosticRule = DiagnosticRule {
+        code: "W017",
+        message: "URL uses insecure HTTP protocol instead of HTTPS.",
+    };
+    pub const MISSING_USER_AGENT: DiagnosticRule = DiagnosticRule {
+        code: "W018",
+        message: "No User-Agent header was set for the HTTP request.",
+    };
 
     // Info codes (I) - Informational
     pub const BEST_PRACTICE_SUGGESTION: DiagnosticRule = DiagnosticRule {
         code: "I001",
         message: "Consider using best practices",
+    };
+    pub const STOP_ON_FAILURE_ENABLED: DiagnosticRule = DiagnosticRule {
+        code: "I002",
+        message: "Stop on failure is enabled - tests will halt on first failure",
     };
 }
 
@@ -99,7 +118,6 @@ pub struct Diagnostic {
     pub rule_id: String,
     pub message: String,
     pub line: usize,
-    pub column: usize,
     pub severity: Severity,
 }
 
@@ -108,6 +126,226 @@ pub enum Severity {
     Warning,
     Error,
     Info,
+}
+
+// A simplified example of the structure
+struct Linter {
+    diagnostics: Vec<Diagnostic>,
+    defined_vars: HashSet<String>,
+    used_vars: HashSet<String>,
+    seen_scenario_names: HashSet<String>,
+    current_headers: HashMap<String, String>,
+}
+
+impl Linter {
+    pub fn new() -> Self {
+        Self {
+            diagnostics: Vec::new(),
+            defined_vars: HashSet::new(),
+            used_vars: HashSet::new(),
+            seen_scenario_names: HashSet::new(),
+            current_headers: HashMap::new(),
+        }
+    }
+
+    pub fn lint(&mut self, suite: &TestSuite) -> &Vec<Diagnostic> {
+        self.diagnostics.clear();
+        self.visit_test_suite(suite);
+        &self.diagnostics
+    }
+
+    fn lint_url(&mut self, url: &str) {
+        // Skip linting if the URL contains variable substitution
+        if url.contains("${") {
+            return;
+        }
+
+        if url.contains("localhost") || url.contains("127.0.0.1") {
+            self.add_diagnostic(
+                &DiagnosticCodes::HTTP_URL_IS_LOCALHOST,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::HTTP_URL_IS_LOCALHOST.code,
+                    DiagnosticCodes::HTTP_URL_IS_LOCALHOST.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+        if url.contains("example.com") || url.contains("example.org") {
+            self.add_diagnostic(
+                &DiagnosticCodes::HTTP_URL_IS_PLACEHOLDER,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::HTTP_URL_IS_PLACEHOLDER.code,
+                    DiagnosticCodes::HTTP_URL_IS_PLACEHOLDER.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+        if url.starts_with("http://") {
+            self.add_diagnostic(
+                &DiagnosticCodes::INSECURE_HTTP_URL,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::INSECURE_HTTP_URL.code,
+                    DiagnosticCodes::INSECURE_HTTP_URL.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+
+        if !url.starts_with("http://") && !url.starts_with("https://") {
+            self.add_diagnostic(
+                &DiagnosticCodes::HTTP_URL_NO_PROTOCOL,
+                &format!(
+                    "{}: {}",
+                    DiagnosticCodes::HTTP_URL_NO_PROTOCOL.code,
+                    DiagnosticCodes::HTTP_URL_NO_PROTOCOL.message,
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+
+        if url.contains('@') && !url.contains("${") {
+            self.add_diagnostic(
+                &DiagnosticCodes::HARDCODED_CREDENTIALS,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::HARDCODED_CREDENTIALS.code,
+                    DiagnosticCodes::HARDCODED_CREDENTIALS.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+    }
+
+    fn lint_header(&mut self, key: &str, value: &str) {
+        let lower_key = key.to_lowercase();
+        // This regex ensures HTTP header names contain only valid "token" characters as defined by RFC 7230.
+        // Valid: Content-Type, User-Agent, X-Custom-Header
+        // Invalid: Content Type (space), User@Agent (@ symbol), Header:Value (colon)
+        let re = regex::Regex::new(r"^[!#$%&'*+\-.^_`|~0-9a-zA-Z]+$").unwrap();
+        println!("key: {}", key);
+        if !re.is_match(key) {
+            println!("key matches regexp {}", key);
+            self.add_diagnostic(
+                &DiagnosticCodes::INVALID_HEADER_NAME,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::INVALID_HEADER_NAME.code,
+                    DiagnosticCodes::INVALID_HEADER_NAME.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+
+        if lower_key == "contet-type" || lower_key == "acept" {
+            self.add_diagnostic(
+                &DiagnosticCodes::SUSPICIOUS_HEADER_TYPO,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::SUSPICIOUS_HEADER_TYPO.code,
+                    DiagnosticCodes::SUSPICIOUS_HEADER_TYPO.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+
+        if lower_key == "authorization" && !value.contains("${") {
+            self.add_diagnostic(
+                &DiagnosticCodes::HARDCODED_CREDENTIALS,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::HARDCODED_CREDENTIALS.code,
+                    DiagnosticCodes::HARDCODED_CREDENTIALS.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+
+        if self.current_headers.contains_key(&lower_key) && lower_key == "content-type" {
+            self.add_diagnostic(
+                &DiagnosticCodes::CONFLICTING_HEADER,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::CONFLICTING_HEADER.code,
+                    DiagnosticCodes::CONFLICTING_HEADER.message,
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+
+        self.current_headers
+            .insert(lower_key.to_owned(), value.to_owned());
+    }
+
+    fn lint_http_body(&mut self, body: &str) {
+        // Skip linting if the body contains variable substitution
+        if body.contains("${") {
+            return;
+        }
+
+        println!("body: {}", body);
+
+        if body.len() > 10 * 1024 {
+            // 10 KB
+            self.add_diagnostic(
+                &DiagnosticCodes::LARGE_REQUEST_BODY,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::LARGE_REQUEST_BODY.code,
+                    DiagnosticCodes::LARGE_REQUEST_BODY.message,
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
+        if let Some(content_type) = self.current_headers.get("content-type") {
+            if content_type.contains("application/json")
+                && serde_json::from_str::<serde_json::Value>(body).is_err()
+            {
+                self.add_diagnostic(
+                    &DiagnosticCodes::INVALID_JSON_BODY,
+                    &format!(
+                        "{} {}",
+                        DiagnosticCodes::INVALID_JSON_BODY.code,
+                        DiagnosticCodes::INVALID_JSON_BODY.message
+                    ),
+                    0,
+                    Severity::Warning,
+                );
+            }
+        }
+    }
+
+    // Use a custom formatted message but keep the rule code
+    fn add_diagnostic(
+        &mut self,
+        rule: &DiagnosticRule,
+        message: &str,
+        line: usize,
+        severity: Severity,
+    ) {
+        self.diagnostics.push(Diagnostic {
+            rule_id: rule.code.to_string(),
+            message: message.to_string(),
+            line,
+            severity,
+        });
+    }
+
+    pub fn get_diagnostics(&self) -> &Vec<Diagnostic> {
+        &self.diagnostics
+    }
 }
 
 // Add this convenience function at the module level
@@ -178,7 +416,6 @@ impl Visitor for Linter {
                     var
                 ),
                 0, // line number - would need span info from AST
-                0, // column number - would need span info from AST
                 Severity::Warning,
             );
         }
@@ -217,7 +454,6 @@ impl Visitor for Linter {
                     line
                 ),
                 line,
-                column,
                 Severity::Error,
             );
         }
@@ -239,7 +475,6 @@ impl Visitor for Linter {
                     line
                 ),
                 line,
-                column,
                 Severity::Error,
             );
         }
@@ -265,8 +500,7 @@ impl Visitor for Linter {
                     line
                 ),
                 line,
-                column,
-                Severity::Warning,
+                Severity::Info,
             );
         }
 
@@ -287,7 +521,6 @@ impl Visitor for Linter {
                     line
                 ),
                 line,
-                column,
                 Severity::Warning,
             );
         }
@@ -311,7 +544,6 @@ impl Visitor for Linter {
                     line
                 ),
                 line,
-                column,
                 Severity::Warning,
             );
         }
@@ -327,7 +559,6 @@ impl Visitor for Linter {
                     line
                 ),
                 line,
-                column,
                 Severity::Warning,
             );
         }
@@ -343,7 +574,6 @@ impl Visitor for Linter {
                     line
                 ),
                 line,
-                column,
                 Severity::Warning,
             );
         }
@@ -354,6 +584,7 @@ impl Visitor for Linter {
     }
 
     fn visit_test_case(&mut self, test: &TestCase) {
+        self.current_headers.clear();
         let (line, column) = test.span.as_ref().map_or((0, 0), |s| (s.line, s.column));
         println!("Test: {}", test.name);
 
@@ -369,6 +600,22 @@ impl Visitor for Linter {
         for condition in &test.then {
             self.visit_condition(condition);
         }
+
+        // After visiting all actions, check for missing User-Agent
+        if self.current_headers.values().any(|v| v.starts_with("http"))
+            && !self.current_headers.contains_key("user-agent")
+        {
+            self.add_diagnostic(
+                &DiagnosticCodes::MISSING_USER_AGENT,
+                &format!(
+                    "{} {}",
+                    DiagnosticCodes::MISSING_USER_AGENT.code,
+                    DiagnosticCodes::MISSING_USER_AGENT.message
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
     }
 
     fn visit_given_step(&mut self, step: &GivenStep) {
@@ -377,50 +624,41 @@ impl Visitor for Linter {
 
     fn visit_action(&mut self, action: &Action) {
         // A helper closure to find variables in a string.
-        let mut find_vars = |s: &str| {
-            let re = regex::Regex::new(r"\$\{(\w+)}").unwrap();
+        let find_vars = |s: &str, used: &mut HashSet<String>| {
+            let re = regex::Regex::new(r"\$\{(\w+)\}").unwrap();
             for cap in re.captures_iter(s) {
-                self.used_vars.insert(cap[1].to_string());
+                used.insert(cap[1].to_string());
             }
         };
 
         match action {
-            Action::Run { command, .. } => find_vars(command),
-            Action::Type { content, .. } => find_vars(content),
+            Action::Run { command, .. } => find_vars(command, &mut self.used_vars),
+            Action::Type { content, .. } => find_vars(content, &mut self.used_vars),
             Action::CreateFile { path, content } => {
-                find_vars(path);
-                find_vars(content);
+                find_vars(path, &mut self.used_vars);
+                find_vars(content, &mut self.used_vars);
             }
             Action::DeleteFile { path }
             | Action::CreateDir { path }
             | Action::DeleteDir { path } => {
-                find_vars(path);
+                find_vars(path, &mut self.used_vars);
             }
             Action::HttpSetHeader { key, value } | Action::HttpSetCookie { key, value } => {
-                find_vars(key);
-                find_vars(value);
+                find_vars(key, &mut self.used_vars);
+                find_vars(value, &mut self.used_vars);
+                self.lint_header(key, value);
             }
             Action::HttpGet { url } | Action::HttpDelete { url } => {
-                find_vars(url);
-                find_vars(url);
-                if !url.starts_with("http://") && !url.starts_with("https://") {
-                    self.add_diagnostic(
-                        &DiagnosticCodes::HTTP_URL_NO_PROTOCOL,
-                        &format!(
-                            "{}: {}",
-                            DiagnosticCodes::HTTP_URL_NO_PROTOCOL.code,
-                            DiagnosticCodes::HTTP_URL_NO_PROTOCOL.message,
-                        ),
-                        0,
-                        0,
-                        Severity::Warning,
-                    );
-                }
+                find_vars(url, &mut self.used_vars);
+                self.lint_url(url);
             }
-            Action::HttpPost { url, .. }
-            | Action::HttpPut { url, .. }
-            | Action::HttpPatch { url, .. } => {
-                find_vars(url);
+            Action::HttpPost { url, body }
+            | Action::HttpPut { url, body }
+            | Action::HttpPatch { url, body } => {
+                find_vars(url, &mut self.used_vars);
+                find_vars(body, &mut self.used_vars);
+                self.lint_url(url);
+                self.lint_http_body(body);
             }
             // Other actions...
             _ => {}
@@ -451,7 +689,6 @@ impl Visitor for Linter {
                             DiagnosticCodes::WAIT_TIME_EXCESSIVE.message,
                             wait
                         ),
-                        0,
                         0,
                         Severity::Warning,
                     );
@@ -515,7 +752,6 @@ impl Visitor for Linter {
                             status
                         ),
                         0,
-                        0,
                         Severity::Error,
                     );
                 }
@@ -531,7 +767,6 @@ impl Visitor for Linter {
                                 DiagnosticCodes::INVALID_HTTP_STATUS.message,
                                 status
                             ),
-                            0,
                             0,
                             Severity::Error,
                         );
@@ -551,62 +786,53 @@ impl Visitor for Linter {
     }
 
     fn visit_background(&mut self, steps: &Vec<GivenStep>) {
-        todo!()
-    }
-
-    fn visit_env_def(&mut self, vars: &Vec<String>) {
-        todo!()
-    }
-
-    fn visit_var_def(&mut self, name: &String, value: &Value) {
-        todo!()
-    }
-
-    fn visit_actor_def(&mut self, actors: &Vec<String>) {
-        todo!()
-    }
-
-    fn visit_feature_def(&mut self, name: &String) {
-        todo!()
-    }
-}
-
-impl Linter {
-    pub fn new() -> Self {
-        Self {
-            diagnostics: Vec::new(),
-            defined_vars: HashSet::new(),
-            used_vars: HashSet::new(),
-            seen_scenario_names: HashSet::new(),
+        // You could add linting rules here, for example:
+        // - Check if background has too many steps
+        // - Validate that background only contains setup actions
+        for step in steps {
+            self.visit_given_step(step);
         }
     }
 
-    pub fn lint(&mut self, suite: &TestSuite) -> &Vec<Diagnostic> {
-        self.diagnostics.clear();
-        self.visit_test_suite(suite);
-        &self.diagnostics
+    fn visit_env_def(&mut self, vars: &Vec<String>) {
+        // Potential linting rules:
+        // - Check for empty environment variable names
+        // - Warn about sensitive variable names
+        for var in vars {
+            if var.trim().is_empty() {
+                // Add appropriate diagnostic
+            }
+        }
     }
 
-    // Use a custom formatted message but keep the rule code
-    fn add_diagnostic(
-        &mut self,
-        rule: &DiagnosticRule,
-        message: &str,
-        line: usize,
-        column: usize,
-        severity: Severity,
-    ) {
-        self.diagnostics.push(Diagnostic {
-            rule_id: rule.code.to_string(),
-            message: message.to_string(),
-            line,
-            column,
-            severity,
-        });
+    fn visit_var_def(&mut self, name: &String, value: &Value) {
+        // Potential linting rules:
+        // - Check for empty variable names
+        // - Track variable usage (for W010: UNUSED_VARIABLE)
+        if name.trim().is_empty() {
+            // Add appropriate diagnostic
+        }
     }
 
-    pub fn get_diagnostics(&self) -> &Vec<Diagnostic> {
-        &self.diagnostics
+    fn visit_actor_def(&mut self, actors: &Vec<String>) {
+        // Potential linting rules:
+        // - Check for empty actor names
+        // - Check for duplicate actors
+        // - Validate actor naming conventions
+        for actor in actors {
+            if actor.trim().is_empty() {
+                // Add appropriate diagnostic
+            }
+        }
+    }
+
+    fn visit_feature_def(&mut self, name: &String) {
+        // Potential linting rules:
+        // - Check for empty feature names
+        // - Validate feature naming conventions
+        if name.trim().is_empty() {
+            // Add appropriate diagnostic
+        }
     }
 }
 

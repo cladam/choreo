@@ -873,7 +873,6 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                 }
                 "clear_cookies" => Action::HttpClearCookies,
                 "http_get" => {
-                    println!("http_get - action_inner: {}", action_inner);
                     let url = action_inner
                         .next()
                         .unwrap()
@@ -882,9 +881,6 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         .unwrap()
                         .as_str()
                         .to_string();
-                    println!("Raw URL before processing: '{}'", url);
-                    println!("URL length: {}", url.len());
-                    println!("URL bytes: {:?}", url.as_bytes());
                     Action::HttpGet { url }
                 }
                 "http_post" => {
@@ -896,14 +892,15 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         .unwrap()
                         .as_str()
                         .to_string();
-                    let body = action_inner
-                        .next()
-                        .unwrap()
-                        .into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .to_string();
+                    let body = unescape_string(
+                        action_inner
+                            .next()
+                            .unwrap()
+                            .into_inner()
+                            .next()
+                            .unwrap()
+                            .as_str(),
+                    );
                     Action::HttpPost { url, body }
                 }
                 "http_put" => {
@@ -915,14 +912,15 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         .unwrap()
                         .as_str()
                         .to_string();
-                    let body = action_inner
-                        .next()
-                        .unwrap()
-                        .into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .to_string();
+                    let body = unescape_string(
+                        action_inner
+                            .next()
+                            .unwrap()
+                            .into_inner()
+                            .next()
+                            .unwrap()
+                            .as_str(),
+                    );
                     Action::HttpPut { url, body }
                 }
                 "http_patch" => {
@@ -934,14 +932,15 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         .unwrap()
                         .as_str()
                         .to_string();
-                    let body = action_inner
-                        .next()
-                        .unwrap()
-                        .into_inner()
-                        .next()
-                        .unwrap()
-                        .as_str()
-                        .to_string();
+                    let body = unescape_string(
+                        action_inner
+                            .next()
+                            .unwrap()
+                            .into_inner()
+                            .next()
+                            .unwrap()
+                            .as_str(),
+                    );
                     Action::HttpPatch { url, body }
                 }
                 "http_delete" => {
