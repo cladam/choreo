@@ -43,7 +43,7 @@ env:
 
 jobs:
   lint-examples:
-    name: Validate Examples
+    name: Lint Examples
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -52,7 +52,7 @@ jobs:
       - name: Build
         run: cargo build --release
 
-      - name: Validate all examples
+      - name: Lint all examples
         run: |
           for file in examples/*.chor; do
             echo "Validating $file"
@@ -60,7 +60,7 @@ jobs:
           done
 
   build-and-test:
-    needs: validate-examples
+    needs: lint-examples
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
