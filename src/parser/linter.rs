@@ -5,9 +5,6 @@ use crate::parser::ast::{
 use std::collections::{HashMap, HashSet};
 
 // The E, W and I codes are inspired by ESLint's conventions.
-// E: Error - A serious issue that likely prevents correct execution.
-// W: Warning - A potential issue that may lead to unexpected behavior.
-// I: Info - Informational messages that do not indicate a problem.
 pub struct DiagnosticRule {
     pub code: &'static str,
     pub message: &'static str,
@@ -16,7 +13,7 @@ pub struct DiagnosticRule {
 pub struct DiagnosticCodes;
 
 impl DiagnosticCodes {
-    // Error codes (E) - Critical issues that prevent execution
+    // Error codes (E) - Critical issues in the chor file
     pub const TIMEOUT_ZERO: DiagnosticRule = DiagnosticRule {
         code: "E001",
         message: "Timeout cannot be zero",
@@ -128,7 +125,6 @@ pub enum Severity {
     Info,
 }
 
-// A simplified example of the structure
 struct Linter {
     diagnostics: Vec<Diagnostic>,
     defined_vars: HashSet<String>,
@@ -155,7 +151,7 @@ impl Linter {
     }
 
     fn lint_url(&mut self, url: &str) {
-        // Skip linting if the URL contains variable substitution
+        // Skip linting if the URL contains variable substitution like ${URL}
         if url.contains("${") {
             return;
         }
@@ -230,9 +226,9 @@ impl Linter {
         // Valid: Content-Type, User-Agent, X-Custom-Header
         // Invalid: Content Type (space), User@Agent (@ symbol), Header:Value (colon)
         let re = regex::Regex::new(r"^[!#$%&'*+\-.^_`|~0-9a-zA-Z]+$").unwrap();
-        println!("key: {}", key);
+        //println!("key: {}", key);
         if !re.is_match(key) {
-            println!("key matches regexp {}", key);
+            //println!("key matches regexp {}", key);
             self.add_diagnostic(
                 &DiagnosticCodes::INVALID_HEADER_NAME,
                 &format!(
@@ -294,7 +290,7 @@ impl Linter {
             return;
         }
 
-        println!("body: {}", body);
+        //println!("body: {}", body);
 
         if body.len() > 10 * 1024 {
             // 10 KB
@@ -327,7 +323,7 @@ impl Linter {
         }
     }
 
-    // Use a custom formatted message but keep the rule code
+    // Use a custom formatted message
     fn add_diagnostic(
         &mut self,
         rule: &DiagnosticRule,
@@ -341,10 +337,6 @@ impl Linter {
             line,
             severity,
         });
-    }
-
-    pub fn get_diagnostics(&self) -> &Vec<Diagnostic> {
-        &self.diagnostics
     }
 }
 
@@ -372,7 +364,7 @@ pub trait Visitor {
     fn visit_env_def(&mut self, vars: &Vec<String>);
     fn visit_var_def(&mut self, name: &String, value: &Value);
     fn visit_actor_def(&mut self, actors: &Vec<String>);
-    fn visit_feature_def(&mut self, name: &String);
+    //fn visit_feature_def(&mut self, name: &String);
 }
 
 impl Visitor for Linter {
@@ -382,12 +374,12 @@ impl Visitor for Linter {
             match statement {
                 Statement::EnvDef(vars) => {
                     for var in vars {
-                        println!("Env: {}", var);
+                        //println!("Env: {}", var);
                         self.defined_vars.insert(var.clone());
                     }
                 }
                 Statement::VarDef(name, _value) => {
-                    println!("Var: {}", name);
+                    //println!("Var: {}", name);
                     self.defined_vars.insert(name.clone());
                 }
                 _ => {}
@@ -415,7 +407,7 @@ impl Visitor for Linter {
                     DiagnosticCodes::UNUSED_VARIABLE.message,
                     var
                 ),
-                0, // line number - would need span info from AST
+                0, // line number - need to get span info
                 Severity::Warning,
             );
         }
@@ -427,7 +419,8 @@ impl Visitor for Linter {
             Statement::TestCase(test) => self.visit_test_case(test),
             Statement::SettingsDef(settings) => self.visit_settings(settings),
             Statement::BackgroundDef(steps) => self.visit_background(steps),
-            Statement::FeatureDef(name) => self.visit_feature_def(name),
+            // Nothing to lint really
+            // Statement::FeatureDef(name) => self.visit_feature_def(name),
             Statement::ActorDef(actors) => self.visit_actor_def(actors),
             Statement::EnvDef(vars) => self.visit_env_def(vars),
             Statement::VarDef(name, value) => self.visit_var_def(name, value),
@@ -443,7 +436,7 @@ impl Visitor for Linter {
             .unwrap_or((0, 0));
 
         if settings.timeout_seconds == 0 {
-            let (line, column) = settings
+            let (line, _column) = settings
                 .setting_spans
                 .as_ref()
                 .and_then(|spans| spans.timeout_seconds_span.as_ref())
@@ -464,7 +457,7 @@ impl Visitor for Linter {
         }
 
         if settings.timeout_seconds > 300 {
-            let (line, column) = settings
+            let (line, _column) = settings
                 .setting_spans
                 .as_ref()
                 .and_then(|spans| spans.timeout_seconds_span.as_ref())
@@ -484,13 +477,9 @@ impl Visitor for Linter {
             );
         }
 
-        // No need to lint report_format or report_path, as the parser catches errors earlier
-
-        // shell_path errors are caught in the parser as well
-
         // Warn if stop_on_failure is enabled
         if settings.stop_on_failure {
-            let (line, column) = settings
+            let (line, _column) = settings
                 .setting_spans
                 .as_ref()
                 .and_then(|spans| spans.stop_on_failure_span.as_ref())
@@ -511,7 +500,7 @@ impl Visitor for Linter {
 
         // Validate expected_failures
         if settings.expected_failures > 100 {
-            let (line, column) = settings
+            let (line, _column) = settings
                 .setting_spans
                 .as_ref()
                 .and_then(|spans| spans.expected_failures_span.as_ref())
@@ -532,13 +521,13 @@ impl Visitor for Linter {
     }
 
     fn visit_scenario(&mut self, scenario: &Scenario) {
-        let (line, column) = scenario
+        let (line, _column) = scenario
             .span
             .as_ref()
             .map_or((0, 0), |s| (s.line, s.column));
-        println!("Scenario: {}", scenario.name);
+        //println!("Scenario: {}", scenario.name);
 
-        // Rule W001: Check for empty scenarios.
+        // Check for empty scenarios.
         if scenario.tests.is_empty() {
             self.add_diagnostic(
                 &DiagnosticCodes::SCENARIO_NO_TESTS,
@@ -553,7 +542,7 @@ impl Visitor for Linter {
             );
         }
 
-        // Rule W008: Check for duplicate scenario names.
+        // Check for duplicate scenario names.
         if !self.seen_scenario_names.insert(scenario.name.clone()) {
             self.add_diagnostic(
                 &DiagnosticCodes::DUPLICATE_SCENARIO_NAME,
@@ -568,7 +557,7 @@ impl Visitor for Linter {
             );
         }
 
-        // Rule W009: Check if setup actions exist without a corresponding cleanup.
+        // Check if setup actions exist without a corresponding cleanup.
         if scenario_has_setup_actions(scenario) && scenario.after.is_empty() {
             self.add_diagnostic(
                 &DiagnosticCodes::MISSING_CLEANUP,
@@ -590,8 +579,8 @@ impl Visitor for Linter {
 
     fn visit_test_case(&mut self, test: &TestCase) {
         self.current_headers.clear();
-        let (line, column) = test.span.as_ref().map_or((0, 0), |s| (s.line, s.column));
-        println!("Test: {}", test.name);
+        let (line, _column) = test.span.as_ref().map_or((0, 0), |s| (s.line, s.column));
+        //println!("Test: {}", test.name);
 
         for step in &test.given {
             match step {
@@ -606,7 +595,7 @@ impl Visitor for Linter {
             self.visit_condition(condition);
         }
 
-        // After visiting all actions, check for missing User-Agent
+        // Check for missing User-Agent
         if self.current_headers.values().any(|v| v.starts_with("http"))
             && !self.current_headers.contains_key("user-agent")
         {
@@ -617,7 +606,7 @@ impl Visitor for Linter {
                     DiagnosticCodes::MISSING_USER_AGENT.code,
                     DiagnosticCodes::MISSING_USER_AGENT.message
                 ),
-                0,
+                line,
                 Severity::Warning,
             );
         }
@@ -633,7 +622,7 @@ impl Visitor for Linter {
     fn visit_action(&mut self, action: &Action) {
         // A helper closure to find variables in a string.
         let find_vars = |s: &str, used: &mut HashSet<String>| {
-            let re = regex::Regex::new(r"\$\{(\w+)\}").unwrap();
+            let re = regex::Regex::new(r"\$\{(\w+)}").unwrap();
             for cap in re.captures_iter(s) {
                 used.insert(cap[1].to_string());
             }
@@ -686,7 +675,7 @@ impl Visitor for Linter {
 
         match condition {
             Condition::Wait { wait, .. } => {
-                // W004: Excessive wait time
+                // Excessive wait time
                 if *wait > 300.0 {
                     // 5 minutes
                     self.add_diagnostic(
@@ -749,7 +738,7 @@ impl Visitor for Linter {
             }
 
             Condition::ResponseStatusIs(status) => {
-                // E005: Invalid HTTP status code
+                // Invalid HTTP status code
                 if !VALID_HTTP_STATUS_RANGE.contains(status) {
                     self.add_diagnostic(
                         &DiagnosticCodes::INVALID_HTTP_STATUS,
@@ -794,9 +783,7 @@ impl Visitor for Linter {
     }
 
     fn visit_background(&mut self, steps: &Vec<GivenStep>) {
-        // You could add linting rules here, for example:
-        // - Check if background has too many steps
-        // - Validate that background only contains setup actions
+        // A background block is essentially a given bloch that is parsed before everything else in a scenario
         for step in steps {
             self.visit_given_step(step);
         }
@@ -835,7 +822,7 @@ impl Visitor for Linter {
         }
     }
 
-    fn visit_var_def(&mut self, name: &String, value: &Value) {
+    fn visit_var_def(&mut self, name: &String, _value: &Value) {
         // Check for naming convention (SCREAMING_SNAKE_CASE for variables)
         if !name
             .chars()
@@ -873,11 +860,11 @@ impl Visitor for Linter {
         let mut seen_actors = HashSet::new();
 
         for actor in actors {
-            println!("actor: {}", actor);
+            //println!("actor: {}", actor);
             // Check for duplicate actors
             if !seen_actors.insert(actor.clone()) {
                 self.add_diagnostic(
-                    &DiagnosticCodes::DUPLICATE_SCENARIO_NAME, // Reusing similar rule
+                    &DiagnosticCodes::DUPLICATE_SCENARIO_NAME, // reuse
                     &format!("Duplicate actor '{}' found", actor),
                     0,
                     Severity::Warning,
@@ -912,15 +899,9 @@ impl Visitor for Linter {
             }
         }
     }
-
-    fn visit_feature_def(&mut self, name: &String) {
-        println!("feature: {}", name);
-        // No specific rules really, a feature is just a string, maybe naming convention and no rude names :)
-    }
 }
 
 ///Helper function to check if a scenario contains file system creation actions.
-/// is_filesystem_creation is a helper function on the Action struct itself
 fn scenario_has_setup_actions(scenario: &Scenario) -> bool {
     for test in &scenario.tests {
         let steps_to_check: Vec<_> = test
