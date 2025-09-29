@@ -11,26 +11,60 @@ variables, and integrate `choreo` into your workflow. This section covers those 
 
 ## Validating and Linting Tests
 
-`choreo` comes with a built-in validate command that acts as a linter for your `.chor` files. It's an essential tool for
-catching errors before you run your tests, especially in an automated CI pipeline.
+`choreo` comes with a built-in validate command that acts as a comprehensive linter for your `.chor` files. It's a
+great tool for catching errors, potential issues, and following best practices before you run your tests, especially
+in an automated CI pipeline.
 
-The validator checks for several common issues:
+The validator performs three levels of checks:
 
-- **Syntax Errors**: Ensures your file conforms to the `choreo` grammar.
-- **Invalid Commands**: Verifies that the commands you're using are valid for the declared actors (e.g. you can't use
-  `http_get` with the `Terminal` actor).
-- **Undeclared Variables**: Checks that any `${variable}` you use has been defined in a `var` block or is expected to be
-  passed in
-  from the environment.
+### Error Checks (E codes)
 
-You can run it from your terminal like this:
+Critical issues that must be fixed:
+
+- **E001**: Timeout cannot be zero
+- **E002**: Invalid HTTP status codes
+- **E003**: Invalid HTTP header names (no spaces or special characters)
+- **E004**: Invalid JSON in request body when Content-Type is `application/json`
+
+### Warning Checks (W codes)
+
+Potential issues that should be reviewed:
+
+- **W001**: Empty scenarios with no test cases
+- **W002**: Tests with no `given` steps (may depend on implicit state)
+- **W003**: HTTP URLs missing protocol (http:// or https://)
+- **W004**: Excessive wait times (over 5 minutes)
+- **W005**: Excessive timeout settings (over 5 minutes)
+- **W006**: Unusually high expected failures count
+- **W008**: Duplicate scenario names within a feature
+- **W009**: Missing cleanup in `after` blocks for file/directory creation
+- **W010**: Unused variable definitions
+- **W011**: URLs pointing to localhost (may not work in all environments)
+- **W012**: Placeholder domains like example.com
+- **W013**: Common header typos (e.g., "Acept" instead of "Accept")
+- **W014**: Conflicting HTTP headers (e.g., multiple Content-Type headers)
+- **W015**: Large request bodies that may cause timeouts
+- **W016**: Hardcoded credentials in URLs or headers
+- **W017**: Insecure HTTP instead of HTTPS
+- **W018**: Missing User-Agent headers for HTTP requests
+
+### Info Checks (I codes)
+
+Informational suggestions:
+
+- **I001**: General best practice suggestions
+- **I002**: Notifications when stop_on_failure is enabled
+
+You can run the linter from your terminal like this:
 
 ```bash
 # Validate the default test.chor file
-choreo validate /path/to/your/test.chor
+choreo lint /path/to/your/test.chor
 ```
 
-If there are any issues, the validator will print detailed error messages to help you fix them.
+The linter will output detailed diagnostic messages with specific line numbers, error codes, and suggestions to help you
+fix issues and improve your test quality. It also tracks variable usage to ensure all defined variables are actually
+used in your tests.
 
 ## Working with Variables and Environment Secrets
 
