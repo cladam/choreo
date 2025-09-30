@@ -28,7 +28,7 @@ Plain Text (`.chor` file) -> Parser (Pest) -> Abstract Syntax Tree (AST) -> Runn
 
 The parser ensures that the structure of the test is correct, checking for things like valid keywords, proper nesting of
 scenarios and tests, and correct usage of actors. If the syntax is valid, it produces an AST that the runner can then
-process. See our [Grammar & Parser documentation](../grammar-and-parser) for more details.
+process. See the [Grammar & Parser documentation](../grammar-and-parser) for more details.
 
 ### 2. The Runner & Backends
 
@@ -58,5 +58,77 @@ and [usage examples](../examples-filesystem).
 
 ### 4. Results & Reporting
 
-The Reporter: Finally, mention that after the runner completes all tests, the results are compiled into a structured
+After the runner completes all tests, the results are compiled into a structured
 JSON report, making it easy to integrate with CI/CD systems.
+
+#### Example report
+
+```json
+[
+  {
+    "uri": "examples/config_file.chor",
+    "keyword": "Feature",
+    "name": "Configuration File Handling",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "Program reads a custom configuration",
+        "steps": [
+          {
+            "name": "CommandSuccessAndFileChecks",
+            "description": "Handles successful commands and file conditions",
+            "result": {
+              "status": "passed",
+              "durationInMs": 165
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "FileSystem delete_file 'config.toml'",
+            "result": {
+              "status": "passed",
+              "durationInMs": 0
+            }
+          }
+        ]
+      },
+      {
+        "keyword": "Scenario",
+        "name": "Listing files in a directory",
+        "steps": [
+          {
+            "name": "VerifyListing",
+            "description": "Verify 'ls' command runs successfully",
+            "result": {
+              "status": "passed",
+              "durationInMs": 111
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "Program greets a user",
+        "steps": [
+          {
+            "name": "VerifyPrintf",
+            "description": "Verify the program prints a welcome message",
+            "result": {
+              "status": "passed",
+              "durationInMs": 55
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 3,
+      "failures": 0,
+      "totalTimeInSeconds": 0.16550574
+    }
+  }
+]
+```

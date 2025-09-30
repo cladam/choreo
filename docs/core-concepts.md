@@ -22,16 +22,16 @@ feature "User Authentication"
 actor Terminal
 
 scenario "Successful login attempt" {
-    test "Verify login grants access" {
+    test VerifySuccessfulLogin "Verify login grants access" {
         given:
             # Assume a 'login' command exists
-            Terminal run "login --user admin --pass secret123"
+            Terminal runs "login --user admin --pass secret123"
         when:
             # Check the output for a success message
             Terminal output_contains "Welcome, admin!"
         then:
-            # The command should exit cleanly
-            Terminal expect_exit_code 0
+            # The command should exit cleanly (0)
+            Terminal last_command succeeded
     }
 }
 ```
@@ -74,7 +74,7 @@ success condition.
 
 ```choreo
 scenario "Handling invalid credentials" {
-  test "Verify login is denied" {
+  test VerifyDeny "Verify login is denied" {
     ...
   }
 }
