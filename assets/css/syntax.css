@@ -1,39 +1,60 @@
-/* A custom Choreo theme based on your color-coded example */
+/* A custom choreo theme for chor files */
 
 pre.highlight {
-  background-color: #E2E2E2;
-  border-radius: 6px;
-  line-height: 1.6;
-  margin-bottom: 1.5em;
-  overflow: auto;
-  padding: 16px;
-  font-size: 0.9em;
-  border: 1px solid #e5e5e5;
+    background-color: #F2F2F2;
+    border-radius: 6px;
+    line-height: 1.6;
+    margin-bottom: 1.5em;
+    overflow: auto;
+    padding: 16px;
+    font-size: 0.9em;
+    border: 1px solid #e5e5e5;
 }
 
 /* Default text color */
-.highlight .h, .highlight { color: #24292f; } 
+.highlight .h, .highlight {
+    color: #24292f;
+}
 
 /* Keywords (feature, scenario, given, when, then) */
-.highlight .k, .highlight .kn, .highlight .kd { color: #8250df; font-weight: bold; }
+.highlight .k, .highlight .kn, .highlight .kd {
+    color: #8250df;
+    font-weight: bold;
+}
 
 /* Built-ins & Literals (Web, Terminal, true) and Numbers (5, 2s) */
-.highlight .nb, .highlight .mi, .highlight .mf, .highlight .m { color: #0550ae; }
+.highlight .nb, .highlight .mi, .highlight .mf, .highlight .m {
+    color: #0550ae;
+}
 
 /* Functions & Assertions (set_header, response_is_success) */
-.highlight .nf { color: #116875; }
+.highlight .nf {
+    color: #116875;
+}
 
 /* Strings ("API Health Check") */
-.highlight .s, .highlight .s1, .highlight .s2 { color: #22863a; }
+.highlight .s, .highlight .s1, .highlight .s2 {
+    color: #22863a;
+}
 
 /* Variables (${url}) */
-.highlight .nv { color: #e36209; }
+.highlight .nv {
+    color: #e36209;
+}
 
 /* Comments (# Example) */
-.highlight .c, .highlight .c1, .highlight .cm { color: #6a737d; font-style: italic; }
+.highlight .c, .highlight .c1, .highlight .cm {
+    color: #6a737d;
+    font-style: italic;
+}
 
 /* Punctuation ({, }, =, :) */
-.highlight .p { color: #57606a; }
+.highlight .p {
+    color: #57606a;
+}
 
 /* Errors (should not appear with a correct lexer) */
-.highlight .err { color: #cf222e; background-color: #ffebe9; } 
+.highlight .err {
+    color: #cf222e;
+    background-color: #ffebe9;
+}
