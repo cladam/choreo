@@ -114,7 +114,16 @@ environment where `choreo` is executed and make them available for substitution.
 **Example:**
 
 ```choreo
-env API_TOKEN, GITHUB_USER
+env {
+    API_TOKEN
+    GITHUB_USER
+}
+```
+
+Or use a single environment variable like:
+
+```choreo
+env HOME
 ```
 
 #### `actors`
