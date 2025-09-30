@@ -11,7 +11,7 @@ module Rouge
 
       # Keywords for blocks and declarations
       KEYWORD_DECLARATION = %w(
-        feature actors settings background scenario after test var env
+        feature actors actor settings background scenario after test var env
       ).freeze
 
       # Keywords for test steps
