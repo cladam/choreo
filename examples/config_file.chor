@@ -1,0 +1,58 @@
+feature "Configuration File Handling"
+
+actors {
+    FileSystem
+    Terminal
+}
+
+scenario "Program reads a custom configuration" {
+    test CommandSuccessAndFileChecks "Handles successful commands and file conditions" {
+        given:
+            # Create a config file with specific content
+            FileSystem create_file "config.toml" with_content "verbose = true"
+        when:
+            # Run the program which should read config.toml
+            #Terminal runs "my-app --config config.toml"
+            Terminal runs "echo 'Running in verbose mode'"
+        then:
+            # The output should reflect the setting from the file
+            Terminal output_contains "Running in verbose mode"
+            FileSystem file_exists "config.toml"
+            FileSystem file_contains "config.toml" with_content "verbose = true"
+    }
+
+    after {
+        FileSystem delete_file "config.toml"
+    }
+}
+
+
+scenario "Listing files in a directory" {
+    test VerifyListing "Verify 'ls' command runs successfully" {
+    given:
+        # Execute immediately
+        wait >= 0s
+    when:
+        # Run the standard 'ls -l' command
+        Terminal runs "ls -l"
+    then:
+        # Assert that the command exited without errors
+        Terminal last_command exit_code_is 0
+    }
+}
+
+scenario "Program greets a user" {
+    test VerifyPrintf "Verify the program prints a welcome message" {
+    given:
+        wait >= 0s
+    when:
+        # Run a command that should print "Hello, Choreo!"
+        #Terminal runs "my-cli-app greet choreo"
+        Terminal runs "echo 'Hello, choreo!'"
+    then:
+        # Check that stdout contains the expected greeting
+        Terminal output_contains "Hello, choreo!"
+        Terminal last_command exit_code_is 0
+        Terminal stderr_is_empty
+    }
+}

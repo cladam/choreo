@@ -16,7 +16,7 @@ To use the `Web` actor in your tests, you must first declare it in the actors li
 actor Web
 ```
 
-### Example 1: API Health Check
+### Example 1: API health check
 
 This example shows a simple health check that sends an authenticated `GET` request to an API endpoint and verifies the
 response.
@@ -37,18 +37,18 @@ background {
     Web set_cookie "session_id" "abc123"
 }
 
-var url = "https://httpbin.org/bearer"
-var bearing_token = "choreo-token-xyz"
-# bearing_token should come from an environment variable or secret manager in real scenarios
-# Example: env: BEARING_TOKEN
+var URL = "https://httpbin.org/bearer"
+var BEARING_TOKEN = "choreo-token-xyz"
+# BEARING_TOKEN should come from an environment variable or secret manager in real scenarios
+# Example: env BEARING_TOKEN
 
 scenario "Health check for a web API endpoint" {
     test HealthCheck "Verify the API endpoint is healthy" {
         given:
             wait >= 0s
         when:
-            Web set_header "Authorization" "Bearer ${bearing_token}"
-            Web http_get "${url}"
+            Web set_header "Authorization" "Bearer ${BEARING_TOKEN}"
+            Web http_get "${URL}"
         then:
             Web response_status is_success
             Web response_time is_below 2s
@@ -61,7 +61,7 @@ scenario "Health check for a web API endpoint" {
 }
 ```
 
-### Example 2: Comprehensive Web Conditions
+### Example 2: Comprehensive web conditions
 
 This example demonstrates a variety of web conditions against the `httpbin.org` service, testing status codes, response
 bodies, and JSON structures.
