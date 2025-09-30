@@ -114,7 +114,7 @@ environment where `choreo` is executed and make them available for substitution.
 **Example:**
 
 ```choreo
-env: API_TOKEN, GITHUB_USER
+env API_TOKEN, GITHUB_USER
 ```
 
 #### `actors`
@@ -125,7 +125,17 @@ Declares the different systems or components that the test will interact with. T
 **Example:**
 
 ```choreo
-actors: Terminal, FileSystem, Web
+actors {
+    Terminal
+    FileSystem
+    Web
+}
+```
+
+Or use a singular actor like `Web`
+
+```choreo
+actor Web
 ```
 
 #### `scenario`
@@ -223,10 +233,10 @@ This is the reference for all available commands that can be used within the `te
 
 ### Wait Conditions
 
-| Syntax           | Description                                                            |
-|:-----------------|:-----------------------------------------------------------------------|
-| `wait \>= 1.5s`  | Passes if the test has been running for at least 1.5 seconds.          |
-| `wait \<= 100ms` | Passes if the test has been running for no more than 100 milliseconds. |
+| Syntax          | Description                                                            |
+|:----------------|:-----------------------------------------------------------------------|
+| `wait >= 1.5s`  | Passes if the test has been running for at least 1.5 seconds.          |
+| `wait <= 100ms` | Passes if the test has been running for no more than 100 milliseconds. |
 
 ### State Conditions
 

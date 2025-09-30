@@ -77,16 +77,19 @@ You can define local variables within your `.chor` file using the `var` keyword.
 using `${variable_name}` syntax.
 
 ```choreo
-var base_url = "https://api.staging.myapp.com"
-var user_id = "user-123"
-test "Fetch user profile" {
-    given:
-        wait >= 0s
-    when:
-        Web http_get "base_url/users/{user_id}"
-    then:
-        Web response_status is_success  
-        Web json_path at "/myapp/user" equals "${user_id}"
+feature "Fetch a user profile"
+actor Web
+var BASE_URL = "https://api.staging.myapp.com"
+var USER_ID = "user-123"
+scenario "User Profile Tests" {
+    test FetchProfile "Fetch user profile" {
+        given:
+            wait >= 0s
+        when:
+            Web http_get "${BASE_URL}/users/{USER_ID}"
+        then:
+            Web response_status is_success
+            Web json_path at "/myapp/user" equals "${USER_ID}"
     }
 }
 ```

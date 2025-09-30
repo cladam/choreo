@@ -19,7 +19,7 @@ test.
 
 ```choreo
 feature "User Authentication"
-actors Terminal
+actor Terminal
 
 scenario "Successful login attempt" {
     test "Verify login grants access" {
@@ -58,7 +58,10 @@ act as specialised backends:
 You must declare which actors your feature will use at the top of the file.
 
 ```choreo
-actors: Terminal, FileSystem
+actors {
+    Terminal
+    FileSystem
+}
 ```
 
 ## 3. Scenarios & Tests: The "How"

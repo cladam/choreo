@@ -5,24 +5,26 @@ title: Web Examples
 
 # The Web Actor
 
-The `Web` actor is a powerful component in `choreo` designed for testing HTTP-based services, such as REST APIs. It allows you to send HTTP requests, manage headers and cookies, and assert conditions on the responses you receive.
+The `Web` actor is a powerful component in `choreo` designed for testing HTTP-based services, such as REST APIs. It
+allows you to send HTTP requests, manage headers and cookies, and assert conditions on the responses you receive.
 
 ## Setup
 
 To use the `Web` actor in your tests, you must first declare it in the actors list at the top of your `.chor` file.
 
 ```choreo
-actors: Web
+actor Web
 ```
 
 ### Example 1: API Health Check
 
-This example shows a simple health check that sends an authenticated `GET` request to an API endpoint and verifies the response.
+This example shows a simple health check that sends an authenticated `GET` request to an API endpoint and verifies the
+response.
 
 ```choreo
 feature "API Health Check"
 
-actors: Web
+actor Web
 
 settings {
     timeout_seconds = 5
@@ -41,7 +43,6 @@ var bearing_token = "choreo-token-xyz"
 # Example: env: BEARING_TOKEN
 
 scenario "Health check for a web API endpoint" {
-
     test HealthCheck "Verify the API endpoint is healthy" {
         given:
             wait >= 0s
@@ -57,17 +58,17 @@ scenario "Health check for a web API endpoint" {
         Web clear_header "Authorization"
         Web clear_cookie "session_id"
     }
-
 }
 ```
 
 ### Example 2: Comprehensive Web Conditions
 
-This example demonstrates a variety of web conditions against the `httpbin.org` service, testing status codes, response bodies, and JSON structures.
+This example demonstrates a variety of web conditions against the `httpbin.org` service, testing status codes, response
+bodies, and JSON structures.
 
 ```choreo
 feature "Web Conditions"
-actors: Web
+actor Web
 
 scenario "Testing various web conditions" {
     test StatusCodeTest "Test different HTTP status codes" {
