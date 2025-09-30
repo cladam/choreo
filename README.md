@@ -119,6 +119,18 @@ choreo validate
 choreo validate --file "examples/advanced_matchers.chor"
 ```
 
+#### Lint a test file
+
+Use the `lint` command to check the syntax and structure of a `.chor` file without executing it.
+
+```bash
+# Validate and run linting on the default test.chor file
+choreo lint
+
+# Lint a specific file
+choreo lint --file "examples/advanced_matchers.chor"
+```
+
 #### Run a script
 
 Use the `run` command to execute a `.chor` file. Use the `--verbose` flag for detailed debug output.
