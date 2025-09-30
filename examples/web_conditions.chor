@@ -11,7 +11,7 @@ scenario "Testing various web conditions" {
             Web http_get "https://httpbin.org/status/200"
         then:
             Web response_status_is 200
-            Web response_time is_below 2s # httpbin can be slow sometimes
+            Web response_time is_below 5s # httpbin can be slow sometimes
     }
 
     test ErrorStatusTest "Test error status codes" {

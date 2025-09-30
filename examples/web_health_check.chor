@@ -28,7 +28,7 @@ scenario "Health check for a web API endpoint" {
             Web http_get "${url}"
         then:
             Web response_status is_success
-            Web response_time is_below 2s
+            Web response_time is_below 5s
     }
 
     after {
