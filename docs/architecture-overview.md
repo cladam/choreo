@@ -20,7 +20,7 @@ The entire process can be visualised as a clear data flow:
 Plain Text (`.chor` file) -> Parser (Pest) -> Abstract Syntax Tree (AST) -> Runner -> Backends (`Web`, `Terminal`,
 `FileSystem`) -> Test Result (JSON Report)
 
-![Data Flow Diagram](../assets/images/choreo-flow.png)
+![Data Flow Diagram]({{ '/assets/images/choreo-flow.png' | relative_url }})
 
 ## Component Breakdown
 
