@@ -20,16 +20,16 @@ actor Terminal
 
 scenario "Listing files in a directory" {
     test VerifyListing "Verify 'ls' command runs successfully" {
-    given:
-        # Execute immediately
-        wait >= 0s
-    when:
-        # Run the standard 'ls -l' command
-        Terminal runs "ls -l"
-    then:
-        # Assert that the command exited without errors
-        Terminal last_command exit_code_is 0
-    }
+        given:
+            # Execute immediately
+            wait >= 0s
+        when:
+            # Run the standard 'ls -l' command
+            Terminal runs "ls -l"
+        then:
+            # Assert that the command exited without errors
+            Terminal last_command succeeded
+        }
 }
 ```
 
@@ -41,16 +41,16 @@ you expect.
 ```choreo
 scenario "Program greets a user" {
     test VerifyPrintf "Verify the program prints a welcome message" {
-    given:
-        wait >= 0s
-    when:
-        # Run a command that should print "Hello, Choreo!"
-        Terminal runs "my-cli-app greet choreo"
-    then:
-        # Check that stdout (output) contains the expected greeting
-        Terminal output_contains "Hello, choreo!"
-        Terminal last_command exit_code_is 0
-        Terminal stderr_is_empty
+        given:
+            wait >= 0s
+        when:
+            # Run a command that should print "Hello, Choreo!"
+            Terminal runs "my-cli-app greet choreo"
+        then:
+            # Check that stdout (output) contains the expected greeting
+            Terminal output_contains "Hello, choreo!"
+            Terminal last_command succeeded
+            Terminal stderr_is_empty
     }
 }
 ```
