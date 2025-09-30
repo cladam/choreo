@@ -58,7 +58,7 @@ Informational suggestions:
 You can run the linter from your terminal like this:
 
 ```bash
-# Validate the default test.chor file
+# Validate a test chor file
 choreo lint /path/to/your/test.chor
 ```
 
@@ -74,19 +74,21 @@ sensitive information like API keys or tokens, which you don't want to hardcode 
 #### Local Variables
 
 You can define local variables within your `.chor` file using the `var` keyword. These variables can then be referenced
-using `${variable_name}` syntax.
+using `${VARIABLE_NAME}` syntax.
 
 ```choreo
 feature "Fetch a user profile"
 actor Web
+
 var BASE_URL = "https://api.staging.myapp.com"
 var USER_ID = "user-123"
+
 scenario "User Profile Tests" {
     test FetchProfile "Fetch user profile" {
         given:
             wait >= 0s
         when:
-            Web http_get "${BASE_URL}/users/{USER_ID}"
+            Web http_get "${BASE_URL}/users/${USER_ID}"
         then:
             Web response_status is_success
             Web json_path at "/myapp/user" equals "${USER_ID}"
@@ -108,15 +110,23 @@ choreo run /path/to/test.chor
 In your `.chor` file, you can reference this environment variable like so:
 
 ```choreo
-env: AUTH_TOKEN
-test "Authenticated request" {
-    given:
-        wait >= 0s
-    when:
-        Web set_header "Authorization" "Bearer ${AUTH_TOKEN}"
-        Web http_get "https://api.myapp.com/protected"
-    then:
-        Web response_status is_success
+feature "Fetch a user profile"
+actor Web
+
+env AUTH_TOKEN
+var BASE_URL = "https://api.staging.myapp.com"
+var USER_ID = "user-123"
+
+scenario "User Profile Tests" {
+    test FetchProfile "Fetch user profile" {
+        given:
+            wait >= 0s
+        when:
+            Web set_header "Authorization" "Bearer ${AUTH_TOKEN}"
+            Web http_get "${BASE_URL}/users/${USER_ID}"
+        then:
+            Web response_status is_success
+            Web json_path at "/myapp/user" equals "${USER_ID}"
     }
 }
 ```
