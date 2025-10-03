@@ -192,8 +192,10 @@ impl TestRunner {
                             test_states.insert(name.clone(), TestState::Running);
                             test_start_times.insert(name.clone(), Instant::now());
                             for given_action in &given_actions {
-                                let substituted_action =
-                                    substitute_variables_in_action(given_action, &self.env_vars);
+                                let substituted_action = substitute_variables_in_action(
+                                    given_action,
+                                    &mut self.env_vars,
+                                );
                                 self.execute_action(
                                     &substituted_action,
                                     &mut terminal_backend,
@@ -206,7 +208,7 @@ impl TestRunner {
 
                             for action in &test_case.when {
                                 let substituted_action =
-                                    substitute_variables_in_action(action, &self.env_vars);
+                                    substitute_variables_in_action(action, &mut self.env_vars);
                                 self.execute_action(
                                     &substituted_action,
                                     &mut terminal_backend,
@@ -274,7 +276,7 @@ impl TestRunner {
                                 for given_action in &given_actions {
                                     let substituted_action = substitute_variables_in_action(
                                         given_action,
-                                        &self.env_vars,
+                                        &mut self.env_vars,
                                     );
                                     self.execute_action(
                                         &substituted_action,
@@ -287,7 +289,7 @@ impl TestRunner {
                                 }
                                 for action in &test_case.when {
                                     let substituted_action =
-                                        substitute_variables_in_action(action, &self.env_vars);
+                                        substitute_variables_in_action(action, &mut self.env_vars);
                                     self.execute_action(
                                         &substituted_action,
                                         &mut terminal_backend,
@@ -338,7 +340,7 @@ impl TestRunner {
                         colours::info("\nRunning after block...");
                         for action in &scenario.after {
                             let substituted_action =
-                                substitute_variables_in_action(action, &self.env_vars);
+                                substitute_variables_in_action(action, &mut self.env_vars);
                             self.execute_action(
                                 &substituted_action,
                                 &mut terminal_backend,
@@ -417,7 +419,7 @@ impl TestRunner {
                 scenarios,
                 &test_states,
                 &test_start_times,
-                &self.env_vars,
+                &mut self.env_vars,
                 &settings,
                 self.verbose,
             )?;
@@ -439,7 +441,7 @@ impl TestRunner {
 
     /// Dispatches an action to the correct backend.
     fn execute_action(
-        &self, // Make it a method
+        &mut self, // Make it a method
         action: &Action,
         terminal: &mut TerminalBackend,
         fs: &FileSystemBackend,
@@ -453,21 +455,24 @@ impl TestRunner {
         // Substitute variables in the action
         let substituted_action = substitute_variables_in_action(action, &self.env_vars);
 
+        let env_vars = &mut self.env_vars;
+
         // Check if it's a terminal action
         if terminal.execute_action(
-            action,
+            &substituted_action,
             last_exit_code,
             Some(Duration::from_secs(timeout_seconds)),
+            env_vars,
         ) {
             return;
         }
         // Check if it's a filesystem action
-        if fs.execute_action(action, terminal.get_cwd()) {
+        if fs.execute_action(&substituted_action, terminal.get_cwd(), env_vars) {
             return;
         }
 
         // Check if it's a web action
-        if web.execute_action(&substituted_action, &self.env_vars, self.verbose) {
+        if web.execute_action(&substituted_action, env_vars, self.verbose) {
             return;
         } else {
             println!(

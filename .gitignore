@@ -25,3 +25,6 @@ target
 reports
 examples/temp_test_dir
 test_result
+
+examples/web_cart_scenario.chor
+examples/data/

@@ -731,7 +731,6 @@ fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
 // --- Single Item Build Functions ---
 
 /// Builds a single Action from a parsed Pair.
-/// Builds a single Action from a parsed Pair.
 pub fn build_action(inner_action: Pair<Rule>) -> Action {
     //println!("Building action for inner_action: {:?}", inner_action);
     match inner_action.as_rule() {
@@ -766,6 +765,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                 .into_inner()
                 .next()
                 .map_or(String::new(), |p| p.as_str().to_string());
+            println!("Terminal runs: {}", command);
             Action::Run { actor, command }
         }
         Rule::filesystem_action => {
@@ -793,6 +793,11 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                         String::new()
                     };
                     Action::CreateFile { path, content }
+                }
+                "read_file" => {
+                    let variable = inner.next().map(|p| p.as_str().to_string());
+                    println!("FS ReadFile Path: {}", path);
+                    Action::ReadFile { path, variable }
                 }
                 _ => unreachable!(),
             }
@@ -979,14 +984,23 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
 
 fn build_value(pair: Pair<Rule>) -> Value {
     // The `value` rule is silent, so we need to inspect its inner pair.
-    let inner_pair = pair.into_inner().next().unwrap();
+    let inner_pair = pair.clone().into_inner().next().unwrap();
+    //println!("{:?}", inner_pair);
     match inner_pair.as_rule() {
         Rule::string => {
             let inner = inner_pair.into_inner().next().unwrap();
             Value::String(unescape_string(inner.as_str()))
         }
         Rule::number => Value::Number(inner_pair.as_str().parse().unwrap()),
-        _ => unreachable!("Unexpected value rule: {:?}", inner_pair.as_rule()),
+        Rule::identifier => {
+            // Handle variable references - convert identifier to a placeholder string
+            let var_name = pair.as_str();
+            Value::String(format!("${{{}}}", var_name))
+        }
+        _ => {
+            println!("{:?}", pair);
+            unreachable!("Unexpected value rule: {:?}", pair.as_rule())
+        }
     }
 }
 

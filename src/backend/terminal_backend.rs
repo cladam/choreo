@@ -1,5 +1,6 @@
 use crate::parser::ast::{Action, TestSuiteSettings};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
+use std::collections::HashMap;
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -124,6 +125,7 @@ impl TerminalBackend {
         action: &Action,
         last_exit_code: &mut Option<i32>,
         timeout: Option<Duration>,
+        _env_vars: &mut HashMap<String, String>,
     ) -> bool {
         match action {
             Action::Type { content, .. } => {
@@ -137,6 +139,10 @@ impl TerminalBackend {
                 true
             }
             Action::Run { command, .. } => {
+                // I'm gonna need to substitute variables here,
+                // imagine: Terminal runs ${COMMAND}
+                //let substituted_command = substitute_string(command, env_vars);
+                //println!("Substituted terminal command: {}", substituted_command);
                 // Special handling for 'cd' to update the backend's CWD.
                 if command.trim().starts_with("cd ") {
                     let path_str = command.trim().strip_prefix("cd ").unwrap().trim();
@@ -157,11 +163,11 @@ impl TerminalBackend {
                 *last_exit_code = None;
                 self.last_stdout.clear();
                 self.last_stderr.clear();
-
-                println!("Running command: {}", command);
-                println!("{}", self.last_stdout);
-                println!("{}", self.last_stderr);
-                println!("{:?}", self.cwd);
+                //
+                // println!("Running command: {}", command);
+                // println!("{}", self.last_stdout);
+                // println!("{}", self.last_stderr);
+                // println!("{:?}", self.cwd);
                 let shell = self.settings.shell_path.as_deref().unwrap_or("/bin/sh");
                 let mut child = Command::new(shell)
                     .arg("-c")

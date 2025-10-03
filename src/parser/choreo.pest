@@ -25,10 +25,18 @@ env_def = {
     ("env" ~ identifier)
 }
 var_def = {
-    ("var:" ~ identifier ~ ("," ~ identifier)*) |
-    ("var" ~ "{" ~ identifier+ ~ "}") |
-    ("var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value)
+    ("var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value) |
+    ("var:" ~ identifier ~ ("," ~ identifier)*)
 }
+
+//var_def = {
+//    ("var" ~ var) |
+//    ("var:" ~ var ~ ("," ~ var)*) |
+//    ("var" ~ "{" ~ var+ ~ "}")
+//}
+
+//var = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
+
 //var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
 //actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 actors_def = {
@@ -100,13 +108,19 @@ web_condition                     = { "Web" ~ (
     response_time_is_below_condition |
     response_body_contains_condition |
     response_body_matches_condition |
+    response_body_equals_json |
     json_body_has_path_condition |
     json_path_equals_condition |
     json_value_is_string_condition |
     json_value_is_number_condition |
     json_value_is_array_condition |
     json_value_is_object_condition |
-    json_value_has_size_condition
+    json_value_has_size_condition |
+    output_is_valid_json_condition |
+    json_output_has_path_condition |
+    json_output_at_equals_condition |
+    json_output_at_includes_condition |
+    json_output_at_has_item_count_condition
 ) }
 
 
@@ -139,13 +153,14 @@ output_ends_with_condition        = { "output_ends_with" ~ non_empty_string }
 output_equals_condition           = { "output_equals" ~ non_empty_string }
 
 // Web-specific condition parts
-response_status_is_condition      = { "response_status_is" ~ ( number | string ) }
+response_status_is_condition         = { "response_status_is" ~ ( number | string ) }
 response_status_is_success_condition = { "response_status" ~ "is_success" }
-response_status_is_error_condition = { "response_status" ~ "is_error" }
-response_status_is_in_condition = { "response_status" ~ "is_in" ~ "[" ~ number ~ ("," ~ number)* ~ "]" }
-response_time_is_below_condition = { "response_time" ~ "is_below" ~ wait_marker }
-response_body_contains_condition  = { "response_body_contains" ~ non_empty_string }
-response_body_matches_condition   = { "response_body_matches" ~ string ~ ("as" ~ identifier)? }
+response_status_is_error_condition   = { "response_status" ~ "is_error" }
+response_status_is_in_condition      = { "response_status" ~ "is_in" ~ "[" ~ number ~ ("," ~ number)* ~ "]" }
+response_time_is_below_condition     = { "response_time" ~ "is_below" ~ wait_marker }
+response_body_contains_condition     = { "response_body_contains" ~ non_empty_string }
+response_body_matches_condition      = { "response_body_matches" ~ string ~ ("as" ~ identifier)? }
+response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string }
 
 // Action Types
 type_action                       = { identifier ~ "types" ~ string }
@@ -165,8 +180,8 @@ web_action_type = {
     ("http_patch" ~ non_empty_string ~ "with_body" ~ string) |
     ("http_delete" ~ non_empty_string)
 }
-filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? }
-filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" }
+filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? ~ ("as" ~ identifier)? }
+filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" | "read_file" }
 
 // The basic building blocks of the choreo language.
 identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }

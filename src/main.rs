@@ -3,6 +3,7 @@ use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
 use choreo::parser::ast::Statement;
+use choreo::parser::helpers::substitute_string;
 use choreo::parser::{linter, parser};
 use choreo::runner::TestRunner;
 use clap::Parser;
@@ -126,7 +127,8 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                         }
                     }
                     Statement::VarDef(key, value) => {
-                        env_vars.insert(key.clone(), value.as_string());
+                        let substituted_value = substitute_string(&value.as_string(), &env_vars);
+                        env_vars.insert(key.clone(), substituted_value);
                     }
                     Statement::Scenario(scenario) => scenarios.push(scenario.clone()),
                     _ => {} // Ignore other statement types

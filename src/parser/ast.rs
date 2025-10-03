@@ -269,26 +269,71 @@ pub enum Condition {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
     // --- Terminal Actions ---
-    Type { actor: String, content: String },
-    Press { actor: String, key: String },
-    Run { actor: String, command: String },
+    Type {
+        actor: String,
+        content: String,
+    },
+    Press {
+        actor: String,
+        key: String,
+    },
+    Run {
+        actor: String,
+        command: String,
+    },
     // --- Filesystem Actions ---
-    CreateFile { path: String, content: String },
-    CreateDir { path: String },
-    DeleteFile { path: String },
-    DeleteDir { path: String },
+    CreateFile {
+        path: String,
+        content: String,
+    },
+    CreateDir {
+        path: String,
+    },
+    DeleteFile {
+        path: String,
+    },
+    DeleteDir {
+        path: String,
+    },
+    ReadFile {
+        path: String,
+        variable: Option<String>,
+    },
     // --- Web Actions ---
-    HttpSetHeader { key: String, value: String },
-    HttpClearHeader { key: String },
+    HttpSetHeader {
+        key: String,
+        value: String,
+    },
+    HttpClearHeader {
+        key: String,
+    },
     HttpClearHeaders,
-    HttpSetCookie { key: String, value: String },
-    HttpClearCookie { key: String },
+    HttpSetCookie {
+        key: String,
+        value: String,
+    },
+    HttpClearCookie {
+        key: String,
+    },
     HttpClearCookies,
-    HttpGet { url: String },
-    HttpPost { url: String, body: String },
-    HttpPut { url: String, body: String },
-    HttpPatch { url: String, body: String },
-    HttpDelete { url: String },
+    HttpGet {
+        url: String,
+    },
+    HttpPost {
+        url: String,
+        body: String,
+    },
+    HttpPut {
+        url: String,
+        body: String,
+    },
+    HttpPatch {
+        url: String,
+        body: String,
+    },
+    HttpDelete {
+        url: String,
+    },
 }
 
 impl Action {

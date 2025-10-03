@@ -1,4 +1,5 @@
 use crate::parser::ast::Action;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -14,12 +15,28 @@ impl FileSystemBackend {
         if p.is_absolute() {
             p.to_path_buf()
         } else {
+            // Check if the path starts with the same directory as cwd
+            if let Some(cwd_name) = cwd.file_name() {
+                if let Some(cwd_str) = cwd_name.to_str() {
+                    if path.starts_with(&format!("{}/", cwd_str)) {
+                        // If path already includes the cwd directory, resolve from parent
+                        if let Some(parent) = cwd.parent() {
+                            return parent.join(p);
+                        }
+                    }
+                }
+            }
             cwd.join(p)
         }
     }
 
     /// Executes a file system action. Returns true if the action was handled.
-    pub fn execute_action(&self, action: &Action, cwd: &Path) -> bool {
+    pub fn execute_action(
+        &self,
+        action: &Action,
+        cwd: &Path,
+        env_vars: &mut HashMap<String, String>,
+    ) -> bool {
         match action {
             Action::CreateFile { path, content } => {
                 fs::write(self.resolve_path(path, cwd), content).expect("Failed to create file");
@@ -46,6 +63,22 @@ impl FileSystemBackend {
                     fs::remove_dir_all(resolved_path).expect("Failed to delete directory");
                 }
                 true
+            }
+            Action::ReadFile { path, variable } => {
+                let resolved_path = self.resolve_path(path, cwd);
+                match fs::read_to_string(&resolved_path) {
+                    Ok(content) => {
+                        env_vars.insert(variable.clone().unwrap().to_string(), content);
+                        true
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Failed to read file {} (resolved to {:?}): {}",
+                            path, resolved_path, e
+                        );
+                        false
+                    }
+                }
             }
             _ => false, // Ignore actions not meant for this backend
         }

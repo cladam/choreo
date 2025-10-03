@@ -254,12 +254,16 @@ pub fn substitute_variables(action: &Action, state: &HashMap<String, String>) ->
         Action::DeleteDir { path } => Action::DeleteDir {
             path: substitute_string(path, state),
         },
+        Action::ReadFile { path, variable } => Action::ReadFile {
+            path: substitute_string(path, state),
+            variable: variable.clone(),
+        },
         _ => action.clone(),
     }
 }
 
 /// Finds and replaces all ${...} placeholders in a string.
-fn substitute_string(content: &str, state: &HashMap<String, String>) -> String {
+pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> String {
     let mut result = content.to_string();
     for (key, value) in state {
         let placeholder = format!("${{{}}}", key);
@@ -338,6 +342,10 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
         Action::DeleteDir { path } => Action::DeleteDir {
             path: substitute_string(path, state),
         },
+        Action::ReadFile { path, variable } => Action::ReadFile {
+            path: substitute_string(path, state),
+            variable: variable.clone(),
+        },
         Action::HttpGet { url } => Action::HttpGet {
             url: substitute_string(url, state),
         },
@@ -388,6 +396,7 @@ pub fn is_synchronous(test_case: &TestCase) -> bool {
                 | Action::DeleteFile { .. }
                 | Action::CreateDir { .. }
                 | Action::DeleteDir { .. }
+                | Action::ReadFile { .. }
                 | Action::HttpGet { .. }
                 | Action::HttpPost { .. }
                 | Action::HttpPut { .. }

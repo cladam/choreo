@@ -34,7 +34,7 @@ impl WebBackend {
     pub fn execute_action(
         &mut self,
         action: &Action,
-        env_vars: &HashMap<String, String>,
+        env_vars: &mut HashMap<String, String>,
         verbose: bool,
     ) -> bool {
         match action {
@@ -253,19 +253,45 @@ impl WebBackend {
                         if verbose {
                             if let Some(ref resp) = self.last_response {
                                 println!(
-                                    "[WEB_BACKEND] POST completed: {} in {:.2}ms",
-                                    resp.body.as_str(),
+                                    "[WEB_BACKEND] POST completed with {} in {:.2}ms",
+                                    resp.status,
                                     duration.as_millis()
                                 );
                             }
                         }
                         true // Successfully handled
                     }
-                    Err(e) => {
+                    Err(ureq::Error::StatusCode(code)) => {
+                        // HTTP error status codes should still be treated as valid responses
+                        let duration = start_time.elapsed();
+                        let status =
+                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+                        self.last_response = Some(LastResponse {
+                            status,
+                            body: format!("HTTP error with status code: {}", code),
+                            response_time_ms: duration.as_millis(),
+                        });
+
                         if verbose {
-                            println!("[WEB_BACKEND] POST failed: {}", e);
+                            println!(
+                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
+                                code,
+                                duration.as_millis()
+                            );
                         }
-                        // You might want to store the error for later checking
+                        true // Still return true as the request was made successfully
+                    }
+                    Err(e) => {
+                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
+                        if verbose {
+                            println!("{}", error_message);
+                        }
+                        self.last_response = Some(LastResponse {
+                            status: StatusCode::INTERNAL_SERVER_ERROR,
+                            body: error_message,
+                            response_time_ms: 0,
+                        });
                         false
                     }
                 }
@@ -309,10 +335,37 @@ impl WebBackend {
                         });
                         true
                     }
-                    Err(e) => {
+                    Err(ureq::Error::StatusCode(code)) => {
+                        // HTTP error status codes should still be treated as valid responses
+                        let duration = start_time.elapsed();
+                        let status =
+                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+                        self.last_response = Some(LastResponse {
+                            status,
+                            body: format!("HTTP error with status code: {}", code),
+                            response_time_ms: duration.as_millis(),
+                        });
+
                         if verbose {
-                            println!("  [WEB] PUT request failed: {}", e);
+                            println!(
+                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
+                                code,
+                                duration.as_millis()
+                            );
                         }
+                        true // Still return true as the request was made successfully
+                    }
+                    Err(e) => {
+                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
+                        if verbose {
+                            println!("{}", error_message);
+                        }
+                        self.last_response = Some(LastResponse {
+                            status: StatusCode::INTERNAL_SERVER_ERROR,
+                            body: error_message,
+                            response_time_ms: 0,
+                        });
                         false
                     }
                 }
@@ -360,10 +413,37 @@ impl WebBackend {
                         });
                         true
                     }
-                    Err(e) => {
+                    Err(ureq::Error::StatusCode(code)) => {
+                        // HTTP error status codes should still be treated as valid responses
+                        let duration = start_time.elapsed();
+                        let status =
+                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+                        self.last_response = Some(LastResponse {
+                            status,
+                            body: format!("HTTP error with status code: {}", code),
+                            response_time_ms: duration.as_millis(),
+                        });
+
                         if verbose {
-                            println!("[WEB_BACKEND] PATCH request failed: {}", e);
+                            println!(
+                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
+                                code,
+                                duration.as_millis()
+                            );
                         }
+                        true // Still return true as the request was made successfully
+                    }
+                    Err(e) => {
+                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
+                        if verbose {
+                            println!("{}", error_message);
+                        }
+                        self.last_response = Some(LastResponse {
+                            status: StatusCode::INTERNAL_SERVER_ERROR,
+                            body: error_message,
+                            response_time_ms: 0,
+                        });
                         false
                     }
                 }
@@ -410,10 +490,37 @@ impl WebBackend {
                         });
                         true
                     }
-                    Err(e) => {
+                    Err(ureq::Error::StatusCode(code)) => {
+                        // HTTP error status codes should still be treated as valid responses
+                        let duration = start_time.elapsed();
+                        let status =
+                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+                        self.last_response = Some(LastResponse {
+                            status,
+                            body: format!("HTTP error with status code: {}", code),
+                            response_time_ms: duration.as_millis(),
+                        });
+
                         if verbose {
-                            println!("[WEB_BACKEND] DELETE request failed: {}", e);
+                            println!(
+                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
+                                code,
+                                duration.as_millis()
+                            );
                         }
+                        true // Still return true as the request was made successfully
+                    }
+                    Err(e) => {
+                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
+                        if verbose {
+                            println!("{}", error_message);
+                        }
+                        self.last_response = Some(LastResponse {
+                            status: StatusCode::INTERNAL_SERVER_ERROR,
+                            body: error_message,
+                            response_time_ms: 0,
+                        });
                         false
                     }
                 }
