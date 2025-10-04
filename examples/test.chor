@@ -1,39 +1,77 @@
 # A test suite for your application
+
+# I use this file to dev and test the linter
+
 feature "My Application Feature"
+actors {
+    Web
+    Terminal
+    FileSystem
+}
 
-# Define the actors that will perform actions.
-actors: Terminal
+var TEST = "test"
+var Ttest = "test2"
+env HOME
 
-# A scenario groups related tests into a single workflow.
-scenario "User can perform a basic workflow" {
-    # A test case with a unique name and description.
-    test CheckAppVersion "Check application version" {
+#setting: timeout_seconds = 30
+
+settings {
+  # Set a custom timeout for this test suite.
+  timeout_seconds = 301
+  # Specify the output directory for reports.
+  report_path = "/"
+  # (report_format defaults to "json" if not specified)
+  # Stop the entire run as soon as one test fails.
+  stop_on_failure = true
+  # Specify the shell to use for the Terminal actor, defaults to bash.
+  shell_path = "bash"
+  expected_failures = 101
+}
+
+background {
+    Web set_header "User Agent" "choreo-test-runner_1.0"
+    Web set_header "Acept" "application/json"
+    Web set_header "Content-Type" "application/json"
+    Web set_header "Content-Type" "text/plain"
+    Web set_header "Authorization" "Bearer XYZ"
+    Web set_cookie "session_id" "abc123"
+}
+
+scenario "A basic scenario" {
+
+    test MyTest "Testing for the linter" {
+
         given:
-            # Conditions that must be met before the test runs.
+            wait >= 301s
+        when:
+            FileSystem create_dir "temp_data"
+            FileSystem create_file "temp_data/initial.txt" with_content "setup data"
+            Terminal runs "cat temp_data/initial.txt"
+        then:
+            Terminal output_contains "setup data"
+    }
+
+    test GetInitialData "retrieve the current state of a resource" {
+        given:
+            # No preconditions needed
             wait >= 0s
         when:
-            # Actions to be performed.
-            Terminal runs "echo 'my-app version 1.0.0'"
+            Web http_get "http://user:password@example.org/json"
         then:
-            # Conditions that must be true after the actions.
-            Terminal last_command succeeded
-            Terminal output_contains "my-app version"
+            #Web response_status_is 200
+            Web response_time is_below 1ms
+            Web response_status is_in [200, 204, 600, 99]
+            Web response_body_contains "slideshow"
+            Web json_body has_path "/slideshow/title"
     }
 
-    test CreateAndCapture "Create a resource and capture its ID" {
-        given:
-            # This test depends on the success of the previous one.
-            Test has_succeeded CheckAppVersion
-        when:
-            Terminal runs "echo 'Created resource with ID: res-123'"
-        then:
-            # Capture part of the output into a variable named 'resourceId'.
-            Terminal output_matches "Created resource with ID: (res-\d+)" as resourceId
-    }
-
-    # This block runs after all tests in the scenario are complete.
     after {
-        # Use the captured 'resourceId' variable to clean up.
-        Terminal runs "echo 'Cleaning up ${resourceId}'"
+        FileSystem delete_file "temp_data/initial.txt"
+        FileSystem delete_dir "temp_data"
     }
+
+}
+
+scenario "A basic scenario" {
+
 }
