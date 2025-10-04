@@ -783,7 +783,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                 .into_inner()
                 .next()
                 .map_or(String::new(), |p| p.as_str().to_string());
-            println!("Terminal runs: {}", command);
+            //println!("Terminal runs: {}", command);
             Action::Run { actor, command }
         }
         Rule::filesystem_action => {

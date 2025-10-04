@@ -121,7 +121,7 @@ choreo validate --file "examples/advanced_matchers.chor"
 
 #### Lint a test file
 
-Use the `lint` command to check the syntax and structure of a `.chor` file without executing it.
+Use the `lint` command to both check syntax and semantics of a `.chor` file without executing it.
 
 ```bash
 # Validate and run linting on the default test.chor file
@@ -145,18 +145,12 @@ choreo run --file "examples/redirecting_output_tee.chor" --verbose
 
 ### Status & Roadmap
 
-Choreo is currently in the **alpha stage**. The core engine is functional, but it is not yet ready for production use.
+`choreo` is currently in the **alpha stage**. The core engine is functional, but it is not yet ready for production use.
 
 The journey ahead includes:
 
-* [ ] A `default_actor` setting to reduce verbosity in tests.
-* [x] **More Actors**
-    * `WebActor` for making and asserting against HTTP API calls.
-* [ ] Generate JUnit XML reports.
-* [ ] Revisit the vhs inspiration by adding an option to record the terminal session as a GIF.
-* [x] An even richer vocabulary of built-in matchers and assertions.
 * [ ] A dedicated editor with syntax highlighting and linting.
-* [ ] A website with tutorials, examples, and documentation.
+* [ ] Parallel execution of scenarios
 
 ### **Contributing**
 
