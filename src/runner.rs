@@ -64,7 +64,7 @@ impl TestRunner {
 
         // --- Backend and State Initialisation ---
         let mut test_states: HashMap<String, TestState> = HashMap::new();
-        let test_start_times: HashMap<String, Instant> = HashMap::new();
+        let mut test_start_times: HashMap<String, Instant> = HashMap::new();
 
         // --- Main Test Loop ---
         let suite_start_time = Instant::now();
@@ -76,7 +76,7 @@ impl TestRunner {
         if !parallel_scenarios.is_empty() {
             if self.verbose {
                 colours::info(&format!(
-                    "\nRunning {} scenarios in parallel...",
+                    "\nRunning {} scenarios in parallel... but not running yet",
                     parallel_scenarios.len()
                 ));
             }
@@ -92,13 +92,15 @@ impl TestRunner {
             }
 
             // Call the sequential scenario runner with proper parameters
-            run_scenarios_seq(
+            let (states, start_times) = run_scenarios_seq(
                 &sequential_scenarios,
                 &settings,
                 self.env_vars.clone(),
                 self.verbose,
                 &self.base_dir,
             )?;
+            test_states = states;
+            test_start_times = start_times;
         }
 
         // --- Final Reporting ---
@@ -210,7 +212,7 @@ fn run_scenarios_seq(
     env_vars: HashMap<String, String>,
     verbose: bool,
     base_dir: &PathBuf,
-) -> Result<(), AppError> {
+) -> Result<(HashMap<String, TestState>, HashMap<String, Instant>), AppError> {
     // --- Backend and State Initialisation ---
     let mut terminal_backend = TerminalBackend::new(base_dir.clone(), settings.clone());
     let mut web_backend = WebBackend::new();
@@ -539,7 +541,7 @@ fn run_scenarios_seq(
         }
     }
 
-    Ok(())
+    Ok((test_states, test_start_times))
 }
 
 /// Executes a single scenario, managing its entire lifecycle. This function is thread-safe.
