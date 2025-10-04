@@ -592,6 +592,38 @@ impl WebBackend {
                 }
                 false
             }
+            Condition::ResponseBodyEqualsJson { expected } => {
+                // Substitute variables in the expected JSON string
+                let substituted_expected = substitute_string(expected, variables);
+                // Parse both the response body and expected JSON for comparison
+                match (
+                    serde_json::from_str::<JsonValue>(&last_response.body),
+                    serde_json::from_str::<JsonValue>(&substituted_expected),
+                ) {
+                    (Ok(actual), Ok(expected_json)) => {
+                        if verbose {
+                            println!(
+                                "[WEB_BACKEND] Comparing JSON response body with expected JSON"
+                            );
+                            println!("[WEB_BACKEND] Actual: {}", actual);
+                            println!("[WEB_BACKEND] Expected: {}", expected_json);
+                        }
+                        actual == expected_json
+                    }
+                    (Err(e), _) => {
+                        if verbose {
+                            println!("[WEB_BACKEND] Failed to parse response body as JSON: {}", e);
+                        }
+                        false
+                    }
+                    (_, Err(e)) => {
+                        if verbose {
+                            println!("[WEB_BACKEND] Failed to parse expected JSON: {}", e);
+                        }
+                        false
+                    }
+                }
+            }
             Condition::JsonValueIsString { path } => {
                 if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
                     if let Some(value) = json_body.pointer(path) {

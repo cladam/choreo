@@ -211,6 +211,7 @@ pub fn check_condition(
         | Condition::ResponseTimeIsBelow { .. }
         | Condition::ResponseBodyContains { .. }
         | Condition::ResponseBodyMatches { .. }
+        | Condition::ResponseBodyEqualsJson { .. }
         | Condition::JsonValueIsString { .. }
         | Condition::JsonValueIsNumber { .. }
         | Condition::JsonValueIsArray { .. }

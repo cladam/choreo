@@ -256,6 +256,9 @@ pub enum Condition {
         regex: String,
         capture_as: Option<String>,
     },
+    ResponseBodyEqualsJson {
+        expected: String,
+    },
     JsonBodyHasPath {
         path: String,
     },
