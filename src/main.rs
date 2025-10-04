@@ -114,6 +114,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                                 testcase_spans: None,
                             }],
                             after: vec![],
+                            parallel: false,
                             scenario_span: None,
                             span: None,
                         };

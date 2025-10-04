@@ -45,7 +45,8 @@ actors_def = {
     ("actor" ~ identifier)
 }
 feature_def                       = { "feature" ~ string }
-scenario_def                      = { "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
+parallel_keyword                  = { "parallel" }
+scenario_def                      = { parallel_keyword? ~ "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
 after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
 
 // Defining a test case.

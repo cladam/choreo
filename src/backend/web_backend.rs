@@ -605,8 +605,8 @@ impl WebBackend {
                             println!(
                                 "[WEB_BACKEND] Comparing JSON response body with expected JSON"
                             );
-                            println!("[WEB_BACKEND] Actual: {}", actual);
-                            println!("[WEB_BACKEND] Expected: {}", expected_json);
+                            //println!("[WEB_BACKEND] Actual: {}", actual);
+                            //println!("[WEB_BACKEND] Expected: {}", expected_json);
                         }
                         actual == expected_json
                     }

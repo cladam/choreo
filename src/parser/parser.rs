@@ -220,6 +220,14 @@ fn build_scenario(pair: Pair<Rule>) -> Statement {
         column: span.start_pos().line_col().1,
     });
 
+    // Peek and look for the parallel keyword
+    if let Some(token) = inner.peek() {
+        if token.as_rule() == Rule::parallel_keyword {
+            scenario.parallel = true;
+            inner.next();
+        }
+    }
+
     // The first inner pair is the scenario name (a string).
     let name_pair = inner.next().unwrap();
     scenario_spans.name_span = Some(Span {
@@ -806,7 +814,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                 }
                 "read_file" => {
                     let variable = inner.next().map(|p| p.as_str().to_string());
-                    println!("FS ReadFile Path: {}", path);
+                    //println!("FS ReadFile Path: {}", path);
                     Action::ReadFile { path, variable }
                 }
                 _ => unreachable!(),

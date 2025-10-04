@@ -134,6 +134,7 @@ pub struct Scenario {
     pub name: String,
     pub tests: Vec<TestCase>,
     pub after: Vec<Action>,
+    pub parallel: bool,
     pub span: Option<Span>,
     pub scenario_span: Option<ScenarioSpan>,
 }
@@ -144,6 +145,7 @@ impl Default for Scenario {
             name: String::new(),
             tests: Vec::new(),
             after: Vec::new(),
+            parallel: false,
             span: None,
             scenario_span: None,
         }
