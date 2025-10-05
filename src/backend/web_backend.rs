@@ -21,6 +21,24 @@ pub struct WebBackend {
 }
 
 impl WebBackend {
+    pub fn with_headers(headers: HashMap<String, String>) -> Self {
+        let mut wb = WebBackend::new();
+        for (k, v) in headers.into_iter() {
+            wb.set_header(&k, &v);
+        }
+        wb
+    }
+
+    // Return a cloned map of current headers so caller can capture them
+    pub fn get_headers(&self) -> HashMap<String, String> {
+        // Adjust to match the actual internal representation (this assumes a HashMap field named headers)
+        self.headers.clone()
+    }
+
+    // Ensure you have a `set_header` method (used above). If it doesn't exist, implement it:
+    pub fn set_header(&mut self, key: &str, value: &str) {
+        self.headers.insert(key.to_string(), value.to_string());
+    }
     /// Creates a new WebBackend with a persistent HTTP client.
     pub fn new() -> Self {
         Self {

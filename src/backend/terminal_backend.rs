@@ -1,3 +1,4 @@
+use crate::colours;
 use crate::parser::ast::{Action, TestSuiteSettings};
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::collections::HashMap;
@@ -144,8 +145,10 @@ impl TerminalBackend {
                 //let substituted_command = substitute_string(command, env_vars);
                 //println!("Substituted terminal command: {}", substituted_command);
                 // Special handling for 'cd' to update the backend's CWD.
-                if command.trim().starts_with("cd ") {
-                    let path_str = command.trim().strip_prefix("cd ").unwrap().trim();
+                let mut choreo_command = command.clone();
+                let trimmed = choreo_command.trim();
+                if trimmed.starts_with("cd ") {
+                    let path_str = trimmed.strip_prefix("cd ").unwrap().trim();
                     let new_path = self.cwd.join(path_str);
                     if new_path.is_dir() {
                         self.cwd = new_path.canonicalize().unwrap_or_else(|_| new_path.clone());
@@ -159,6 +162,24 @@ impl TerminalBackend {
                     }
                     return true;
                 }
+
+                // Detect trailing & (allow whitespace before it)
+                if trimmed.ends_with('&') {
+                    // Remove the trailing ampersand and any extra whitespace
+                    let without_amp = trimmed[..trimmed.rfind('&').unwrap_or(trimmed.len())]
+                        .trim_end()
+                        .to_string();
+
+                    // Build a safe nohup wrapper to fully detach the process.
+                    // Escape is intentionally minimal: the original command is assumed to be a shell snippet.
+                    choreo_command = format!("nohup {} >/dev/null 2>&1 &", without_amp);
+
+                    colours::info(&format!(
+                        "[TERMINAL] Spawning detached background command: {}",
+                        without_amp
+                    ));
+                }
+
                 // Reset last command results
                 *last_exit_code = None;
                 self.last_stdout.clear();
@@ -171,7 +192,7 @@ impl TerminalBackend {
                 let shell = self.settings.shell_path.as_deref().unwrap_or("/bin/sh");
                 let mut child = Command::new(shell)
                     .arg("-c")
-                    .arg(command)
+                    .arg(choreo_command)
                     .current_dir(&self.cwd)
                     .stdin(Stdio::null()) // Prevent hanging on commands waiting for stdin
                     .stdout(Stdio::piped())

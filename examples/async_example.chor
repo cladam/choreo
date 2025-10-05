@@ -1,0 +1,45 @@
+# File: `async_example.chor`
+feature "Async operations example"
+
+settings {
+  timeout_seconds = 15
+}
+
+actors: Terminal, Web, FileSystem
+
+# Start a simple HTTP server in the background on the main thread so all scenarios can hit it.
+background {
+    Terminal runs "python3 -m http.server 8000 &"
+    # give server a moment to start
+    wait >= 0.5s
+}
+
+# Run tests in parallel to exercise async behavior
+parallel scenario "Concurrent requests and background jobs" {
+  test Req1 "HTTP GET to root" {
+    given:
+      wait >= 0s
+    when:
+      Web http_get "http://localhost:8000/"
+    then:
+      Web response_status_is 200
+      Web response_time is_below 2s
+  }
+
+  test LongJob "Background job finishes and writes marker" {
+    given:
+      wait >= 0s
+    when:
+      # Redirect background job output to a file so the runner can check it
+      Terminal runs "bash -c 'sleep 3; echo long-job-done > /tmp/longjob.out 2>&1' &"
+    then:
+      # Check the file for the marker instead of terminal output
+      FileSystem file_contains "/tmp/longjob.out" with_content "long-job-done"
+  }
+
+  after {
+    # cleanup: kill any background python server (best-effort)
+    Terminal runs "pkill -f 'http.server' || true"
+    Terminal runs "rm -f /tmp/longjob.out"
+  }
+}

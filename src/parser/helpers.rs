@@ -1,7 +1,7 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
 use crate::backend::web_backend::WebBackend;
-use crate::parser::ast::{Action, Condition, TestCase, TestState};
+use crate::parser::ast::{Action, Condition, GivenStep, TestCase, TestState};
 use jsonpath_lib::selector;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
@@ -387,8 +387,45 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
     }
 }
 
-/// Determines if a test case contains only synchronous actions.
+/// Returns true if the given action should be treated as *asynchronous*
+fn action_is_async(action: &Action) -> bool {
+    match action {
+        // Treat HTTP request actions as non-blocking for test orchestration
+        Action::HttpGet { .. }
+        | Action::HttpPost { .. }
+        | Action::HttpPut { .. }
+        | Action::HttpPatch { .. }
+        | Action::HttpDelete { .. } => true,
+
+        // Treat shell Run commands that end with '&' as async (background jobs).
+        Action::Run { command, .. } => {
+            let trimmed = command.trim();
+            // If the command ends with '&' (allowing whitespace before it) treat as async.
+            trimmed.ends_with('&')
+        }
+
+        // Other actions considered synchronous by default.
+        _ => false,
+    }
+}
+
+/// Determines whether an entire test case should be executed synchronously.
+/// Returns `true` when the test contains no async actions; `false` otherwise.
 pub fn is_synchronous(test_case: &TestCase) -> bool {
+    // Check `given` (which contains GivenStep) and `when` (which contains Action).
+    let given_has_async = test_case.given.iter().any(|gs| match gs {
+        GivenStep::Action(a) => action_is_async(a),
+        GivenStep::Condition(_) => false,
+    });
+
+    let when_has_async = test_case.when.iter().any(|a| action_is_async(a));
+
+    // If any async action is present, the test is asynchronous.
+    !(given_has_async || when_has_async)
+}
+
+/// Determines if a test case contains only synchronous actions.
+pub fn is_synchronous_old(test_case: &TestCase) -> bool {
     test_case.when.iter().all(|action| {
         matches!(
             action,

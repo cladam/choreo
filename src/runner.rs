@@ -4,14 +4,15 @@ use crate::backend::web_backend::WebBackend;
 use crate::colours;
 use crate::error::AppError;
 use crate::parser::ast::{
-    Action, Condition, GivenStep, ReportFormat, Statement, TestCase, TestState, TestSuite,
-    TestSuiteSettings,
+    Action, Condition, GivenStep, ReportFormat, Scenario, Statement, TestCase, TestState,
+    TestSuite, TestSuiteSettings,
 };
 use crate::parser::helpers::{
     check_all_conditions_met, is_synchronous, substitute_variables_in_action,
 };
 use crate::reporting::generate_choreo_report;
 use itertools::Itertools;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -62,12 +63,68 @@ impl TestRunner {
             settings.shell_path = Some("/bin/sh".to_string());
         }
 
-        // --- Backend and State Initialisation ---
-        let mut test_states: HashMap<String, TestState> = HashMap::new();
-        let mut test_start_times: HashMap<String, Instant> = HashMap::new();
+        // Clone scenarios into a mutable Vec so we can remove Background and run it first.
+        let mut scenarios_vec: Vec<_> = scenarios.iter().cloned().collect();
+        let mut bg_http_headers: HashMap<String, String> = HashMap::new();
+
+        // Run any Background scenario first so its actions (e.g. Web set_header) modify `self.env_vars`.
+        if let Some(pos) = scenarios_vec.iter().position(|s| s.name == "Background") {
+            if self.verbose {
+                colours::info("Running Background setup first...");
+            }
+
+            let bg = scenarios_vec.remove(pos);
+
+            // Per-background backends (run on main thread, mutating self.env_vars)
+            let mut terminal_backend =
+                TerminalBackend::new(self.base_dir.clone(), settings.clone());
+            let fs_backend = FileSystemBackend::new();
+            let mut web_backend = WebBackend::new();
+            let mut last_exit_code: Option<i32> = None;
+
+            // Background was created in main as a single test with given steps.
+            for test in &bg.tests {
+                for step in &test.given {
+                    if let GivenStep::Action(action) = step {
+                        // Use the runner method which mutates self.env_vars
+                        self.execute_action(
+                            action,
+                            &mut terminal_backend,
+                            &fs_backend,
+                            &mut web_backend,
+                            &mut last_exit_code,
+                            settings.timeout_seconds,
+                        );
+                    }
+                }
+            }
+
+            // Capture headers set by the background web backend so scenarios inherit them
+            bg_http_headers = web_backend.get_headers();
+
+            if self.verbose {
+                colours::success("Background setup applied to runner env_vars.");
+            }
+        }
+
+        // -- Parallel execution using Rayon --
+        //let mut test_states: HashMap<String, TestState> = HashMap::new();
+        //let mut test_start_times: HashMap<String, Instant> = HashMap::new();
+
+        let test_states = Arc::new(Mutex::new(HashMap::new()));
+        let test_start_times = Arc::new(Mutex::new(HashMap::new()));
 
         // --- Main Test Loop ---
         let suite_start_time = Instant::now();
+
+        {
+            let mut states = test_states.lock().unwrap();
+            for sc in scenarios {
+                for t in &sc.tests {
+                    states.entry(t.name.clone()).or_insert(TestState::Pending);
+                }
+            }
+        }
 
         // Separate parallel and sequential scenarios
         let (parallel_scenarios, sequential_scenarios): (Vec<_>, Vec<_>) =
@@ -76,11 +133,32 @@ impl TestRunner {
         if !parallel_scenarios.is_empty() {
             if self.verbose {
                 colours::info(&format!(
-                    "\nRunning {} scenarios in parallel... but not running yet",
+                    "\nRunning {} scenarios in parallel...",
                     parallel_scenarios.len()
                 ));
             }
-            // TODO: Implement parallel execution later
+            let parallel_results: Vec<Result<(), AppError>> = parallel_scenarios
+                .par_iter()
+                .cloned() // clone Scenario if needed so closure owns it
+                .map(|scenario| {
+                    // each closure runs in parallel; pass cloned Arcs
+                    run_scenario(
+                        &scenario,
+                        &settings,
+                        self.env_vars.clone(),
+                        self.verbose,
+                        &self.base_dir,
+                        Arc::clone(&test_states),
+                        Arc::clone(&test_start_times),
+                        bg_http_headers.clone(),
+                    )
+                })
+                .collect();
+
+            // Propagate any errors (return first Err)
+            for res in parallel_results {
+                res?;
+            }
         }
 
         if !sequential_scenarios.is_empty() {
@@ -91,26 +169,32 @@ impl TestRunner {
                 ));
             }
 
-            // Call the sequential scenario runner with proper parameters
-            let (states, start_times) = run_scenarios_seq(
-                &sequential_scenarios,
-                &settings,
-                self.env_vars.clone(),
-                self.verbose,
-                &self.base_dir,
-            )?;
-            test_states = states;
-            test_start_times = start_times;
+            // Run sequential scenarios on current thread (or spawn them too, depending on desired semantics)
+            for scenario in sequential_scenarios {
+                run_scenario(
+                    &scenario,
+                    &settings,
+                    self.env_vars.clone(),
+                    self.verbose,
+                    &self.base_dir,
+                    Arc::clone(&test_states),
+                    Arc::clone(&test_start_times),
+                    bg_http_headers.clone(),
+                )?;
+            }
         }
 
         // --- Final Reporting ---
         let suite_duration = suite_start_time.elapsed();
+        // Snapshot final maps for reporting
+        let test_states_final = test_states.lock().unwrap().clone();
+        let test_start_times_final = test_start_times.lock().unwrap().clone();
 
         // This is the logic from the old print_summary function
         let mut passed = 0;
         let mut failed = 0;
         let mut skipped = 0;
-        for state in test_states.values() {
+        for state in test_states_final.values() {
             match state {
                 TestState::Passed => passed += 1,
                 TestState::Failed(_) => failed += 1,
@@ -121,7 +205,7 @@ impl TestRunner {
         colours::info(&format!(
             "\nTest suite '{}' summary: {} tests run in {:.2}s ({} passed, {} failed, {} skipped)",
             suite_name,
-            test_states.len(),
+            test_states_final.len(),
             suite_duration.as_secs_f32(),
             passed,
             failed,
@@ -134,8 +218,8 @@ impl TestRunner {
                 suite_start_time.elapsed(),
                 &feature_name,
                 &*scenarios,
-                &test_states,
-                &test_start_times,
+                &test_states_final,
+                &test_start_times_final,
                 &mut self.env_vars,
                 &settings,
                 self.verbose,
@@ -146,7 +230,7 @@ impl TestRunner {
             }
         }
 
-        let failures = test_states.values().filter(|s| s.is_failed()).count();
+        let failures = test_states_final.values().filter(|s| s.is_failed()).count();
         if failures > settings.expected_failures {
             return Err(AppError::TestsFailed {
                 count: failures,
@@ -544,18 +628,372 @@ fn run_scenarios_seq(
     Ok((test_states, test_start_times))
 }
 
-/// Executes a single scenario, managing its entire lifecycle. This function is thread-safe.
+// --- Thread-safe run_scenario ---
+// Accepts shared Arcs for states/times so multiple scenarios can run in parallel.
 fn run_scenario(
-    scenario: &crate::parser::ast::Scenario,
+    scenario: &Scenario,
     settings: &TestSuiteSettings,
-    background_steps: &[GivenStep],
-    test_states: Arc<Mutex<HashMap<String, TestState>>>,
-    test_start_times: Arc<Mutex<HashMap<String, Instant>>>,
     env_vars: HashMap<String, String>,
     verbose: bool,
     base_dir: &PathBuf,
-) {
-    todo!("Working on it, in parallel...")
+    test_states: Arc<Mutex<HashMap<String, TestState>>>,
+    test_start_times: Arc<Mutex<HashMap<String, Instant>>>,
+    initial_http_headers: HashMap<String, String>,
+) -> Result<(), AppError> {
+    // Per-scenario isolated backends and mutable state
+    let mut terminal_backend = TerminalBackend::new(base_dir.clone(), settings.clone());
+    let fs_backend = FileSystemBackend::new();
+    let mut web_backend = WebBackend::with_headers(initial_http_headers);
+    let mut variables = env_vars.clone();
+    let test_timeout = Duration::from_secs(settings.timeout_seconds);
+    let mut last_exit_code: Option<i32> = None;
+    let mut output_buffer = String::new();
+
+    // Initialise tests states (insert Pending entries) under lock
+    {
+        let mut states = test_states.lock().unwrap();
+        for test in &scenario.tests {
+            states
+                .entry(test.name.clone())
+                .or_insert(TestState::Pending);
+        }
+    }
+
+    let scenario_start_time = Instant::now();
+
+    'scenario_loop: loop {
+        colours::info(&format!("\nRunning scenario: '{}'", scenario.name));
+        let elapsed_since_scenario_start = scenario_start_time.elapsed();
+        let mut progress_made = false;
+
+        //let mut tests_to_start: Vec<(String, Vec<Action>)> = Vec::new();
+        let mut tests_to_start: Vec<(String, Vec<Action>, bool)> = Vec::new();
+        let mut tests_to_pass: Vec<String> = Vec::new();
+        let mut immediate_failures: Vec<(String, String)> = Vec::new();
+
+        // --- Checking Phase: take snapshots of shared maps and operate on snapshots ---
+        let states_snapshot: HashMap<String, TestState> = {
+            let locked = test_states.lock().unwrap();
+            locked.clone()
+        };
+        let start_times_snapshot: HashMap<String, Instant> = {
+            let locked = test_start_times.lock().unwrap();
+            locked.clone()
+        };
+
+        // Determine tests to evaluate (not done)
+        let tests_to_check: Vec<TestCase> = scenario
+            .tests
+            .iter()
+            .filter(|tc| !states_snapshot.get(&tc.name).unwrap().is_done())
+            .cloned()
+            .collect();
+
+        for test_case in &tests_to_check {
+            let current_state = states_snapshot.get(&test_case.name).unwrap().clone();
+
+            match current_state {
+                TestState::Pending => {
+                    let (given_conditions, given_actions): (Vec<Condition>, Vec<Action>) =
+                        test_case.given.iter().partition_map(|step| match step {
+                            GivenStep::Condition(c) => itertools::Either::Left(c.clone()),
+                            GivenStep::Action(a) => itertools::Either::Right(a.clone()),
+                        });
+
+                    let is_sync = is_synchronous(&test_case);
+                    println!("Test is sync = {}", is_sync);
+
+                    let sync_test = is_synchronous(test_case);
+                    if !sync_test {
+                        terminal_backend.read_pty_output(&mut output_buffer);
+                    }
+
+                    if check_all_conditions_met(
+                        "given",
+                        &given_conditions,
+                        &states_snapshot,
+                        &output_buffer,
+                        &terminal_backend.last_stderr.clone(),
+                        elapsed_since_scenario_start.as_secs_f32(),
+                        &mut variables,
+                        &last_exit_code,
+                        &fs_backend,
+                        &mut terminal_backend,
+                        &mut web_backend,
+                        verbose,
+                    ) {
+                        tests_to_start.push((
+                            test_case.name.clone(),
+                            given_actions.clone(),
+                            is_sync,
+                        ));
+                        //tests_to_start.push((test_case.name.clone(), given_actions));
+                    }
+                }
+                TestState::Running => {
+                    if !is_synchronous(test_case) {
+                        terminal_backend.read_pty_output(&mut output_buffer);
+                    }
+
+                    let elapsed_for_test = start_times_snapshot
+                        .get(&test_case.name)
+                        .map_or(0.0, |start| start.elapsed().as_secs_f32());
+
+                    if check_all_conditions_met(
+                        "then",
+                        &test_case.then,
+                        &states_snapshot,
+                        &output_buffer,
+                        &terminal_backend.last_stderr.clone(),
+                        elapsed_for_test,
+                        &mut variables,
+                        &last_exit_code,
+                        &fs_backend,
+                        &mut terminal_backend,
+                        &mut web_backend,
+                        verbose,
+                    ) {
+                        tests_to_pass.push(test_case.name.clone());
+                    } else if start_times_snapshot
+                        .get(&test_case.name)
+                        .map_or(false, |start| start.elapsed() > test_timeout)
+                    {
+                        immediate_failures.push((
+                            test_case.name.clone(),
+                            format!("Test timed out after {} seconds", settings.timeout_seconds),
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // --- Updating Phase: perform mutations under brief locks, but run actions without locks ---
+        if !tests_to_start.is_empty() {
+            progress_made = true;
+            for (name, given_actions, is_sync) in tests_to_start {
+                let test_case = scenario.tests.iter().find(|tc| tc.name == name).unwrap();
+
+                if is_sync {
+                    println!(" ▶️ Starting SYNC test: {}", name);
+                    {
+                        let mut states = test_states.lock().unwrap();
+                        states.insert(name.clone(), TestState::Running);
+                    }
+                    {
+                        let mut starts = test_start_times.lock().unwrap();
+                        starts.insert(name.clone(), Instant::now());
+                    }
+
+                    // execute given actions and when actions (no locks held)
+                    for given_action in &given_actions {
+                        let substituted_action =
+                            substitute_variables_in_action(given_action, &mut variables);
+                        execute_action(
+                            &substituted_action,
+                            &mut terminal_backend,
+                            &fs_backend,
+                            &mut web_backend,
+                            &mut last_exit_code,
+                            settings.timeout_seconds,
+                            &mut variables,
+                            verbose,
+                        );
+                    }
+                    for action in &test_case.when {
+                        let substituted_action =
+                            substitute_variables_in_action(action, &mut variables);
+                        execute_action(
+                            &substituted_action,
+                            &mut terminal_backend,
+                            &fs_backend,
+                            &mut web_backend,
+                            &mut last_exit_code,
+                            settings.timeout_seconds,
+                            &mut variables,
+                            verbose,
+                        );
+                    }
+
+                    if let Some(137) = last_exit_code {
+                        break;
+                    }
+
+                    let passed = check_all_conditions_met(
+                        "then",
+                        &test_case.then,
+                        &{
+                            let locked = test_states.lock().unwrap();
+                            locked.clone()
+                        },
+                        &output_buffer,
+                        &terminal_backend.last_stderr.clone(),
+                        test_start_times
+                            .lock()
+                            .unwrap()
+                            .get(&name)
+                            .map_or(0.0, |start| start.elapsed().as_secs_f32()),
+                        &mut variables,
+                        &last_exit_code,
+                        &fs_backend,
+                        &mut terminal_backend,
+                        &mut web_backend,
+                        verbose,
+                    );
+
+                    if let Some(mut state_guard) = test_states.lock().ok() {
+                        if passed {
+                            state_guard.insert(name.clone(), TestState::Passed);
+                            colours::success(&format!(" 🟢 Test Passed: {}", name));
+                        } else {
+                            let mut error_msg = "Synchronous test conditions not met".to_string();
+                            if !terminal_backend.last_stderr.is_empty() {
+                                error_msg = format!(
+                                    "Synchronous test failed. Stderr: {}",
+                                    terminal_backend.last_stderr.trim()
+                                );
+                            }
+                            state_guard.insert(name.clone(), TestState::Failed(error_msg.clone()));
+                            colours::error(&format!(" 🔴 Test Failed: {} - {}", name, error_msg));
+                        }
+                    }
+
+                    if settings.stop_on_failure
+                        && test_states.lock().unwrap().values().any(|s| s.is_failed())
+                    {
+                        break;
+                    }
+                    continue; // re-evaluate after a sync test finishes
+                } else {
+                    // async case: mark running and execute given/when without holding locks while executing actions
+                    println!(" ▶  Starting ASYNC test: {}", name);
+                    {
+                        let mut states = test_states.lock().unwrap();
+                        states.insert(name.clone(), TestState::Running);
+                    }
+                    {
+                        let mut starts = test_start_times.lock().unwrap();
+                        starts.insert(name.clone(), Instant::now());
+                    }
+
+                    for given_action in &given_actions {
+                        let substituted_action =
+                            substitute_variables_in_action(given_action, &mut variables);
+                        execute_action(
+                            &substituted_action,
+                            &mut terminal_backend,
+                            &fs_backend,
+                            &mut web_backend,
+                            &mut last_exit_code,
+                            settings.timeout_seconds,
+                            &mut variables,
+                            verbose,
+                        );
+                    }
+                    for action in &test_case.when {
+                        let substituted_action =
+                            substitute_variables_in_action(action, &mut variables);
+                        execute_action(
+                            &substituted_action,
+                            &mut terminal_backend,
+                            &fs_backend,
+                            &mut web_backend,
+                            &mut last_exit_code,
+                            settings.timeout_seconds,
+                            &mut variables,
+                            verbose,
+                        );
+                    }
+                }
+            }
+        }
+
+        if !tests_to_pass.is_empty() {
+            progress_made = true;
+            let mut states = test_states.lock().unwrap();
+            for name in tests_to_pass {
+                if let Some(state) = states.get_mut(&name) {
+                    if !state.is_done() {
+                        *state = TestState::Passed;
+                        colours::success(&format!(" 🟢  Test Passed: {}", name));
+                    }
+                }
+            }
+        }
+
+        if !immediate_failures.is_empty() {
+            progress_made = true;
+            let mut states = test_states.lock().unwrap();
+            for (name, error_msg) in immediate_failures {
+                if let Some(state) = states.get_mut(&name) {
+                    if !state.is_done() {
+                        *state = TestState::Failed(error_msg.clone());
+                        colours::error(&format!(" 🔴  Test Failed: {} - {}", name, error_msg));
+                    }
+                }
+            }
+        }
+
+        // Check if all tests in this scenario are done
+        let all_done = {
+            let states = test_states.lock().unwrap();
+            scenario
+                .tests
+                .iter()
+                .all(|t| states.get(&t.name).unwrap().is_done())
+        };
+
+        if all_done {
+            if !scenario.after.is_empty() {
+                colours::info("\nRunning after block...");
+                for action in &scenario.after {
+                    let substituted_action = substitute_variables_in_action(action, &mut variables);
+                    execute_action(
+                        &substituted_action,
+                        &mut terminal_backend,
+                        &fs_backend,
+                        &mut web_backend,
+                        &mut last_exit_code,
+                        settings.timeout_seconds,
+                        &mut variables,
+                        verbose,
+                    );
+                }
+            }
+            break;
+        }
+
+        // stop_on_failure handling across global shared state
+        if settings.stop_on_failure && test_states.lock().unwrap().values().any(|s| s.is_failed()) {
+            let mut states = test_states.lock().unwrap();
+            for (_name, state) in states.iter_mut() {
+                if matches!(*state, TestState::Pending | TestState::Running) {
+                    *state = TestState::Skipped;
+                }
+            }
+            colours::error("\nStopping test run due to failure (stop_on_failure is true).");
+            break 'scenario_loop;
+        }
+
+        if !progress_made {
+            thread::sleep(Duration::from_millis(50));
+            let elapsed_since_suite_start = scenario_start_time.elapsed();
+            if elapsed_since_suite_start > test_timeout + Duration::from_secs(1) {
+                colours::warn("\nWarning: No progress was made in the last loop iteration, and the scenario is not complete. Marking remaining tests as skipped.");
+                let mut states = test_states.lock().unwrap();
+                for test in &scenario.tests {
+                    if let Some(state) = states.get_mut(&test.name) {
+                        if matches!(*state, TestState::Pending | TestState::Running) {
+                            *state = TestState::Skipped;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    } // end scenario loop
+
+    Ok(())
 }
 
 /// Dispatches an action to the correct backend.
