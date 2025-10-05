@@ -1,7 +1,7 @@
 # Example test scenario using httpbin endpoints
 
 feature "Web Conditions"
-actors: Web
+actors: Web, Terminal
 
 scenario "Testing various web conditions" {
     test StatusCodeTest "Test different HTTP status codes" {
@@ -71,7 +71,7 @@ scenario "Testing various web conditions" {
             Web http_get "https://httpbin.org/user-agent"
         then:
             Web response_status_is 200
-            Web response_body_matches "\"user-agent\":\\s*\"[^\"]+\""
+            Web response_body_matches 'user-agent":\s*"[^"]+"'
     }
 
     test JsonPathTest "Test JSON path existence" {

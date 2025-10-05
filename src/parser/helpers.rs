@@ -411,7 +411,7 @@ fn action_is_async(action: &Action) -> bool {
 
 /// Determines whether an entire test case should be executed synchronously.
 /// Returns `true` when the test contains no async actions; `false` otherwise.
-pub fn is_synchronous(test_case: &TestCase) -> bool {
+pub fn is_synchronous_new(test_case: &TestCase) -> bool {
     // Check `given` (which contains GivenStep) and `when` (which contains Action).
     let given_has_async = test_case.given.iter().any(|gs| match gs {
         GivenStep::Action(a) => action_is_async(a),
@@ -425,7 +425,7 @@ pub fn is_synchronous(test_case: &TestCase) -> bool {
 }
 
 /// Determines if a test case contains only synchronous actions.
-pub fn is_synchronous_old(test_case: &TestCase) -> bool {
+pub fn is_synchronous(test_case: &TestCase) -> bool {
     test_case.when.iter().all(|action| {
         matches!(
             action,
