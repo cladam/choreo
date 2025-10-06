@@ -5,7 +5,7 @@ actors: Terminal
 scenario "Translate lowercase to uppercase" {
     test TrTranslatesToUppercase "tr correctly converts lowercase to uppercase" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Terminal runs "echo 'hello world' | tr '[:lower:]' '[:upper:]'"
         then:

@@ -321,9 +321,8 @@ fn run_scenario(
     }
 
     let scenario_start_time = Instant::now();
-
+    colours::info(&format!("\nRunning scenario: '{}'", scenario.name));
     'scenario_loop: loop {
-        colours::info(&format!("\nRunning scenario: '{}'", scenario.name));
         let elapsed_since_scenario_start = scenario_start_time.elapsed();
         let mut progress_made = false;
 

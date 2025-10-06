@@ -12,7 +12,7 @@ scenario "User can create a note, export it, and verify file operations" {
     # Create a note and capture its name for later use.
     test NoteCreationSuccess "Create a new note" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Terminal runs "medi new choreo-test -m '# My quick medi note'"
         then:

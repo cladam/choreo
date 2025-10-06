@@ -10,7 +10,7 @@ scenario "Verifying precise terminal output" {
 
     test StartsWith "output_starts_with matches the beginning of the output" {
         given:
-            wait >= 1s
+            Test can_start
         when:
             Terminal runs "echo 'Hello Choreo World'"
         then:
@@ -21,7 +21,6 @@ scenario "Verifying precise terminal output" {
     test CheckAppVersion "Check application version" {
         given:
             # Conditions that must be met before the test runs.
-            wait >= 2s
             Test has_succeeded StartsWith
         when:
             # Actions to be performed.

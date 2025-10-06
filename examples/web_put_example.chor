@@ -17,8 +17,7 @@ scenario "Retrieve and update data via REST API" {
 
     test GetInitialData "retrieve the current state of a resource" {
         given:
-            # No preconditions needed
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/json"
         then:

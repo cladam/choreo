@@ -4,7 +4,7 @@ actors: Web
 scenario "Setting and verifying custom headers" {
     test HeaderEcho "Verify custom header is sent" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web set_header "X-Custom-Header" "test-value"
             Web http_get "https://httpbin.org/headers"

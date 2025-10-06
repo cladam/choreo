@@ -40,7 +40,6 @@ background {
 scenario "A basic scenario" {
 
     test MyTest "Testing for the linter" {
-
         given:
             wait >= 301s
         when:
@@ -54,7 +53,7 @@ scenario "A basic scenario" {
     test GetInitialData "retrieve the current state of a resource" {
         given:
             # No preconditions needed
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "http://user:password@example.org/json"
         then:

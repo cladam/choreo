@@ -20,7 +20,7 @@ scenario "POST data via httpbin REST API" {
     test GetInitialData "retrieve the current state of a resource" {
         given:
             # No preconditions needed
-            wait >= 0s
+            Test can_start
             Web set_header "Accept" "application/json"
         when:
             Web http_get "https://httpbin.org/json"
@@ -43,7 +43,7 @@ scenario "POST data via httpbin REST API" {
 
     test PostRequestTest "Test POST request and response" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web set_header "Content-Type" "application/x-www-form-urlencoded"
             Web http_post "https://httpbin.io/post" with_body "${FORM_DATA}"
@@ -53,7 +53,7 @@ scenario "POST data via httpbin REST API" {
 
     test PatchWithFormDataTest "Test PATCH request with form data" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web set_header "Content-Type" "application/x-www-form-urlencoded"
             Web http_patch "https://httpbin.org/patch" with_body "key1=value1&key2=value2"
@@ -66,7 +66,7 @@ scenario "POST data via httpbin REST API" {
 
     test DeleteTest "Test DELETE request" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_delete "https://httpbin.org/delete"
         then:

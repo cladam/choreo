@@ -18,7 +18,7 @@ var FORM_DATA = "custname=test&custtel=1234567&custemail=test%40example.com&size
 scenario "POST data via httpbin REST API" {
     test PostRequestTest "Test POST request and response" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web set_header "Content-Type" "application/x-www-form-urlencoded"
             Web http_post "http://httpbin.io/post" with_body "${FORM_DATA}"

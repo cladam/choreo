@@ -22,7 +22,7 @@ scenario "Health check for a web API endpoint" {
 
     test HealthCheck "Verify the API endpoint is healthy" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web set_header "Authorization" "Bearer ${bearing_token}"
             Web http_get "${url}"

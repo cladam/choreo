@@ -5,7 +5,7 @@ actors: Terminal
 scenario "Validate date output format" {
     test DateMatchesIsoFormat "date output matches the YYYY-MM-DD format" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Terminal runs "date +%F" # %F is an alias for %Y-%m-%d
         then:
