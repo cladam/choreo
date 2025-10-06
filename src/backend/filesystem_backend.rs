@@ -96,6 +96,10 @@ impl FileSystemBackend {
 
     pub fn file_does_not_exist(&self, path: &str, cwd: &Path, verbose: bool) -> bool {
         let resolved_path = self.resolve_path(path, cwd);
+        println!(
+            "Checking if file does not exist: {}",
+            resolved_path.display()
+        );
         if verbose {
             println!(
                 "Checking if file does not exist: {}",

@@ -41,11 +41,7 @@ impl TestRunner {
         }
     }
 
-    pub fn run(
-        &mut self,
-        suite_name: &str,
-        scenarios: &[crate::parser::ast::Scenario],
-    ) -> Result<(), AppError> {
+    pub fn run(&mut self, suite_name: &str, scenarios: &[Scenario]) -> Result<(), AppError> {
         let mut settings = TestSuiteSettings::default();
         let mut feature_name = "Choreo Test Feature".to_string(); // Default name
                                                                   //let mut scenarios: Vec<crate::parser::ast::Scenario> = Vec::new();

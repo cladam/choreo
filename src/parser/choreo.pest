@@ -54,6 +54,14 @@ test                              = { "test" ~ identifier ~ string ~ "{" ~ given
 given_block                       = { "given:" ~ (action | condition)* }
 when_block                        = { "when:"  ~ action+ }
 then_block                        = { "then:"  ~ condition+ }
+// Defining a test case.
+// test        = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
+// given_block = { "given:" ~ step* }
+// when_block  = { "when:"  ~ step+ }
+// then_block  = { "then:"  ~ step+ }
+
+// A step can be either an action or a condition.
+step = { action | condition }
 
 // --- Generic Rule Block (for non-test logic) ---
 rule                              = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }
@@ -76,8 +84,8 @@ wait_condition                    = { "wait" ~ WHITESPACE* ~ comparison_op ~ WHI
 //state_condition                   = { "Test" ~ ("has_succeeded" | "can_start") ~ identifier }
 //state_condition                   = { "Test" ~ (("has_succeeded" ~ identifier) | "can_start") }
 state_condition                   = { "Test" ~ (state_has_succeeded | state_can_start) }
-state_has_succeeded = { "has_succeeded" ~ identifier }
-state_can_start = { "can_start" }
+state_has_succeeded               = { "has_succeeded" ~ identifier }
+state_can_start                   = { "can_start" }
 // --- Filesystem Conditions ---
 file_is_not_empty_condition       = { "file" ~ non_empty_string ~ "is_not_empty" }
 file_is_empty_condition           = { "file" ~ non_empty_string ~ "is_empty" }

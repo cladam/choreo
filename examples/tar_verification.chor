@@ -10,9 +10,9 @@ settings {
 
 background {
     # This background block runs before each test to set up a consistent environment.
-    FileSystem dir_does_not_exist "source_dir"
-    FileSystem dir_does_not_exist "extracted_dir"
-    FileSystem file_does_not_exist "backup.tar.gz"
+    #FileSystem dir_does_not_exist "source_dir"
+    #FileSystem dir_does_not_exist "extracted_dir"
+    #FileSystem file_does_not_exist "backup.tar.gz"
     FileSystem create_dir "source_dir/data"
     FileSystem create_file "source_dir/config.yml" with_content "setting: true"
     FileSystem create_file "source_dir/data/report.csv" with_content "id,value\n1,100"
@@ -34,6 +34,7 @@ scenario "Create, extract, and verify a tarball" {
     test CreateArchive "Create a compressed tar archive" {
         given:
             Test has_succeeded CreateSourceFiles
+            FileSystem file_does_not_exist "backup.tar.gz"
         when:
             # The -C flag changes the directory, so paths in the archive are relative.
             Terminal runs "tar -czf backup.tar.gz -C source_dir ."

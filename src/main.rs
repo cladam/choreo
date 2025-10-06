@@ -59,6 +59,40 @@ scenario "User can perform a basic workflow" {
 }
 "#;
 
+fn enhance_parse_error<E: ToString>(err: E, source: &str) -> String {
+    let base = err.to_string();
+    // Try to parse the " --> line:col" snippet from pest's error text
+    let mut hint = String::new();
+    if let Some(idx) = base.find("-->") {
+        if let Some(rest) = base.get(idx + 3..) {
+            // rest likely starts with " 39:24" or similar
+            let rest_trim = rest.trim_start();
+            if let Some(colon_pos) = rest_trim.find(':') {
+                let line_str = &rest_trim[..colon_pos].trim();
+                if let Ok(line_num) = line_str.parse::<usize>() {
+                    if let Some(line) = source.lines().nth(line_num.saturating_sub(1)) {
+                        if line.contains("FileSystem") {
+                            hint.push_str(
+                                "\nHint: This error occurs on a line containing `FileSystem`.",
+                            );
+                            hint.push_str("\n- Ensure `FileSystem` constructs are used as actions (e.g. in `when`) with the correct form:");
+                            hint.push_str(
+                                "\n  `FileSystem create_file \"path\" with_content \"...\"`",
+                            );
+                            hint.push_str("\n- If you intended a filesystem *condition*, use the supported condition form in a `then`/`given` block (or consult the grammar).");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if hint.is_empty() {
+        base
+    } else {
+        format!("{}{}\n", base, hint)
+    }
+}
+
 fn main() {
     let cli = cli::Cli::parse();
     if let Err(e) = run(cli) {
@@ -86,7 +120,8 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                     suite
                 }
                 Err(e) => {
-                    return Err(AppError::ParseError(e.to_string()));
+                    // Return an AppError::ParseError with extra context/hint
+                    return Err(AppError::ParseError(enhance_parse_error(e, &source)));
                 }
             };
 
