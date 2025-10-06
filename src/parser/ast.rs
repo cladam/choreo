@@ -158,16 +158,25 @@ pub enum GivenStep {
     Condition(Condition),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum StateCondition {
+    HasSucceeded(String),
+    CanStart,
+}
+
 // All possible conditions that can trigger a rule.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Condition {
+    // deprecated
     Wait {
         op: String,
         wait: f32,
     },
+    // deprecated
     StateSucceeded {
         outcome: String,
     },
+    State(StateCondition),
     // --- Terminal Conditions ---
     OutputContains {
         actor: String,

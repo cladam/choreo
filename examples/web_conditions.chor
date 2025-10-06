@@ -6,7 +6,7 @@ actors: Web, Terminal
 scenario "Testing various web conditions" {
     test StatusCodeTest "Test different HTTP status codes" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/status/200"
         then:
@@ -16,7 +16,7 @@ scenario "Testing various web conditions" {
 
     test ErrorStatusTest "Test error status codes" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/status/404"
         then:
@@ -25,7 +25,7 @@ scenario "Testing various web conditions" {
 
     test SuccessStatusTest "Test response status is success" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/status/201"
         then:
@@ -34,7 +34,7 @@ scenario "Testing various web conditions" {
 
     test ErrorStatusConditionTest "Test response status is error" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/status/500"
         then:
@@ -43,7 +43,7 @@ scenario "Testing various web conditions" {
 
     test StatusInListTest "Test response status is in list" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/status/202"
         then:
@@ -52,7 +52,7 @@ scenario "Testing various web conditions" {
 
     test BodyContainsTest "Test response body contains text" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/json"
         then:
@@ -66,7 +66,7 @@ scenario "Testing various web conditions" {
 
     test BodyMatchesTest "Test response body regex matching" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/user-agent"
         then:
@@ -76,7 +76,7 @@ scenario "Testing various web conditions" {
 
     test JsonPathTest "Test JSON path existence" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/json"
         then:
@@ -86,7 +86,7 @@ scenario "Testing various web conditions" {
 
     test JsonValueTest "Test JSON path value equality" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/json"
         then:

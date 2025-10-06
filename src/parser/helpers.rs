@@ -1,7 +1,7 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
 use crate::backend::web_backend::WebBackend;
-use crate::parser::ast::{Action, Condition, GivenStep, TestCase, TestState};
+use crate::parser::ast::{Action, Condition, GivenStep, StateCondition, TestCase, TestState};
 use jsonpath_lib::selector;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
@@ -110,9 +110,10 @@ pub fn check_condition(
             }
             false
         }
-        Condition::StateSucceeded { outcome } => test_states
+        Condition::State(StateCondition::HasSucceeded(outcome)) => test_states
             .get(outcome)
             .is_some_and(|s| *s == TestState::Passed),
+        Condition::State(StateCondition::CanStart) => true,
         Condition::LastCommandSucceeded => {
             if verbose {
                 println!("Checking if last command succeeded: {:?}", last_exit_code);

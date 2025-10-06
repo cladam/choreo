@@ -1,7 +1,7 @@
 // parser.rs
 use crate::parser::ast::{
     Action, Condition, GivenStep, ReportFormat, Scenario, ScenarioSpan, SettingSpan, Span,
-    Statement, TestCase, TestCaseSpan, TestSuite, TestSuiteSettings, Value,
+    StateCondition, Statement, TestCase, TestCaseSpan, TestSuite, TestSuiteSettings, Value,
 };
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
@@ -402,9 +402,62 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                 .to_string();
             Condition::OutputContains { actor, text }
         }
+        // Rule::state_condition => {
+        //     let mut test_name = String::new();
+        //     let mut inner = inner_cond.into_inner();
+        //     let first = inner.next();
+        //     match first.unwrap().as_rule() {
+        //         Rule::identifier => {
+        //             test_name = first.as_str().to_string();
+        //             Condition::State(StateCondition::HasSucceeded(test_name))
+        //         }
+        //         _ => {
+        //             let condition_type = first.as_str();
+        //
+        //             match condition_type {
+        //                 "has_succeeded" => {
+        //                     Condition::State(StateCondition::HasSucceeded(test_name))
+        //                 }
+        //                 "can_start" => Condition::State(StateCondition::CanStart),
+        //                 _ => panic!("Unknown state condition keyword: {}", condition_type),
+        //             }
+        //         }
+        //     }
+        // }
         Rule::state_condition => {
-            let outcome = inner_cond.into_inner().next().unwrap().as_str().to_string();
-            Condition::StateSucceeded { outcome }
+            let mut inner = inner_cond.into_inner();
+
+            // The inner iterator contains the grouped tokens, not "Test"
+            if let Some(first_token) = inner.next() {
+                match first_token.as_rule() {
+                    Rule::state_can_start => Condition::State(StateCondition::CanStart),
+
+                    Rule::state_has_succeeded => {
+                        // `first_token` is a grouped pair containing the keyword and the identifier.
+                        let mut parts = first_token.into_inner();
+                        //println!("parts: {}", parts.next().unwrap().as_str());
+                        // skip the keyword ("has_succeeded") if present
+                        //let _keyword = parts.next().map(|p| p.as_str());
+                        // next part is the identifier (test name)
+                        let test_name = parts
+                            .next()
+                            .expect("Missing test name after has_succeeded")
+                            .as_str()
+                            .to_string();
+                        Condition::State(StateCondition::HasSucceeded(test_name))
+                    }
+
+                    Rule::identifier => {
+                        // shorthand: `Test <identifier>`
+                        let test_name = first_token.as_str().to_string();
+                        Condition::State(StateCondition::HasSucceeded(test_name))
+                    }
+
+                    other => panic!("Unexpected rule in state_condition: {:?}", other),
+                }
+            } else {
+                panic!("Empty state_condition tokens");
+            }
         }
         Rule::output_matches_condition => {
             let mut inner = inner_cond.into_inner();

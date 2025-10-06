@@ -599,7 +599,7 @@ impl WebBackend {
             Condition::ResponseBodyMatches { regex, capture_as } => {
                 if let Ok(re) = regex::Regex::new(regex) {
                     if let Some(captures) = re.captures(&last_response.body) {
-                        println!("Regexp: {}", captures.get(0).unwrap().as_str());
+                        //println!("Regexp: {}", captures.get(0).unwrap().as_str());
                         if let Some(var_name) = capture_as {
                             if let Some(capture_group) = captures.get(1) {
                                 let value = capture_group.as_str().to_string();
