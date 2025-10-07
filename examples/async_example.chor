@@ -9,7 +9,7 @@ actors: Terminal, Web, FileSystem
 
 # Start a simple HTTP server in the background on the main thread so all scenarios can hit it.
 background {
-    Terminal runs "python3 -m http.server 8000 &"
+    Terminal run "python3 -m http.server 8000 &"
     # give server a moment to start
     wait >= 0.5s
 }
@@ -31,7 +31,7 @@ parallel scenario "Concurrent requests and background jobs" {
             Test can_start
         when:
             # Redirect background job output to a file so the runner can check it
-            Terminal runs "bash -c 'sleep 3; echo long-job-done > /tmp/longjob.out 2>&1' &"
+            Terminal run "bash -c 'sleep 3; echo long-job-done > /tmp/longjob.out 2>&1' &"
         then:
             # Check the file for the marker instead of terminal output
             FileSystem file_contains "/tmp/longjob.out" with_content "long-job-done"
@@ -39,7 +39,7 @@ parallel scenario "Concurrent requests and background jobs" {
 
     after {
         # cleanup: kill any background python server (best-effort)
-        Terminal runs "pkill -f 'http.server' || true"
-        Terminal runs "rm -f /tmp/longjob.out"
+        Terminal run "pkill -f 'http.server' || true"
+        Terminal run "rm -f /tmp/longjob.out"
     }
 }

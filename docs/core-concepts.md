@@ -25,7 +25,7 @@ scenario "Successful login attempt" {
     test VerifySuccessfulLogin "Verify login grants access" {
         given:
             # Assume a 'login' command exists
-            Terminal runs "login --user admin --pass secret123"
+            Terminal run "login --user admin --pass secret123"
         when:
             # Check the output for a success message
             Terminal output_contains "Welcome, admin!"

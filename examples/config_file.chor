@@ -12,8 +12,8 @@ scenario "Program reads a custom configuration" {
             FileSystem create_file "config.toml" with_content "verbose = true"
         when:
             # Run the program which should read config.toml
-            #Terminal runs "my-app --config config.toml"
-            Terminal runs "echo 'Running in verbose mode'"
+            #Terminal run "my-app --config config.toml"
+            Terminal run "echo 'Running in verbose mode'"
         then:
             # The output should reflect the setting from the file
             Terminal output_contains "Running in verbose mode"
@@ -34,7 +34,7 @@ scenario "Listing files in a directory" {
         Test can_start
     when:
         # Run the standard 'ls -l' command
-        Terminal runs "ls -l"
+        Terminal run "ls -l"
     then:
         # Assert that the command exited without errors
         Terminal last_command exit_code_is 0
@@ -47,8 +47,8 @@ scenario "Program greets a user" {
         Test can_start
     when:
         # Run a command that should print "Hello, Choreo!"
-        #Terminal runs "my-cli-app greet choreo"
-        Terminal runs "echo 'Hello, choreo!'"
+        #Terminal run "my-cli-app greet choreo"
+        Terminal run "echo 'Hello, choreo!'"
     then:
         # Check that stdout contains the expected greeting
         Terminal output_contains "Hello, choreo!"

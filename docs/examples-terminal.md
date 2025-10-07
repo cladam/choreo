@@ -45,7 +45,7 @@ scenario "Program greets a user" {
             Test can_start
         when:
             # Run a command that should print "Hello, Choreo!"
-            Terminal runs "my-cli-app greet choreo"
+            Terminal run "my-cli-app greet choreo"
         then:
             # Check that stdout (output) contains the expected greeting
             Terminal output_contains "Hello, choreo!"
