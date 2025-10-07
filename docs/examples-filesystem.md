@@ -37,7 +37,7 @@ scenario "Program generates a log file" {
             FileSystem delete_file "log.txt"
         when:
             # Assume 'my-program --log' creates a log.txt file
-            Terminal runs "my-program --log"
+            Terminal run "my-program --log"
         then:
             # Verify that the file now exists
             FileSystem file_exists "log.txt"
@@ -66,7 +66,7 @@ scenario "Program reads a custom configuration" {
             FileSystem create_file "config.toml" with_content "verbose = true"
         when:
             # Run the program which should read config.toml
-            Terminal runs "my-app --config config.toml"
+            Terminal run "my-app --config config.toml"
         then:
             # The output should reflect the setting from the file
             Terminal output_contains "Running in verbose mode"

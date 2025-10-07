@@ -10,7 +10,7 @@ scenario "Verifying precise terminal output" {
         given:
             Test can_start
         when:
-            Terminal runs "echo 'Hello Choreo World'"
+            Terminal run "echo 'Hello Choreo World'"
         then:
             Terminal output_starts_with 'Hello'
     }
@@ -19,7 +19,7 @@ scenario "Verifying precise terminal output" {
         given:
             Test has_succeeded StartsWith
         when:
-            Terminal runs "echo 'Hello Choreo World'"
+            Terminal run "echo 'Hello Choreo World'"
         then:
             Terminal output_ends_with "World"
     }
@@ -28,7 +28,7 @@ scenario "Verifying precise terminal output" {
         given:
             Test has_succeeded EndsWith
         when:
-            Terminal runs "echo 'exact-match'"
+            Terminal run "echo 'exact-match'"
         then:
             # Note: The output will have a trailing newline, which we must match.
             Terminal output_equals "exact-match\n"
@@ -39,7 +39,7 @@ scenario "Verifying precise terminal output" {
             Test has_succeeded Equals
         when:
             # This command writes "ERROR" to stderr.
-            Terminal runs "echo 'ERROR' >&2"
+            Terminal run "echo 'ERROR' >&2"
         then:
             Terminal stdout_is_empty
             Terminal stderr_contains "ERROR"

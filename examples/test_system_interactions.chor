@@ -17,7 +17,7 @@ scenario "Testing exit codes and file system conditions" {
 
         when:
             # Action: Run a simple command that will succeed (exit code 0).
-            Terminal runs "echo 'Test successful'"
+            Terminal run "echo 'Test successful'"
 
         then:
             # Assertions using the new exit code and filesystem conditions.
@@ -36,7 +36,7 @@ scenario "Testing exit codes and file system conditions" {
         when:
             # Action: Run a command that is guaranteed to fail.
             # `cat` on a non-existent file typically exits with code 1.
-            Terminal runs "cat non_existent_file.txt"
+            Terminal run "cat non_existent_file.txt"
 
         then:
             # Assertions using the new exit code conditions.

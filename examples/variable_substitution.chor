@@ -11,7 +11,7 @@ scenario "Using file-defined variables" {
         given:
             FileSystem delete_file "${FILENAME}"
         when:
-            Terminal runs "echo '${GREETING}' > ${FILENAME}"
+            Terminal run "echo '${GREETING}' > ${FILENAME}"
         then:
             Terminal last_command succeeded
             FileSystem file_exists "${FILENAME}"

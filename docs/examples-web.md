@@ -45,7 +45,7 @@ var BEARING_TOKEN = "choreo-token-xyz"
 scenario "Health check for a web API endpoint" {
     test HealthCheck "Verify the API endpoint is healthy" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web set_header "Authorization" "Bearer ${BEARING_TOKEN}"
             Web http_get "${URL}"
@@ -73,7 +73,7 @@ actor Web
 scenario "Testing various web conditions" {
     test StatusCodeTest "Test different HTTP status codes" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/status/200"
         then:
@@ -83,7 +83,7 @@ scenario "Testing various web conditions" {
 
     test SuccessStatusTest "Test response status is success" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/status/201"
         then:
@@ -92,7 +92,7 @@ scenario "Testing various web conditions" {
 
     test BodyContainsTest "Test response body contains text and has correct JSON structure" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/json"
         then:
@@ -106,7 +106,7 @@ scenario "Testing various web conditions" {
 
     test JsonValueTest "Test JSON path value equality" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "https://httpbin.org/json"
         then:

@@ -9,7 +9,7 @@ scenario "Listing files in the current directory" {
             wait >= 1s
         # WHEN: The single, specific action you are testing.
         when:
-            Terminal runs "ls -l"
+            Terminal run "ls -l"
         # THEN: The expected outcome that defines success.
         then:
             Terminal output_contains "test_ls.chor" # This file should be listed

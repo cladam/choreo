@@ -12,7 +12,7 @@ scenario "User can create a note, add a task, verify it, and clean up" {
         given:
             wait >= 1s
         when:
-            Terminal runs "medi new blog-idea-for-dsl-test -m '# My medi note'"
+            Terminal run "medi new blog-idea-for-dsl-test -m '# My medi note'"
         then:
             Terminal output_contains "Successfully created note: 'blog-idea-for-dsl-test'"
     }
@@ -22,7 +22,7 @@ scenario "User can create a note, add a task, verify it, and clean up" {
         given:
             Test has_succeeded NoteCreationSuccess
         when:
-            Terminal runs "medi task add blog-idea-for-dsl-test 'Write the first draft'"
+            Terminal run "medi task add blog-idea-for-dsl-test 'Write the first draft'"
         then:
             Terminal output_contains "Added new task with ID:"
     }
@@ -32,7 +32,7 @@ scenario "User can create a note, add a task, verify it, and clean up" {
         given:
             Test has_succeeded TaskCanBeAdded
         when:
-            Terminal runs "medi task list"
+            Terminal run "medi task list"
         then:
             Terminal output_contains "Write the first draft (for note blog-idea-for-dsl-test)"
     }
@@ -42,7 +42,7 @@ scenario "User can create a note, add a task, verify it, and clean up" {
         given:
             Test has_succeeded TaskAppearsInList
         when:
-            Terminal runs "medi delete blog-idea-for-dsl-test --force"
+            Terminal run "medi delete blog-idea-for-dsl-test --force"
         then:
             Terminal output_contains "Successfully deleted note: 'blog-idea-for-dsl-test'"
     }

@@ -8,7 +8,7 @@ scenario "Terminate a long-running process" {
             Test can_start
         when:
             # This command will be killed after 1 second.
-            Terminal runs "timeout 1 sleep 5"
+            Terminal run "timeout 1 sleep 5"
         then:
             Terminal last_command failed
             # `timeout` returns 124 when it kills the child process.

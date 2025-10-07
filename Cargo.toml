@@ -18,6 +18,7 @@ strip-ansi-escapes = "0.2.1"
 terminal_size = "0.4.3"
 clap = { version = "4.5.48", features = ["derive"] }
 colored = "3.0.0"
+uuid = { version = "1.18.1", features = ["v4"] }
 thiserror = "2.0.17"
 anyhow = "1.0.100"
 serde = { version = "1.0.221", features = ["derive"] }

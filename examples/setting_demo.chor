@@ -22,9 +22,9 @@ scenario "A simple test to confirm settings are used" {
         given:
             wait >= 1s
         when:
-            Terminal runs "echo 'Settings are working!'"
+            Terminal run "echo 'Settings are working!'"
             # Uncomment below to see the timeout in action.
-            #Terminal runs "sleep 6"
+            #Terminal run "sleep 6"
         then:
             Terminal output_contains "Settings are working!"
     }
@@ -35,7 +35,7 @@ scenario "A scenario with a failing test" {
         given:
             wait >= 1s
         when:
-            Terminal runs "echo 'This test will fail'"
+            Terminal run "echo 'This test will fail'"
         then:
             # This condition will not be met.
             Terminal output_contains "This is not the output"
@@ -47,7 +47,7 @@ scenario "A second scenario that should not run" {
         given:
             wait >= 1s
         when:
-            Terminal runs "echo 'This should not be printed'"
+            Terminal run "echo 'This should not be printed'"
         then:
             Terminal output_contains "This should not be printed"
     }

@@ -12,7 +12,7 @@ scenario "Verifying precise terminal output" {
         given:
             Test can_start
         when:
-            Terminal runs "echo 'Hello Choreo World'"
+            Terminal run "echo 'Hello Choreo World'"
         then:
             Terminal last_command succeeded
             Terminal output_starts_with 'Hello'
@@ -24,7 +24,7 @@ scenario "Verifying precise terminal output" {
             Test has_succeeded StartsWith
         when:
             # Actions to be performed.
-            Terminal runs "echo 'my-app version 1.0.0'"
+            Terminal run "echo 'my-app version 1.0.0'"
         then:
             # Conditions that must be true after the actions.
             Terminal last_command succeeded
@@ -36,7 +36,7 @@ scenario "Verifying precise terminal output" {
             # This test depends on the success of the previous one.
             Test has_succeeded CheckAppVersion
         when:
-            Terminal runs "echo 'Created resource with ID: res-123'"
+            Terminal run "echo 'Created resource with ID: res-123'"
         then:
             # Capture part of the output into a variable named 'resourceId'.
             Terminal output_matches "Created resource with ID: (res-\d+)" as resourceId
@@ -44,6 +44,6 @@ scenario "Verifying precise terminal output" {
     # This block runs after all tests in the scenario are complete.
     after {
         # Use the captured 'resourceId' variable to clean up.
-        Terminal runs "echo 'Cleaning up ${resourceId}'"
+        Terminal run "echo 'Cleaning up ${resourceId}'"
     }
 }

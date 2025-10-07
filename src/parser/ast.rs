@@ -282,15 +282,20 @@ pub enum Condition {
 // All possible actions that can be executed.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
+    // --- System Actions ---
+    Pause {
+        duration: f32,
+    },
+    Log {
+        message: String,
+    },
+    Timestamp {
+        variable: String,
+    },
+    Uuid {
+        variable: String,
+    },
     // --- Terminal Actions ---
-    Type {
-        actor: String,
-        content: String,
-    },
-    Press {
-        actor: String,
-        key: String,
-    },
     Run {
         actor: String,
         command: String,

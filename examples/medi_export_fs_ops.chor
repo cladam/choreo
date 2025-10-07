@@ -14,7 +14,7 @@ scenario "User can create a note, export it, and verify file operations" {
         given:
             Test can_start
         when:
-            Terminal runs "medi new choreo-test -m '# My quick medi note'"
+            Terminal run "medi new choreo-test -m '# My quick medi note'"
         then:
             Terminal output_matches "Successfully created note: '([\w-]+)'" as noteName
     }
@@ -23,8 +23,8 @@ scenario "User can create a note, export it, and verify file operations" {
         given:
             Test has_succeeded NoteCreationSuccess
         when:
-            Terminal runs "touch medi-export.txt"
-            Terminal runs "medi export medi-export --format json"
+            Terminal run "touch medi-export.txt"
+            Terminal run "medi export medi-export --format json"
         then:
             Terminal last_command succeeded
             Terminal output_contains "notes as JSON to 'medi-export.json'"
@@ -38,7 +38,7 @@ scenario "User can create a note, export it, and verify file operations" {
             Test has_succeeded ExportNoteToFileSystem
             FileSystem file_exists "medi-export.json"
         when:
-            Terminal runs "cat medi-export.json"
+            Terminal run "cat medi-export.json"
         then:
             #Terminal last_command succeeded
             Terminal output_is_valid_json
@@ -48,7 +48,7 @@ scenario "User can create a note, export it, and verify file operations" {
     # This block runs after all tests in the scenario are complete.
     after {
         # Use the captured 'noteName' variable to delete the created note.
-        Terminal runs "medi delete ${noteName} --force"
+        Terminal run "medi delete ${noteName} --force"
         FileSystem delete_file "medi-export.json"
         FileSystem delete_file "medi-export.txt"
     }

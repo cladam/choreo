@@ -7,7 +7,7 @@ scenario "Sort a list of lines" {
         given:
             wait >= 50ms
         when:
-            Terminal runs "printf 'charlie\nalpha\nbravo' | sort"
+            Terminal run "printf 'charlie\nalpha\nbravo' | sort"
         then:
             Terminal output_matches "alpha\nbravo\ncharlie"
     }

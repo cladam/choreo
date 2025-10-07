@@ -7,7 +7,7 @@ scenario "Translate lowercase to uppercase" {
         given:
             Test can_start
         when:
-            Terminal runs "echo 'hello world' | tr '[:lower:]' '[:upper:]'"
+            Terminal run "echo 'hello world' | tr '[:lower:]' '[:upper:]'"
         then:
             Terminal output_contains "HELLO WORLD"
     }

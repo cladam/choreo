@@ -7,7 +7,7 @@ scenario "Validate date output format" {
         given:
             Test can_start
         when:
-            Terminal runs "date +%F" # %F is an alias for %Y-%m-%d
+            Terminal run "date +%F" # %F is an alias for %Y-%m-%d
         then:
             # Matches a four-digit year, a dash, a two-digit month, etc.
             Terminal output_matches "\d{4}-\d{2}-\d{2}"

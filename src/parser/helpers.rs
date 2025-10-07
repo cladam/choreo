@@ -227,12 +227,8 @@ pub fn check_condition(
 }
 
 /// Creates a new Action with its string values substituted from the state map.
-pub fn substitute_variables(action: &Action, state: &HashMap<String, String>) -> Action {
+pub fn _substitute_variables(action: &Action, state: &HashMap<String, String>) -> Action {
     match action {
-        Action::Type { actor, content } => Action::Type {
-            actor: actor.clone(),
-            content: substitute_string(content, state),
-        },
         Action::Run { actor, command } => {
             println!(
                 "  [DEBUG] Substituting in Run action: command='{}'",
@@ -323,13 +319,12 @@ pub fn substitute_variables_in_condition(
 /// Creates a new Action with its string values substituted from the state map.
 pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, String>) -> Action {
     match action {
-        Action::Type { content, actor } => Action::Type {
-            actor: actor.clone(),
-            content: substitute_string(content, state),
-        },
         Action::Run { command, actor } => Action::Run {
             actor: actor.clone(),
             command: substitute_string(command, state),
+        },
+        Action::Log { message } => Action::Log {
+            message: substitute_string(message, state),
         },
         Action::CreateFile { path, content } => Action::CreateFile {
             path: substitute_string(path, state),
@@ -378,10 +373,6 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
             value: substitute_string(value, state),
         },
         Action::HttpClearCookie { key } => Action::HttpClearCookie {
-            key: substitute_string(key, state),
-        },
-        Action::Press { actor, key } => Action::Press {
-            actor: actor.clone(),
             key: substitute_string(key, state),
         },
         _ => action.clone(),

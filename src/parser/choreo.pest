@@ -6,19 +6,17 @@
 WHITESPACE                        = _{ " " | "\t" | NEWLINE }
 COMMENT                           = _{ "#" ~ (!NEWLINE ~ ANY)* }
 
-// The program is a series of statements.
+// choreo DSL is a series of statements.
 grammar                           = { SOI ~ statement* ~ EOI }
 statement                         = { feature_def | settings_def | env_def | var_def | actors_def | background_def | scenario_def }
 
 // Setting up the test suite.
-//settings_def                      = { "settings" ~ "{" ~ setting+ ~ "}" }
 settings_def = {
     ("setting:" ~ setting ~ ("," ~ setting)*) |
     ("settings" ~ "{" ~ setting+ ~ "}")
 }
 setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ (value | binary_op) }
 background_def                    = { "background" ~ "{" ~ (action | condition)+ ~ "}" }
-//env_def                           = { "env:" ~ identifier ~ ("," ~ identifier)* }
 env_def = {
     ("env:" ~ identifier ~ ("," ~ identifier)*) |
     ("env" ~ "{" ~ identifier+ ~ "}") |
@@ -29,16 +27,6 @@ var_def = {
     ("var:" ~ identifier ~ ("," ~ identifier)*)
 }
 
-//var_def = {
-//    ("var" ~ var) |
-//    ("var:" ~ var ~ ("," ~ var)*) |
-//    ("var" ~ "{" ~ var+ ~ "}")
-//}
-
-//var = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
-
-//var_def                           = { "var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value }
-//actors_def                        = { "actors:" ~ identifier ~ ("," ~ identifier)* }
 actors_def = {
     ("actors:" ~ identifier ~ ("," ~ identifier)*) |
     ("actors" ~ "{" ~ identifier+ ~ "}") |
@@ -54,14 +42,6 @@ test                              = { "test" ~ identifier ~ string ~ "{" ~ given
 given_block                       = { "given:" ~ (action | condition)* }
 when_block                        = { "when:"  ~ action+ }
 then_block                        = { "then:"  ~ condition+ }
-// Defining a test case.
-// test        = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
-// given_block = { "given:" ~ step* }
-// when_block  = { "when:"  ~ step+ }
-// then_block  = { "then:"  ~ step+ }
-
-// A step can be either an action or a condition.
-step = { action | condition }
 
 // --- Generic Rule Block (for non-test logic) ---
 rule                              = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }
@@ -76,16 +56,19 @@ condition = {
     terminal_condition |
     web_condition
 }
-action                            = { type_action | press_action | run_action | filesystem_action | web_action }
+action = {
+    system_action |
+    filesystem_action |
+    run_action |
+    web_action
+}
 
 // Condition Types
 wait_condition                    = { "wait" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ wait_marker }
-//state_condition                   = { "Test" ~ "has_succeeded" ~ identifier }
-//state_condition                   = { "Test" ~ ("has_succeeded" | "can_start") ~ identifier }
-//state_condition                   = { "Test" ~ (("has_succeeded" ~ identifier) | "can_start") }
 state_condition                   = { "Test" ~ (state_has_succeeded | state_can_start) }
 state_has_succeeded               = { "has_succeeded" ~ identifier }
 state_can_start                   = { "can_start" }
+
 // --- Filesystem Conditions ---
 file_is_not_empty_condition       = { "file" ~ non_empty_string ~ "is_not_empty" }
 file_is_empty_condition           = { "file" ~ non_empty_string ~ "is_empty" }
@@ -96,6 +79,7 @@ filesystem_condition              = { "FileSystem" ~ (
     file_is_not_empty_condition |
     file_is_empty_condition
 ) }
+// --- Terminal Conditions ---
 terminal_condition                = { "Terminal" ~ (
     output_contains_condition |
     output_matches_condition |
@@ -114,6 +98,7 @@ terminal_condition                = { "Terminal" ~ (
     json_output_at_includes_condition |
     json_output_at_has_item_count_condition
 ) }
+// --- Web Conditions ---
 web_condition                     = { "Web" ~ (
     response_status_is_condition |
     response_status_is_success_condition |
@@ -177,10 +162,8 @@ response_body_matches_condition      = { "response_body_matches" ~ string ~ ("as
 response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string }
 
 // Action Types
-type_action                       = { identifier ~ "types" ~ string }
-press_action                      = { identifier ~ "presses" ~ non_empty_string }
-run_action                        = { identifier ~ "runs" ~ non_empty_string }
-web_action = { identifier ~ web_action_type }
+run_action                        = { "Terminal" ~ "run" ~ non_empty_string }
+web_action                        = { "Web" ~ web_action_type }
 web_action_type = {
     ("set_header" ~ string ~ string) |
     ("clear_header" ~ string) |
@@ -197,21 +180,33 @@ web_action_type = {
 filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? ~ ("as" ~ identifier)? }
 filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" | "read_file" }
 
+// --- System Actor ---
+system_action = { "System" ~ system_action_type }
+system_action_type = {
+    system_pause |
+    system_log |
+    system_timestamp |
+    system_uuid
+}
+
+system_pause = { "pause" ~ wait_marker }
+system_log = { "log" ~ string }
+system_timestamp = { "timestamp" ~ "as" ~ (string | identifier) }
+system_uuid = { "uuid" ~ "as" ~ identifier }
+// system_action                     = { "System" ~ ( system_pause | system_log | system_timestamp | system_uuid ) }
+// system_pause                      = { "pause" ~ WHITESPACE* ~ wait_marker }
+// system_log                        = { "log" ~ WHITESPACE+ ~ string }
+// system_timestamp                  = { "timestamp" ~ WHITESPACE+ ~ "as" ~ WHITESPACE+ ~ (identifier | string) }
+// system_uuid                       = { "uuid" ~ WHITESPACE+ ~ "as" ~ WHITESPACE+ ~ identifier }
+
 // The basic building blocks of the choreo language.
 identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
-
-//string                            = ${ "\"" ~ inner_double ~ "\"" | "'" ~ inner_single ~ "'" }
-//inner_double                      = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
-//inner_single                      = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
-//non_empty_content                 = ${ "\"" ~ within_double+ ~ "\"" | "'" ~ within_single+ ~ "'" }
-string                              = ${ "\"" ~ within_double ~ "\"" | "'" ~ within_single ~ "'" }
-within_double                       = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
-within_single                       = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
-non_empty_string                    = ${ "\"" ~ within_double_non_empty ~ "\"" | "'" ~ within_single_non_empty ~ "'" }
-within_double_non_empty              = @{ ( "\\" ~ ANY | !"\"" ~ ANY )+ }
-within_single_non_empty              = @{ ( "\\" ~ ANY | !"'" ~ ANY )+ }
-//within_double                      = @{ !("\"" | "\\") ~ ANY | "\\" ~ ("\"" | "\\" | "n" | "t" | "r") }
-//within_single                      = @{ !("'" | "\\") ~ ANY | "\\" ~ ("'" | "\\" | "n" | "t" | "r") }
+string                            = ${ "\"" ~ within_double ~ "\"" | "'" ~ within_single ~ "'" }
+within_double                     = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
+within_single                     = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
+non_empty_string                  = ${ "\"" ~ within_double_non_empty ~ "\"" | "'" ~ within_single_non_empty ~ "'" }
+within_double_non_empty           = @{ ( "\\" ~ ANY | !"\"" ~ ANY )+ }
+within_single_non_empty           = @{ ( "\\" ~ ANY | !"'" ~ ANY )+ }
 number                            = @{ ASCII_DIGIT+ }
 float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 duration                          = @{ ASCII_DIGIT+ ~ ("ms" | "s") }

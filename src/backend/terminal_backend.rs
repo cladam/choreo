@@ -1,9 +1,10 @@
 use crate::colours;
 use crate::parser::ast::{Action, TestSuiteSettings};
+use crate::parser::helpers::substitute_variables_in_action;
+use chrono::Utc;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::collections::HashMap;
 use std::io::Read;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
@@ -12,10 +13,9 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 use terminal_size::{terminal_size, Height, Width};
+use uuid as rust_uuid;
 
 pub struct TerminalBackend {
-    // For interactive PTY sessions (`types`, `presses`)
-    pty_writer: Box<dyn Write + Send>,
     pty_output_receiver: Receiver<String>,
     child: Box<dyn portable_pty::Child + Send + Sync>,
     #[allow(dead_code)]
@@ -64,12 +64,11 @@ impl TerminalBackend {
             .spawn_command(cmd)
             .expect("Failed to spawn command");
 
-        // We need to get a reader and writer for the PTY's master end.
+        // We need to get a reader for the PTY's master end.
         let reader = pair
             .master
             .try_clone_reader()
             .expect("Failed to clone reader");
-        let writer = pair.master.take_writer().expect("Failed to take writer");
 
         // Create the channel for communication.
         let (sender, receiver): (Sender<String>, Receiver<String>) = mpsc::channel();
@@ -91,7 +90,6 @@ impl TerminalBackend {
         });
 
         Self {
-            pty_writer: writer,
             pty_output_receiver: receiver,
             child,
             reader_thread: Some(reader_thread),
@@ -128,22 +126,9 @@ impl TerminalBackend {
         timeout: Option<Duration>,
         _env_vars: &mut HashMap<String, String>,
     ) -> bool {
+        let action = substitute_variables_in_action(action, _env_vars);
         match action {
-            Action::Type { content, .. } => {
-                self.pty_writer.write_all(content.as_bytes()).unwrap();
-                self.pty_writer.flush().unwrap();
-                true
-            }
-            Action::Press { key, .. } if key == "Enter" => {
-                self.pty_writer.write_all(b"\n").unwrap();
-                self.pty_writer.flush().unwrap();
-                true
-            }
             Action::Run { command, .. } => {
-                // I'm gonna need to substitute variables here,
-                // imagine: Terminal runs ${COMMAND}
-                //let substituted_command = substitute_string(command, env_vars);
-                //println!("Substituted terminal command: {}", substituted_command);
                 // Special handling for 'cd' to update the backend's CWD.
                 let mut choreo_command = command.clone();
                 let trimmed = choreo_command.trim();
@@ -184,11 +169,7 @@ impl TerminalBackend {
                 *last_exit_code = None;
                 self.last_stdout.clear();
                 self.last_stderr.clear();
-                //
-                // println!("Running command: {}", command);
-                // println!("{}", self.last_stdout);
-                // println!("{}", self.last_stderr);
-                // println!("{:?}", self.cwd);
+
                 let shell = self.settings.shell_path.as_deref().unwrap_or("/bin/sh");
                 let mut child = Command::new(shell)
                     .arg("-c")
@@ -264,6 +245,50 @@ impl TerminalBackend {
 
                 true
             }
+
+            // System log: surface the message into the interactive output and log it.
+            Action::Log { message } => {
+                colours::info(&format!("[SYSTEM] {}", message));
+                if !self.last_stdout.is_empty() && !self.last_stdout.ends_with('\n') {
+                    self.last_stdout.push('\n');
+                }
+                self.last_stdout.push_str(&format!("System: {}\n", message));
+                true
+            }
+
+            // Pause: sleep for the specified duration (seconds).
+            Action::Pause { duration } => {
+                // Expecting `duration` as a floating-point number of seconds.
+                let dur = Duration::from_secs_f32(duration);
+                thread::sleep(dur);
+                true
+            }
+
+            // Timestamp: set a variable to the current timestamp (seconds.nanos).
+            Action::Timestamp { variable } => {
+                let now = Utc::now();
+                let ts = now.format("%Y-%m-%d_%H:%M:%S").to_string();
+                _env_vars.insert(variable.clone(), ts.clone());
+                if !self.last_stdout.is_empty() && !self.last_stdout.ends_with('\n') {
+                    self.last_stdout.push('\n');
+                }
+                self.last_stdout
+                    .push_str(&format!("Timestamp {} = {}\n", variable, ts));
+                true
+            }
+
+            // Uuid: set a variable to a generated v4 UUID.
+            Action::Uuid { variable } => {
+                let uid = rust_uuid::Uuid::new_v4().to_string();
+                _env_vars.insert(variable.clone(), uid.clone());
+                if !self.last_stdout.is_empty() && !self.last_stdout.ends_with('\n') {
+                    self.last_stdout.push('\n');
+                }
+                self.last_stdout
+                    .push_str(&format!("Uuid {} = {}\n", variable, uid));
+                true
+            }
+
             _ => false, // Ignore actions not meant for this backend
         }
     }

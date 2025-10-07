@@ -106,9 +106,11 @@ pub fn generate_choreo_report(
 
 fn format_action_for_report(action: &Action) -> String {
     match action {
-        Action::Type { actor, content } => format!("{} types '{}'", actor, content),
-        Action::Press { actor, key } => format!("{} presses '{}'", actor, key),
         Action::Run { actor, command } => format!("{} runs '{}'", actor, command),
+        Action::Pause { duration } => format!("duration of '{}'", duration),
+        Action::Log { message } => format!("logs '{}'", message),
+        Action::Timestamp { variable } => format!("timestamp at ({})", variable),
+        Action::Uuid { variable } => format!("uuid of '{}'", variable),
         Action::CreateFile { path, .. } => format!("FileSystem create_file '{}'", path),
         Action::DeleteFile { path } => format!("FileSystem delete_file '{}'", path),
         Action::CreateDir { path } => format!("FileSystem create_dir '{}'", path),

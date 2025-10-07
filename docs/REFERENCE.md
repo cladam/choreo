@@ -196,7 +196,7 @@ not conditions.
 
 ```
 when:  
-    Terminal runs "data-processor --input data.txt"
+    Terminal run "data-processor --input data.txt"
 ```
 
 #### `then`:
@@ -235,27 +235,27 @@ This is the reference for all available commands that can be used within the `te
 
 | Syntax                     | Description                                                                             |
 |:---------------------------|:----------------------------------------------------------------------------------------|
-| `Terminal runs "..."`      | Executes a shell command non-interactively. The command and a newline are sent at once. |
+| `Terminal run "..."`       | Executes a shell command non-interactively. The command and a newline are sent at once. |
 | `Terminal types "..."`     | Simulates a user typing a string into the terminal.                                     |
 | `Terminal presses "Enter"` | Simulates a user pressing the Enter key.                                                |
 
 #### Conditions
 
-| Syntax                                     | Description                                                                        |
-|:-------------------------------------------|:-----------------------------------------------------------------------------------|
-| `Terminal last_command succeeded`          | Passes if the last `Terminal runs` command exited with code 0.                     |
-| `Terminal last_command failed`             | Passes if the last `Terminal runs` command exited with a non-zero code.            |
-| `Terminal last_command exit_code_is <num>` | Passes if the last `Terminal runs` command exited with the specified code.         |
-| `Terminal output_contains "..."`           | Passes if the combined stdout/stderr stream from the PTY contains the substring.   |
-| `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal runs` command was empty.              |
-| `Terminal stderr_is_empty`                 | Passes if the stderr from the last `Terminal runs` command was empty.              |
-| `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal runs` command contains the substring. |
-| `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `runs` command starts with the string.    |
-| `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `runs` command ends with the string.      |
-| `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `runs` command is an exact match.         |
-| `Terminal output_matches "..."`            | Passes if the combined stdout/stderr stream from the PTY matches the regex.        |
-| `Terminal output_is_valid_json`            | Passes if the combined stdout/stderr stream from the PTY is valid JSON.            |
-| `Terminal json_output has_path "..."`      | Passes if the JSON output has the specified JSON path.                             |
+| Syntax                                     | Description                                                                       |
+|:-------------------------------------------|:----------------------------------------------------------------------------------|
+| `Terminal last_command succeeded`          | Passes if the last `Terminal run` command exited with code 0.                     |
+| `Terminal last_command failed`             | Passes if the last `Terminal run` command exited with a non-zero code.            |
+| `Terminal last_command exit_code_is <num>` | Passes if the last `Terminal run` command exited with the specified code.         |
+| `Terminal output_contains "..."`           | Passes if the combined stdout/stderr stream from the PTY contains the substring.  |
+| `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal run` command was empty.              |
+| `Terminal stderr_is_empty`                 | Passes if the stderr from the last `Terminal run` command was empty.              |
+| `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal run` command contains the substring. |
+| `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `runs` command starts with the string.   |
+| `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `runs` command ends with the string.     |
+| `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `runs` command is an exact match.        |
+| `Terminal output_matches "..."`            | Passes if the combined stdout/stderr stream from the PTY matches the regex.       |
+| `Terminal output_is_valid_json`            | Passes if the combined stdout/stderr stream from the PTY is valid JSON.           |
+| `Terminal json_output has_path "..."`      | Passes if the JSON output has the specified JSON path.                            |
 
 ### FileSystem Commands
 
@@ -331,6 +331,6 @@ with the variable's value before executing the step.
 ```
 var FILENAME = "output.log"  
 when:  
-  Terminal runs "echo 'hello' > ${FILENAME}"  
+  Terminal run "echo 'hello' > ${FILENAME}"  
 ```
 

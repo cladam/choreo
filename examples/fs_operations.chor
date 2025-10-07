@@ -13,7 +13,7 @@ scenario "Verifying file content" {
             # The background already created this file
             FileSystem file_exists "temp_data/initial.txt"
         when:
-            Terminal runs "cat temp_data/initial.txt"
+            Terminal run "cat temp_data/initial.txt"
         then:
             Terminal output_contains "setup data"
     }
@@ -25,7 +25,7 @@ scenario "Verifying directory listing" {
             # The background already created this directory
             FileSystem dir_exists "temp_data"
         when:
-            Terminal runs "ls temp_data"
+            Terminal run "ls temp_data"
         then:
             Terminal output_contains "initial.txt"
     }

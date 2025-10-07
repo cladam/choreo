@@ -7,7 +7,7 @@ scenario "Extract a field from a delimited string" {
         given:
             Test can_start
         when:
-            Terminal runs "echo 'field1,field2,field3' | cut -d ',' -f 2"
+            Terminal run "echo 'field1,field2,field3' | cut -d ',' -f 2"
         then:
             Terminal output_contains "field2"
     }

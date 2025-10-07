@@ -7,7 +7,7 @@ scenario "Demonstrate new terminal output assertions" {
         given:
             wait >= 50ms
         when:
-            Terminal runs "echo 'hello world'"
+            Terminal run "echo 'hello world'"
         then:
             Terminal output_starts_with "hello"
     }
@@ -16,7 +16,7 @@ scenario "Demonstrate new terminal output assertions" {
         given:
             Test has_succeeded StartsWith
         when:
-            Terminal runs "echo 'another line here'"
+            Terminal run "echo 'another line here'"
         then:
             Terminal output_ends_with "here"
     }
@@ -25,7 +25,7 @@ scenario "Demonstrate new terminal output assertions" {
         given:
             Test has_succeeded EndsWith
         when:
-            Terminal runs "echo 'exact match'"
+            Terminal run "echo 'exact match'"
         then:
             # The output will have a trailing newline, which we must match.
             Terminal output_equals "exact match"
@@ -36,7 +36,7 @@ scenario "Demonstrate new terminal output assertions" {
             Test has_succeeded Equals
         when:
             # This command will fail and write to stderr
-            Terminal runs "ls non_existent_directory"
+            Terminal run "ls non_existent_directory"
         then:
             Terminal last_command failed
             Terminal stderr_contains "No such file or directory"
@@ -47,13 +47,13 @@ scenario "Demonstrate new terminal output assertions" {
             Test has_succeeded Stderr
         when:
             # mkdir does not produce stdout on success
-            Terminal runs "mkdir test_dir_deleteme"
+            Terminal run "mkdir test_dir_deleteme"
         then:
             Terminal last_command succeeded
             Terminal stdout_is_empty
     }
 
     after {
-        Terminal runs "rmdir test_dir_deleteme"
+        Terminal run "rmdir test_dir_deleteme"
     }
 }

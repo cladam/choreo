@@ -11,10 +11,10 @@ scenario "Testing a script that calls another command" {
             # This script will be on the PATH in the test's CWD.
             FileSystem create_file "${MOCK_SCRIPT}" with_content "echo 'mocked output'"
             # Make the script executable.
-            Terminal runs "chmod +x ${MOCK_SCRIPT}"
+            Terminal run "chmod +x ${MOCK_SCRIPT}"
         when:
             # Action: Execute our mock script.
-            Terminal runs "./${MOCK_SCRIPT}"
+            Terminal run "./${MOCK_SCRIPT}"
         then:
             Terminal last_command succeeded
             Terminal output_equals "mocked output"

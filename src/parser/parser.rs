@@ -20,11 +20,9 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
         if statement_pair.as_rule() == Rule::EOI {
             break;
         }
-        //println!("Parsed statement: {:?}", statement_pair);
 
         // This opens the "statement" container to get the content.
         let pair = statement_pair.into_inner().next().unwrap();
-        //println!("Parsed pair: {:?}", pair);
 
         statements.push(match pair.as_rule() {
             // Now this will correctly match on the inner rule.
@@ -48,7 +46,7 @@ fn build_background_def(pair: Pair<Rule>) -> Statement {
     Statement::BackgroundDef(steps)
 }
 
-// Helper function for a simple definition.
+// Helper function for the actor definition
 fn build_actors_def(pair: Pair<Rule>) -> Statement {
     let identifiers: Vec<String> = pair
         .into_inner()
@@ -187,12 +185,13 @@ fn build_feature_def(pair: Pair<Rule>) -> Statement {
     Statement::FeatureDef(name)
 }
 
+// Helper function for environment variables
 fn build_env_def(pair: Pair<Rule>) -> Statement {
     let identifiers: Vec<String> = pair.into_inner().map(|p| p.as_str().to_string()).collect();
     Statement::EnvDef(identifiers)
 }
 
-// This is the other key function to implement.
+// This function builds the actions
 fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
     pairs
         .map(|pair| {
@@ -402,28 +401,6 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                 .to_string();
             Condition::OutputContains { actor, text }
         }
-        // Rule::state_condition => {
-        //     let mut test_name = String::new();
-        //     let mut inner = inner_cond.into_inner();
-        //     let first = inner.next();
-        //     match first.unwrap().as_rule() {
-        //         Rule::identifier => {
-        //             test_name = first.as_str().to_string();
-        //             Condition::State(StateCondition::HasSucceeded(test_name))
-        //         }
-        //         _ => {
-        //             let condition_type = first.as_str();
-        //
-        //             match condition_type {
-        //                 "has_succeeded" => {
-        //                     Condition::State(StateCondition::HasSucceeded(test_name))
-        //                 }
-        //                 "can_start" => Condition::State(StateCondition::CanStart),
-        //                 _ => panic!("Unknown state condition keyword: {}", condition_type),
-        //             }
-        //         }
-        //     }
-        // }
         Rule::state_condition => {
             let mut inner = inner_cond.into_inner();
 
@@ -433,12 +410,7 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                     Rule::state_can_start => Condition::State(StateCondition::CanStart),
 
                     Rule::state_has_succeeded => {
-                        // `first_token` is a grouped pair containing the keyword and the identifier.
                         let mut parts = first_token.into_inner();
-                        //println!("parts: {}", parts.next().unwrap().as_str());
-                        // skip the keyword ("has_succeeded") if present
-                        //let _keyword = parts.next().map(|p| p.as_str());
-                        // next part is the identifier (test name)
                         let test_name = parts
                             .next()
                             .expect("Missing test name after has_succeeded")
@@ -799,46 +771,162 @@ fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
     pairs.map(build_condition).collect()
 }
 
-// --- Single Item Build Functions ---
-
 /// Builds a single Action from a parsed Pair.
 pub fn build_action(inner_action: Pair<Rule>) -> Action {
     //println!("Building action for inner_action: {:?}", inner_action);
     match inner_action.as_rule() {
-        Rule::type_action => {
-            let mut inner = inner_action.into_inner();
-            let actor = inner.next().unwrap().as_str().to_string();
-            let content = inner
-                .next()
-                .unwrap()
-                .into_inner()
-                .next()
-                .map_or(String::new(), |p| p.as_str().to_string());
-            Action::Type { actor, content }
-        }
-        Rule::press_action => {
-            let mut inner = inner_action.into_inner();
-            let actor = inner.next().unwrap().as_str().to_string();
-            let key = inner
-                .next()
-                .unwrap()
-                .into_inner()
-                .next()
-                .map_or(String::new(), |p| p.as_str().to_string());
-            Action::Press { actor, key }
-        }
+        // --- Terminal Action ---
         Rule::run_action => {
             let mut inner = inner_action.into_inner();
-            let actor = inner.next().unwrap().as_str().to_string();
-            let command = inner
-                .next()
-                .unwrap()
+            //let _terminal = inner.next().unwrap(); // Skip "Terminal" keyword
+            //let _run = inner.next().unwrap(); // Skip "run" keyword
+            let command = inner.next().unwrap().into_inner().next().unwrap().as_str();
+            let command = unescape_string(command);
+            println!("Terminal run: {}", command);
+            Action::Run {
+                actor: "Terminal".to_string(),
+                command,
+            }
+        }
+        // --- System Actions ---
+        Rule::system_action => {
+            let mut inner = inner_action.into_inner();
+            let action_type_pair = inner.next().unwrap(); // this is the system_action_type pair
+            let specific = action_type_pair
                 .into_inner()
                 .next()
-                .map_or(String::new(), |p| p.as_str().to_string());
-            //println!("Terminal runs: {}", command);
-            Action::Run { actor, command }
+                .expect("Missing specific system action");
+            match specific.as_rule() {
+                Rule::system_log => {
+                    let mut action_inner = specific.into_inner();
+                    // the only inner item is the string pair
+                    let message_pair = action_inner.next().unwrap();
+                    let message =
+                        unescape_string(message_pair.into_inner().next().unwrap().as_str());
+                    Action::Log { message }
+                }
+                Rule::system_pause => {
+                    let mut action_inner = specific.into_inner();
+                    // the only inner item is the wait_marker
+                    let duration_marker = action_inner.next().unwrap().as_str();
+                    let duration = parse_duration(duration_marker);
+                    Action::Pause { duration }
+                }
+                Rule::system_timestamp => {
+                    let mut action_inner = specific.into_inner();
+                    // the only inner item is either a string or an identifier
+                    let var_pair = action_inner.next().unwrap();
+                    let var_name = if var_pair.as_rule() == Rule::string {
+                        unescape_string(var_pair.into_inner().next().unwrap().as_str())
+                    } else {
+                        var_pair.as_str().to_string()
+                    };
+                    Action::Timestamp { variable: var_name }
+                }
+                Rule::system_uuid => {
+                    let mut action_inner = specific.into_inner();
+                    let var_pair = action_inner.next().unwrap();
+                    let var_name = var_pair.as_str().to_string();
+                    Action::Uuid { variable: var_name }
+                }
+                _ => unreachable!("Unhandled system_action type: {:?}", specific.as_str()),
+            }
+            // match keyword {
+            //     "pause" => {
+            //         let duration_str = &path;
+            //         let duration = parse_duration(duration_str);
+            //         Action::Pause { duration }
+            //     }
+            //     "log" => {
+            //         let message = &path.clone();
+            //         let message = unescape_string(message);
+            //         Action::Log { message }
+            //     }
+            // Rule::system_pause => {
+            //     let mut action_inner = action_type.into_inner();
+            //     let _pause = action_inner.next().unwrap(); // Skip "pause"
+            //     let duration_str = action_inner.next().unwrap().as_str();
+            //     let duration = parse_duration(duration_str);
+            //     Action::Pause { duration }
+            // }
+            // Rule::system_log => {
+            //     let mut action_inner = action_type.into_inner();
+            //     let _log = action_inner.next().unwrap(); // Skip "log"
+            //     let message_pair = action_inner.next().unwrap();
+            //     let message =
+            //         unescape_string(message_pair.into_inner().next().unwrap().as_str());
+            //     Action::Log { message }
+            // }
+            // Rule::system_timestamp => {
+            //     let mut action_inner = action_type.into_inner();
+            //     let _timestamp = action_inner.next().unwrap(); // Skip "timestamp"
+            //     let _as = action_inner.next().unwrap(); // Skip "as"
+            //     let var_pair = action_inner.next().unwrap();
+            //     let var_name = if var_pair.as_rule() == Rule::string {
+            //         unescape_string(var_pair.into_inner().next().unwrap().as_str())
+            //     } else {
+            //         var_pair.as_str().to_string()
+            //     };
+            //     Action::Timestamp { variable: var_name }
+            // }
+            // Rule::system_uuid => {
+            //     let mut action_inner = action_type.into_inner();
+            //     let _uuid = action_inner.next().unwrap(); // Skip "uuid"
+            //     let _as = action_inner.next().unwrap(); // Skip "as"
+            //     let var_name = action_inner.next().unwrap().as_str().to_string();
+            //     Action::Uuid { variable: var_name }
+            // }
+            //_ => panic!("Unknown system action type: {}", keyword),
+            //}
         }
+
+        // Rule::system_action => {
+        //     let mut inner = inner_action.into_inner();
+        //     let system_type = inner.next().unwrap(); // This is the system_action_type
+        //
+        //     let mut type_inner = system_type.into_inner();
+        //     let first_token = type_inner.next().unwrap(); // This is the actual keyword token
+        //     let keyword = first_token.as_str();
+        //
+        //     println!("{:?}", keyword);
+        //
+        //     if keyword == "pause" {
+        //         let _pause = type_inner.next().unwrap(); // Skip "pause" keyword
+        //         let duration_str = type_inner.next().unwrap().as_str();
+        //         let duration = parse_duration(duration_str);
+        //         Action::Pause { duration }
+        //     } else {
+        //         panic!("Unknown system action: {}", keyword);
+        //     }
+
+        //match first_token.as_str() {
+        // "pause" => {
+        //     let duration_str = &text;
+        //     let duration = parse_duration(duration_str);
+        //     Action::Pause { duration }
+        // }
+        // "log" => {
+        //     let message = &text.clone();
+        //     let message = unescape_string(message);
+        //     Action::Log { message }
+        // }
+        // "timestamp" => {
+        //     let _as = text.clone(); // Skip "as"
+        //     let var_name = _as;
+        //     Action::Timestamp {
+        //         variable: var_name.to_string(),
+        //     }
+        // }
+        // "uuid" => {
+        //     let _as = text.clone(); // Skip "as"
+        //     let var_name = _as;
+        //     Action::Uuid {
+        //         variable: var_name.to_string(),
+        //     }
+        // }
+        //_ => panic!("Unknown system action: {}", first_token.as_str()),
+        //}
+        //}
         Rule::filesystem_action => {
             let mut inner = inner_action.into_inner();
             //let _actor = inner.next().unwrap().as_str(); // Consume the actor identifier
@@ -875,7 +963,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
         }
         Rule::web_action => {
             let mut inner = inner_action.into_inner();
-            let _actor = inner.next().unwrap().as_str().to_string();
+            //let _actor = inner.next().unwrap().as_str().to_string();
             // The next pair determines the specific web action type.
             let action_type = inner.next().unwrap();
             let action_type_str = action_type.as_str();
@@ -1072,6 +1160,18 @@ fn build_value(pair: Pair<Rule>) -> Value {
             println!("{:?}", pair);
             unreachable!("Unexpected value rule: {:?}", pair.as_rule())
         }
+    }
+}
+
+fn parse_duration(duration_str: &str) -> f32 {
+    if duration_str.ends_with("ms") {
+        let num_part = &duration_str[..duration_str.len() - 2];
+        num_part.parse::<f32>().unwrap_or(0.0) / 1000.0
+    } else if duration_str.ends_with("s") {
+        let num_part = &duration_str[..duration_str.len() - 1];
+        num_part.parse::<f32>().unwrap_or(0.0)
+    } else {
+        0.0
     }
 }
 

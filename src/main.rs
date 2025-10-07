@@ -30,10 +30,10 @@ scenario "User can perform a basic workflow" {
     test CheckAppVersion "Check application version" {
         given:
             # Conditions that must be met before the test runs.
-            wait >= 0s
+            Test can_start
         when:
             # Actions to be performed.
-            Terminal runs "echo 'my-app version 1.0.0'"
+            Terminal run "echo 'my-app version 1.0.0'"
         then:
             # Conditions that must be true after the actions.
             Terminal last_command succeeded
@@ -45,7 +45,7 @@ scenario "User can perform a basic workflow" {
             # This test depends on the success of the previous one.
             Test has_succeeded CheckAppVersion
         when:
-            Terminal runs "echo 'Created resource with ID: res-123'"
+            Terminal run "echo 'Created resource with ID: res-123'"
         then:
             # Capture part of the output into a variable named 'resourceId'.
             Terminal output_matches "Created resource with ID: (res-\d+)" as resourceId
@@ -54,7 +54,7 @@ scenario "User can perform a basic workflow" {
     # This block runs after all tests in the scenario are complete.
     after {
         # Use the captured 'resourceId' variable to clean up.
-        Terminal runs "echo 'Cleaning up ${resourceId}'"
+        Terminal run "echo 'Cleaning up ${resourceId}'"
     }
 }
 "#;
@@ -80,6 +80,10 @@ fn enhance_parse_error<E: ToString>(err: E, source: &str) -> String {
                                 "\n  `FileSystem create_file \"path\" with_content \"...\"`",
                             );
                             hint.push_str("\n- If you intended a filesystem *condition*, use the supported condition form in a `then`/`given` block (or consult the grammar).");
+                        } else if line.contains("System") {
+                            hint.push_str(
+                                "\nHint: This error occurs on a line containing `System`.",
+                            );
                         }
                     }
                 }

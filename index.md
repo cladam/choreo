@@ -31,7 +31,7 @@ system:
 `Plain-Text .feature file` -> `Regex-based Step Definitions (Glue Code)` -> `Actual Application Code`
 
 This indirection is complex and brittle. `choreo` solves this by being an executable specification. A `.chor` file is a
-complete, self-contained program that combines the readable BDD steps with the implementation (`Terminal runs`, `FileSystem
+complete, self-contained program that combines the readable BDD steps with the implementation (`Terminal run`, `FileSystem
 create_file`, etc.). This creates a direct and simple architectural flow, entirely removing the need for a separate "
 glue code" layer.
 
@@ -77,7 +77,7 @@ scenario "User can create a new note with content" {
         given:
             FileSystem delete_file "my-note.md"
         when:
-            Terminal runs "my-cli new my-note --content 'Hello'"
+            Terminal run "my-cli new my-note --content 'Hello'"
         then:
             Terminal last_command succeeded
             FileSystem file_exists "my-note.md"

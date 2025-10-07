@@ -45,7 +45,7 @@ scenario "A basic scenario" {
         when:
             FileSystem create_dir "temp_data"
             FileSystem create_file "temp_data/initial.txt" with_content "setup data"
-            Terminal runs "cat temp_data/initial.txt"
+            Terminal run "cat temp_data/initial.txt"
         then:
             Terminal output_contains "setup data"
     }

@@ -24,7 +24,7 @@ scenario "Create, extract, and verify a tarball" {
             FileSystem dir_exists "source_dir/data"
             FileSystem file_exists "source_dir/config.yml"
         when:
-            Terminal runs "ls -l source_dir"
+            Terminal run "ls -l source_dir"
         then:
             Terminal last_command succeeded
             Terminal output_contains "config.yml"
@@ -37,7 +37,7 @@ scenario "Create, extract, and verify a tarball" {
             FileSystem file_does_not_exist "backup.tar.gz"
         when:
             # The -C flag changes the directory, so paths in the archive are relative.
-            Terminal runs "tar -czf backup.tar.gz -C source_dir ."
+            Terminal run "tar -czf backup.tar.gz -C source_dir ."
         then:
             Terminal last_command succeeded
             FileSystem file_exists "backup.tar.gz"
@@ -48,7 +48,7 @@ scenario "Create, extract, and verify a tarball" {
             Test has_succeeded CreateArchive
         when:
             FileSystem create_dir "extracted_dir"
-            Terminal runs "tar -xzf backup.tar.gz -C extracted_dir"
+            Terminal run "tar -xzf backup.tar.gz -C extracted_dir"
         then:
             Terminal last_command succeeded
             FileSystem dir_exists "extracted_dir/data"
@@ -61,7 +61,7 @@ scenario "Create, extract, and verify a tarball" {
             Test has_succeeded ExtractArchive
         when:
             # The 'diff' command will exit with a non-zero code if there are differences.
-            Terminal runs "diff -qr source_dir extracted_dir"
+            Terminal run "diff -qr source_dir extracted_dir"
         then:
             Terminal last_command succeeded
             Terminal stdout_is_empty

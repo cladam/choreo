@@ -8,7 +8,7 @@ scenario "Verify user information" {
         given:
             Test can_start
         when:
-            Terminal runs "id -un" # -u gets user ID, -n gets the name
+            Terminal run "id -un" # -u gets user ID, -n gets the name
         then:
             Terminal output_contains "${USER}"
     }

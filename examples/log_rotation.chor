@@ -1,0 +1,56 @@
+feature "Log Rotation"
+
+actors {
+    Terminal
+    FileSystem
+    System
+}
+
+background {
+    FileSystem create_dir "logs/data"
+    FileSystem create_file "logs/data/log1" with_content "bunch of lines like this"
+    FileSystem create_file "logs/data/log2" with_content "bunch of lines like this"
+    FileSystem create_file "logs/data/log3" with_content "bunch of lines like this"
+}
+
+var LOG_FILE = "app.log"
+
+scenario "it archives logs based on the date" {
+
+    test LogIsCreated "it creates a new log file" {
+        given:
+            FileSystem delete_file "${LOG_FILE}"
+        when:
+            Terminal run "cd logs/data"
+            Terminal run "echo 'log entry from echo' >> ${LOG_FILE}"
+        then:
+            FileSystem file_exists "${LOG_FILE}"
+    }
+
+    test LogIsRotated "it rotates the log file after a delay" {
+        given:
+            Test has_succeeded LogIsCreated
+            # Capture the current date to predict the rotated filename
+            System timestamp as "START_TIME"
+            System uuid as UUID
+            FileSystem file_does_not_exist "app-${START_TIME}.log.gz"
+        when:
+            # Go back up the tree again
+            Terminal run "cd ../../"
+            Terminal run "tar -czf app-${START_TIME}.log.gz logs"
+            System log "Tarred the files"
+            System log "${START_TIME}"
+            System log "${UUID}"
+            # Use a System action to pause, simulating time passing
+            System pause 2s
+        then:
+            Terminal last_command succeeded
+            # Use the captured variable to check for the correctly named file
+            FileSystem file_exists "app-${START_TIME}.log.gz"
+    }
+
+    after {
+        FileSystem delete_dir "logs"
+        FileSystem delete_file "app-${START_TIME}.log.gz"
+    }
+}

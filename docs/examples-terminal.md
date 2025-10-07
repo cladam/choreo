@@ -22,10 +22,10 @@ scenario "Listing files in a directory" {
     test VerifyListing "Verify 'ls' command runs successfully" {
         given:
             # Execute immediately
-            wait >= 0s
+            Test can_start
         when:
             # Run the standard 'ls -l' command
-            Terminal runs "ls -l"
+            Terminal run "ls -l"
         then:
             # Assert that the command exited without errors
             Terminal last_command succeeded
@@ -42,7 +42,7 @@ you expect.
 scenario "Program greets a user" {
     test VerifyPrintf "Verify the program prints a welcome message" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             # Run a command that should print "Hello, Choreo!"
             Terminal runs "my-cli-app greet choreo"

@@ -6,8 +6,7 @@ title: Advanced Topics
 # Advanced Topics
 
 While the core of `choreo` is writing tests, the ecosystem includes powerful tools to help you maintain quality, work
-with
-variables, and integrate `choreo` into your workflow. This section covers those advanced features.
+with variables, and integrate `choreo` into your workflow. This section covers those advanced features.
 
 ## Validating and Linting Tests
 
@@ -86,7 +85,7 @@ var USER_ID = "user-123"
 scenario "User Profile Tests" {
     test FetchProfile "Fetch user profile" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web http_get "${BASE_URL}/users/${USER_ID}"
         then:
@@ -120,7 +119,7 @@ var USER_ID = "user-123"
 scenario "User Profile Tests" {
     test FetchProfile "Fetch user profile" {
         given:
-            wait >= 0s
+            Test can_start
         when:
             Web set_header "Authorization" "Bearer ${AUTH_TOKEN}"
             Web http_get "${BASE_URL}/users/${USER_ID}"
