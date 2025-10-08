@@ -92,15 +92,13 @@ the context, the action, and the expected outcome in a clear, logical flow.
 ## How choreo Works
 
 When you run a Choreo test, an internal **parser** reads your human-readable `.chor` file and translates each step into
-a command.
-These commands are then executed by the declared **actors**, which act as the bridge between your test and the system.
-For a deeper look at the parser and backend implementations, see
+a command. These commands are then executed by the declared **actors**, which act as the bridge between your test and
+the system. For a deeper look at the parser and backend implementations, see
 our [Architecture documentation](../architecture-overview).
 
 ## Summary
 
 By structuring your `.chor` files with `feature`, `actors`, `scenario`, and `test` blocks, you create clear,
 readable, and maintainable tests that describe both the behavior of your application and the intent behind each test
-case.
-This organisation helps you and your team understand what is being tested and why, making it easier to maintain and
-extend your test suite over time.
+case. This organisation helps you and your team understand what is being tested and why, making it easier to maintain
+and extend your test suite over time.

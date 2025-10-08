@@ -47,13 +47,13 @@
               </a>
           </li>
           <li>
-              <a href="{{ '/docs/backend-filesystem' | relative_url }}" {% if page.url == "/docs/backend-filesystem" %}class="active"{% endif %}>
-                  FileSystem Backend
+              <a href="{{ '/docs/backend-terminal' | relative_url }}" {% if page.url == "/docs/backend-terminal" %}class="active"{% endif %}>
+              Terminal Backend
               </a>
           </li>
           <li>
-              <a href="{{ '/docs/backend-terminal' | relative_url }}" {% if page.url == "/docs/backend-terminal" %}class="active"{% endif %}>
-                  Terminal Backend
+              <a href="{{ '/docs/backend-filesystem' | relative_url }}" {% if page.url == "/docs/backend-filesystem" %}class="active"{% endif %}>
+                  FileSystem Backend
               </a>
           </li>
           <li>
@@ -67,14 +67,19 @@
     <div class="nav-category">
       <h3 class="nav-category-title">Examples</h3>
       <ul>
+          <li>
+              <a href="{{ '/docs/examples-terminal' | relative_url }}" {% if page.url == "/docs/examples-terminal" %}class="active"{% endif %}>
+              Terminal Examples
+              </a>
+          </li>
+          <li>
+              <a href="{{ '/docs/examples-systeml' | relative_url }}" {% if page.url == "/docs/examples-system" %}class="active"{% endif %}>
+              System Examples
+              </a>
+          </li>
         <li>
           <a href="{{ '/docs/examples-filesystem' | relative_url }}" {% if page.url == "/docs/examples-filesystem" %}class="active"{% endif %}>
             FileSystem Examples
-          </a>
-        </li>
-        <li>
-          <a href="{{ '/docs/examples-terminal' | relative_url }}" {% if page.url == "/docs/examples-terminal" %}class="active"{% endif %}>
-            Terminal Examples
           </a>
         </li>
         <li>

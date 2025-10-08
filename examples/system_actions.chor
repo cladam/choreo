@@ -1,0 +1,47 @@
+feature "System Actor Actions"
+
+# Declare the actors we will use in this test suite.
+actors {
+    System
+    Terminal
+}
+
+settings {
+    stop_on_failure = true
+}
+
+scenario "Demonstrate built-in System actions" {
+
+    test SystemActions "Use log, pause, uuid, and timestamp" {
+        given:
+            # This test can start immediately.
+            Test can_start
+        when:
+            # Use the 'log' action to print debug messages.
+            System log "This test will now pause for 500ms."
+
+            # Use the 'pause' action to wait for a specific duration.
+            System pause 500ms
+
+            # Use 'uuid' to generate a unique ID and store it in a variable.
+            System uuid as MY_UUID
+            System log "Generated UUID: ${MY_UUID}"
+
+            # Use 'timestamp' to get the current unix time and store it.
+            System timestamp as MY_TIMESTAMP
+            System log "Generated Timestamp: ${MY_TIMESTAMP}"
+
+            # Use the generated variables in other actions.
+            Terminal run "echo 'The unique ID for this run is ${MY_UUID}'"
+        then:
+            # Verify the terminal action worked as expected.
+            Terminal last_command succeeded
+            Terminal output_contains "The unique ID for this run is"
+            Terminal output_matches "([a-f0-9\\-]{36})" as MATCHED_UUID
+    }
+
+    after {
+        System log "System actions test completed."
+        System log "The UUID captured from the output was: ${MATCHED_UUID}"
+    }
+}

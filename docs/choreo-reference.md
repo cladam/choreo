@@ -67,7 +67,7 @@ A block for configuring the behavior of the choreo test runner for the current f
 |:--------------------|:-----------|:-----------|:-------------------------------------------------------------------------------------------------|
 | `timeout_seconds`   | Number     | 30         | The maximum time in seconds a scenario can run before failing.                                   |  
 | `stop_on_failure`   | Boolean    | false      | If true, the entire test suite will stop immediately after the first test fails.                 |  
-| `shell_path`        | String     | "zsh"      | The absolute path to the shell to use for the Terminal actor.                                    |  
+| `shell_path`        | String     | "sh"       | The absolute path to the shell to use for the Terminal actor.                                    |  
 | `report_path`       | String     | "reports/" | The directory where the report file will be saved.                                               |  
 | `expected_failures` | Number     | 0          | Declares the number of tests that are expected to fail for the suite to be considered a success. |
 
@@ -83,7 +83,8 @@ settings {
 
 #### `background`
 
-A block that provides a common set of readable `given` steps that apply to all scenarios in a feature.
+A block that provides a common set of `given` steps that will be executed before _every_ scenario in the file. This is
+ideal for shared setup logic.
 
 **Example:**
 
@@ -129,7 +130,7 @@ env HOME
 #### `actors`
 
 Declares the different systems or components that the test will interact with. The three currently supported actors are
-`Terminal`, `FileSystem` and `Web`. You must declare at least one actor per file.
+`Terminal`, `System`, `FileSystem` and `Web`. You must declare at least one actor per file.
 
 **Example:**
 
@@ -138,6 +139,7 @@ actors {
     Terminal
     FileSystem
     Web
+    System
 }
 ```
 
@@ -159,6 +161,38 @@ scenario "A user can successfully create and then delete a file" {
     # ... test blocks go here ...  
 }
 ```
+
+#### `parallel scenario`
+
+To improve the performance of your test suites, especially those with many I/O-bound tests (like HTTP requests), you can
+run scenarios in parallel. By default, all scenarios run sequentially in the order they are defined.
+To mark a scenario for parallel execution, add the `parallel` keyword before the `scenario` keyword.
+
+**Example:**
+
+```choreo
+parallel scenario "This will run in parallel" {
+    # ... tests ...
+}
+
+parallel scenario "This will also run in parallel" {
+    # ... tests ...
+}
+
+scenario "This will run sequentially after all parallel ones finish" {
+    # ... tests ...
+}
+```
+
+**Important Considerations:**
+
+- **State Isolation:** Each parallel scenario runs with its own isolated state, including separate backends (Terminal,
+  Web, etc.). Variables defined in a `var` block or via `env` are copied to each scenario, but changes to variables
+  within one parallel scenario will not affect others.
+- **Dependencies:** Tests within a parallel scenario can still depend on each other (e.g., `Test has_succeeded ...`),
+  but you cannot have dependencies between different `parallel` scenarios.
+- **Resource Contention:** Be mindful of resource contention (CPU, network, file system) when running many scenarios in
+  parallel.
 
 #### `test`
 
@@ -251,17 +285,16 @@ This is the reference for all available commands that can be used within the `te
 
 | Syntax                          | Description                                                                                                         |
 |:--------------------------------|:--------------------------------------------------------------------------------------------------------------------|
-| `test has_succeeded <TestName>` | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
+| `Test has_succeeded <TestName>` | Passes if the test with the given name has already passed. This is the primary mechanism for creating dependencies. |
+| `Test can_start`                | A "no-op" condition that always passes. It's used to make given blocks that have no pre-conditions more readable.   |
 
 ### Terminal Commands
 
 #### Actions
 
-| Syntax                     | Description                                                                             |
-|:---------------------------|:----------------------------------------------------------------------------------------|
-| `Terminal run "..."`       | Executes a shell command non-interactively. The command and a newline are sent at once. |
-| `Terminal types "..."`     | Simulates a user typing a string into the terminal.                                     |
-| `Terminal presses "Enter"` | Simulates a user pressing the Enter key.                                                |
+| Syntax               | Description                                                                             |
+|:---------------------|:----------------------------------------------------------------------------------------|
+| `Terminal run "..."` | Executes a shell command non-interactively. The command and a newline are sent at once. |
 
 #### Conditions
 
@@ -280,6 +313,17 @@ This is the reference for all available commands that can be used within the `te
 | `Terminal output_matches "..."`            | Passes if the combined stdout/stderr stream from the PTY matches the regex.       |
 | `Terminal output_is_valid_json`            | Passes if the combined stdout/stderr stream from the PTY is valid JSON.           |
 | `Terminal json_output has_path "..."`      | Passes if the JSON output has the specified JSON path.                            |
+
+### System Commands
+
+#### Actions
+
+| Syntax                          | Description                                                       |
+|:--------------------------------|:------------------------------------------------------------------|
+| `System pause <duration>`       | Pauses the test execution for a specified time (e.g., 1s, 500ms). |
+| `System log "..."`              | Prints a message directly to the choreo console for debugging.    |
+| `System uuid as <var_name>`     | Generates a new UUID and saves it to a variable.                  |
+| `System timestamp as <varName>` | Captures the current Unix timestamp into a variable.              |
 
 ### FileSystem Commands
 
@@ -333,6 +377,7 @@ This is the reference for all available commands that can be used within the `te
 | `Web response_time is_below 1s/200ms`          | Passes if the last HTTP response was received in under the specified time.           |
 | `Web response_body_contains "..."`             | Passes if the last HTTP response body contains the specified substring.              |
 | `Web response_body_matches "..." [as JSON]`    | Passes if the last HTTP response body matches the specified regex.                   |
+| `Web response_body_equals_json "..."`          | Passes if the last HTTP response body matches a json string.                         |
 | `Web json_body has_path "..."`                 | Passes if the last HTTP response body (as JSON) has the specified JSON path.         |
 | `Web json_path at "..." equals <value>`        | Passes if the value at the specified JSON path equals the given value.               |
 | `Web json_response at "..." is_a_string`       | Passes if the value at the specified JSON path is a string.                          |

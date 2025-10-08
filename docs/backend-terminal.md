@@ -25,3 +25,8 @@ newsroom:
 
 This ensures the news anchor (the main thread) is never stuck waiting and can remain responsive, checking for new
 messages from the reporter whenever it needs to.
+
+The `TerminalBackend` is also responsible for handling actions associated with the `System` actor. These are
+general-purpose actions that are not tied to a specific domain like filesystem or web interactions. This includes
+actions like logging messages (`System log "..."`), pausing execution (`System pause 1s`), and generating variables (
+`System uuid as MY_ID`).
