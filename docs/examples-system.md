@@ -99,5 +99,6 @@ scenario "Program greets a user" {
 
 ## Full Example
 
-See the example file [examples/system_actions.chor](../examples/system_actions.chor) for a runnable demonstration of
-these actions.
+See the example
+file [examples/system_actions.chor](https://github.com/cladam/choreo/blob/main/examples/system_actions.chor) for a
+runnable demonstration of these actions.

@@ -44,4 +44,4 @@ a separate "glue code" layer.
   is asynchronous. `choreo`'s reactive engine waits for a "concluding event" (the `then` conditions becoming true)
   rather than relying on fragile `sleep()` commands, which is a key principle for writing reliable tests.
 
-Ready to learn the syntax? Dive into the [Choreo DSL Reference](/choreo-reference).
+Ready to learn the syntax? Dive into the [Choreo DSL Reference](/choreo/docs/choreo-reference).
