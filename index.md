@@ -13,98 +13,35 @@ allowing you to write automated, human-readable tests for any command-line tool 
 command-line applications and APIs. It's a modern BDD framework designed for engineers who need to
 verify the behaviour of their systems from the outside in.
 
-## The Challenge: Testing from the outside
+## Philosophy and Guiding Principles
 
-Testing applications from an external perspective, whether it's a CLI tool, a REST API, or a script that interacts with
-the file system is often complex. Traditional tools can lead to brittle shell scripts or require complex "glue code" to
-connect plain-text specifications to an executable test runner. This creates friction and slows down development.
+`choreo` is designed to be a modern, developer-centric tool for **Acceptance Test-Driven Development (ATDD)**. Its
+architecture is heavily influenced by the principles of Continuous Delivery.
 
-## The `choreo` solution: An executable specification
+### An Executable Specification
 
-`choreo`'s design is heavily influenced by the original intent of Behaviour-Driven Development (BDD), as described by
-its creator. The core goal is to improve communication to get work done, not to get bogged down in layers of
-abstraction.
+The biggest pitfall of traditional BDD frameworks is the separation between the plain-text specification (the `.feature`
+file) and the "glue code" that implements it. This creates unnecessary layers of indirection that are complex and
+brittle.
 
-Traditional BDD frameworks often separate the plain-text specification from the implementation, creating a multi-layered
-system:
+`choreo` solves this by being an **executable specification**. A `.chor` file is a complete, self-contained program that
+combines the readable BDD steps with the implementation (`Terminal run`, `Web http_get`, etc.). This creates a direct
+and simple architectural flow from a single `.chor` file to the application being tested, entirely removing the need for
+a separate "glue code" layer.
 
-`Plain-Text .feature file` -> `Regex-based Step Definitions (Glue Code)` -> `Actual Application Code`
+### Core Principles
 
-This indirection is complex and brittle. `choreo` solves this by being an executable specification. A `.chor` file is a
-complete, self-contained program that combines the readable BDD steps with the implementation (`Terminal run`, `FileSystem
-create_file`, etc.). This creates a direct and simple architectural flow, entirely removing the need for a separate "
-glue code" layer.
+`choreo` is built around a set of principles that lead to robust, maintainable, and valuable acceptance tests:
 
-This approach aligns perfectly with the vision of a "model client"; a way for engineers to describe a system's
-behaviour in a readable format that is directly executable.
+- **Developers Own the Tests:** Acceptance tests are a core part of the development process, not a separate QA activity.
+  choreo is designed to be a powerful tool in the hands of developers.
+- **Focus on "What," not "How":** Tests should describe the behaviour of your system, not the implementation details of
+  its UI. By interacting directly with your application's shell interface or API, `choreo` tests are more stable and
+  less coupled to the presentation layer.
+- **Test Isolation is Crucial:** Tests must be repeatable and independent. `choreo`'s background and after blocks
+  provide a robust mechanism for ensuring that each scenario runs in a clean, known state.
+- **Tests Should Appear Synchronous:** A test should read like a simple, sequential story, even if the system under test
+  is asynchronous. `choreo`'s reactive engine waits for a "concluding event" (the `then` conditions becoming true)
+  rather than relying on fragile `sleep()` commands, which is a key principle for writing reliable tests.
 
-## Key Features:
-
-* **Readable BDD Syntax:** Uses an explicit `Feature -> Scenario -> Test` hierarchy with `given`, `when`, and `then`
-  blocks to tell a clear story.
-* **Multi-Actor System:** Natively understands how to interact with different parts of your system, including the
-  `Terminal`, the `FileSystem`, and the `Web`.
-* **Stateful Scenarios:** Chain tests together with `Test has_succeeded` and capture dynamic values from output into
-  variables (`... as myVar`), allowing you to build complex, end-to-end scenarios.
-* **Powerful Assertions:** A rich vocabulary of built-in matchers for checking exit codes, `stdout` vs. `stderr`, file
-  content, JSON responses, and more, inspired by industry-standard tools like Chai.js and ShellSpec.
-* **CI-Friendly Reporting:** Generates standard JSON reports for easy integration with CI/CD pipelines.
-* **Extensible Architecture:** Designed to allow for future expansion with additional actors and custom commands.
-* **Open Source:** Fully open-source and available at [GitHub]("https://github.com/cladam/choreo")
-  and [Crates.io](https://crates.io/crates/choreo).
-
-## ATDD in Practice
-
-In modern software engineering, different types of tests serve different purposes. `choreo` is a specialised tool
-designed for the upper levels of the testing pyramid, focusing on Acceptance Test-Driven Development (ATDD).
-
-### Acceptance Tests (Level 3)
-
-`choreo` is perfect for writing acceptance tests for your application's features. A `.chor` file can serve as the
-executable version of a user story's acceptance criteria.
-
-#### Example: Testing a CLI tool
-
-```choreo
-feature "Note Creation"
-actors {
-    Terminal
-    Web
-}
-
-scenario "User can create a new note with content" {
-    test NoteIsCreated "it creates the note file on disk" {
-        given:
-            FileSystem delete_file "my-note.md"
-        when:
-            Terminal run "my-cli new my-note --content 'Hello'"
-        then:
-            Terminal last_command succeeded
-            FileSystem file_exists "my-note.md"
-    }
-}
-```
-
-### External System Contract Tests (Level 4)
-
-The `Web` actor makes `choreo` a powerful tool for writing contract tests. These tests verify that the external APIs
-your application depends on are still working the way you expect.
-
-#### Example: Verifying an API contract
-
-```choreo
-feature "httpbin.org API Contract"
-actor Web
-scenario "Verify the /post endpoint contract" {
-    test PostEndpointEchoesJson "it correctly echoes a JSON body" {
-        when:
-            Web POST "https://httpbin.org/post" with_body '{"id": 123}'
-        then:
-            Web response_status_is 200
-            Web json_path at "/json/id" equals 123
-    }
-}
-```
-
-By providing a single, powerful language for both acceptance and contract testing, `choreo` helps you build confidence
-in your entire system, from its internal features to its external dependencies.
+Ready to learn the syntax? Dive into the [Choreo DSL Reference](/choreo-reference).
