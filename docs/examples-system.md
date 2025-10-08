@@ -12,7 +12,7 @@ The `System` actor provides access to built-in functionalities that don't fall i
 
 To use system actions, you must declare the `System` actor in your `actors` block.
 
-```chor
+```choreo
 actors {
     System
     Terminal
