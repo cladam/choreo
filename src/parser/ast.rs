@@ -366,6 +366,7 @@ impl Action {
 pub enum Value {
     String(String),
     Number(i32),
+    Bool(bool),
 }
 
 impl Value {
@@ -373,6 +374,7 @@ impl Value {
         match self {
             Value::String(s) => s.clone(),
             Value::Number(n) => n.to_string(),
+            Value::Bool(b) => b.to_string(),
         }
     }
 }

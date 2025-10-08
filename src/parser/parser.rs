@@ -831,102 +831,7 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                 }
                 _ => unreachable!("Unhandled system_action type: {:?}", specific.as_str()),
             }
-            // match keyword {
-            //     "pause" => {
-            //         let duration_str = &path;
-            //         let duration = parse_duration(duration_str);
-            //         Action::Pause { duration }
-            //     }
-            //     "log" => {
-            //         let message = &path.clone();
-            //         let message = unescape_string(message);
-            //         Action::Log { message }
-            //     }
-            // Rule::system_pause => {
-            //     let mut action_inner = action_type.into_inner();
-            //     let _pause = action_inner.next().unwrap(); // Skip "pause"
-            //     let duration_str = action_inner.next().unwrap().as_str();
-            //     let duration = parse_duration(duration_str);
-            //     Action::Pause { duration }
-            // }
-            // Rule::system_log => {
-            //     let mut action_inner = action_type.into_inner();
-            //     let _log = action_inner.next().unwrap(); // Skip "log"
-            //     let message_pair = action_inner.next().unwrap();
-            //     let message =
-            //         unescape_string(message_pair.into_inner().next().unwrap().as_str());
-            //     Action::Log { message }
-            // }
-            // Rule::system_timestamp => {
-            //     let mut action_inner = action_type.into_inner();
-            //     let _timestamp = action_inner.next().unwrap(); // Skip "timestamp"
-            //     let _as = action_inner.next().unwrap(); // Skip "as"
-            //     let var_pair = action_inner.next().unwrap();
-            //     let var_name = if var_pair.as_rule() == Rule::string {
-            //         unescape_string(var_pair.into_inner().next().unwrap().as_str())
-            //     } else {
-            //         var_pair.as_str().to_string()
-            //     };
-            //     Action::Timestamp { variable: var_name }
-            // }
-            // Rule::system_uuid => {
-            //     let mut action_inner = action_type.into_inner();
-            //     let _uuid = action_inner.next().unwrap(); // Skip "uuid"
-            //     let _as = action_inner.next().unwrap(); // Skip "as"
-            //     let var_name = action_inner.next().unwrap().as_str().to_string();
-            //     Action::Uuid { variable: var_name }
-            // }
-            //_ => panic!("Unknown system action type: {}", keyword),
-            //}
         }
-
-        // Rule::system_action => {
-        //     let mut inner = inner_action.into_inner();
-        //     let system_type = inner.next().unwrap(); // This is the system_action_type
-        //
-        //     let mut type_inner = system_type.into_inner();
-        //     let first_token = type_inner.next().unwrap(); // This is the actual keyword token
-        //     let keyword = first_token.as_str();
-        //
-        //     println!("{:?}", keyword);
-        //
-        //     if keyword == "pause" {
-        //         let _pause = type_inner.next().unwrap(); // Skip "pause" keyword
-        //         let duration_str = type_inner.next().unwrap().as_str();
-        //         let duration = parse_duration(duration_str);
-        //         Action::Pause { duration }
-        //     } else {
-        //         panic!("Unknown system action: {}", keyword);
-        //     }
-
-        //match first_token.as_str() {
-        // "pause" => {
-        //     let duration_str = &text;
-        //     let duration = parse_duration(duration_str);
-        //     Action::Pause { duration }
-        // }
-        // "log" => {
-        //     let message = &text.clone();
-        //     let message = unescape_string(message);
-        //     Action::Log { message }
-        // }
-        // "timestamp" => {
-        //     let _as = text.clone(); // Skip "as"
-        //     let var_name = _as;
-        //     Action::Timestamp {
-        //         variable: var_name.to_string(),
-        //     }
-        // }
-        // "uuid" => {
-        //     let _as = text.clone(); // Skip "as"
-        //     let var_name = _as;
-        //     Action::Uuid {
-        //         variable: var_name.to_string(),
-        //     }
-        // }
-        //_ => panic!("Unknown system action: {}", first_token.as_str()),
-        //}
-        //}
         Rule::filesystem_action => {
             let mut inner = inner_action.into_inner();
             //let _actor = inner.next().unwrap().as_str(); // Consume the actor identifier
@@ -1143,7 +1048,11 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
 
 fn build_value(pair: Pair<Rule>) -> Value {
     // The `value` rule is silent, so we need to inspect its inner pair.
-    let inner_pair = pair.clone().into_inner().next().unwrap();
+    //let inner_pair = pair.clone().into_inner().next().unwrap();
+    let inner_pair = match pair.clone().into_inner().next() {
+        Some(p) => p,
+        None => pair.clone(),
+    };
     //println!("{:?}", inner_pair);
     match inner_pair.as_rule() {
         Rule::string => {
@@ -1156,9 +1065,14 @@ fn build_value(pair: Pair<Rule>) -> Value {
             let var_name = pair.as_str();
             Value::String(format!("${{{}}}", var_name))
         }
+        Rule::binary_op => Value::Bool(inner_pair.as_str().parse().unwrap()),
         _ => {
-            println!("{:?}", pair);
-            unreachable!("Unexpected value rule: {:?}", pair.as_rule())
+            // Handle the case where the pair itself is a binary_op
+            if pair.as_rule() == Rule::binary_op {
+                Value::Bool(pair.as_str().parse().unwrap())
+            } else {
+                unreachable!("Unexpected value rule: {:?}", pair.as_rule())
+            }
         }
     }
 }

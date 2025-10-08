@@ -708,7 +708,9 @@ impl WebBackend {
                         let our_value = match actual_value {
                             JsonValue::String(s) => Value::String(s.clone()),
                             JsonValue::Number(n) => Value::Number(n.as_f64().unwrap_or(0.0) as i32),
+                            JsonValue::Bool(b) => Value::Bool(*b),
                             // Add other type conversions as needed.
+                            // I'm lacking Object, Array abd null - TODO
                             _ => Value::String(actual_value.to_string()),
                         };
                         return &our_value == expected_value;

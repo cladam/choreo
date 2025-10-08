@@ -135,7 +135,7 @@ json_output_at_equals_condition   = { "json_output" ~ "at" ~ non_empty_string ~ 
 json_output_at_includes_condition = { "json_output" ~ "at" ~ non_empty_string ~ "includes" ~ value }
 json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ non_empty_string ~ "has_item_count" ~ number }
 json_body_has_path_condition      = { "json_body" ~ "has_path" ~ non_empty_string }
-json_path_equals_condition        = { "json_path" ~ "at" ~ non_empty_string ~ "equals" ~ value }
+json_path_equals_condition        = { "json_path" ~ "at" ~ non_empty_string ~ "equals" ~ (value | binary_op) }
 
 
 // Terminal-specific condition parts
@@ -213,5 +213,6 @@ duration                          = @{ ASCII_DIGIT+ ~ ("ms" | "s") }
 wait_unit                         = @{ "s" | "ms" }
 wait_marker                       = @{ float ~ wait_unit }
 value                             = { string | number }
+//value                          = { string | number | binary_op }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
 binary_op                         = { "true" | "false" }
