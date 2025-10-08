@@ -77,26 +77,6 @@ when:
     Web set_header "X-Request-Time" "${REQUEST_TIME}"
 ```
 
-This is a very common test case where you run a command and check if its standard output (`stdout`) contains the text
-you expect.
-
-```choreo
-scenario "Program greets a user" {
-    test VerifyPrintf "Verify the program prints a welcome message" {
-        given:
-            Test can_start
-        when:
-            # Run a command that should print "Hello, Choreo!"
-            Terminal run "my-cli-app greet choreo"
-        then:
-            # Check that stdout (output) contains the expected greeting
-            Terminal output_contains "Hello, choreo!"
-            Terminal last_command succeeded
-            Terminal stderr_is_empty
-    }
-}
-```
-
 ## Full Example
 
 See the example
