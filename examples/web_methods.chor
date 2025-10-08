@@ -23,7 +23,7 @@ scenario "POST data via httpbin REST API" {
             Test can_start
             Web set_header "Accept" "application/json"
         when:
-            Web http_get "https://httpbin.org/json"
+            Web http_get "https://httpbin.io/json"
         then:
             Web response_status_is 200
             Web response_body_contains "slideshow"
@@ -35,7 +35,7 @@ scenario "POST data via httpbin REST API" {
             Test has_succeeded GetInitialData
             Web set_header "Content-Type" "application/json"
         when:
-            Web http_put "https://httpbin.org/put" with_body "{\"updated\": true, \"timestamp\": \"2024-01-01\"}"
+            Web http_put "https://httpbin.io/put" with_body "{\"updated\": true, \"timestamp\": \"2024-01-01\"}"
         then:
             Web response_status is_in [200, 204]
             Web response_body_contains "updated"
@@ -56,23 +56,23 @@ scenario "POST data via httpbin REST API" {
             Test can_start
         when:
             Web set_header "Content-Type" "application/x-www-form-urlencoded"
-            Web http_patch "https://httpbin.org/patch" with_body "key1=value1&key2=value2"
+            Web http_patch "https://httpbin.io/patch" with_body "key1=value1&key2=value2"
         then:
             Web response_status_is 200
             Web response_body_contains "form"
             Web json_body has_path "/form/key1"
-            Web json_path at "/form/key1" equals "value1"
+            Web json_path at "/form/key1/0" equals "value1"
     }
 
     test DeleteTest "Test DELETE request" {
         given:
             Test can_start
         when:
-            Web http_delete "https://httpbin.org/delete"
+            Web http_delete "https://httpbin.io/delete"
         then:
             Web response_status_is 200
             Web response_body_contains "delete"
             Web json_body has_path "/url"
-            Web json_path at "/url" equals "https://httpbin.org/delete"
+            Web json_path at "/url" equals "http://httpbin.io/delete"
     }
 }

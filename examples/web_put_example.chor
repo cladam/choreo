@@ -19,7 +19,7 @@ scenario "Retrieve and update data via REST API" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/json"
+            Web http_get "https://httpbin.io/json"
         then:
             Web response_status_is 200
             Web response_body_contains "slideshow"
@@ -31,7 +31,7 @@ scenario "Retrieve and update data via REST API" {
             Test has_succeeded GetInitialData
             Web set_header "Content-Type" "application/json"
         when:
-            Web http_put "https://httpbin.org/put" with_body "{\"updated\": true, \"timestamp\": \"2024-01-01\"}"
+            Web http_put "https://httpbin.io/put" with_body "{\"updated\": true, \"timestamp\": \"2024-01-01\"}"
         then:
             Web response_status is_in [200, 204]
             Web response_body_contains "updated"

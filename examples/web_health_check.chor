@@ -13,7 +13,7 @@ background {
     Web set_cookie "session_id" "abc123"
 }
 
-var url = "https://httpbin.org/bearer"
+var url = "https://httpbin.io/bearer"
 var bearing_token = "choreo-token-xyz"
 # bearing_token should come from an environment variable or secret manager in real scenarios
 # Example: env: BEARING_TOKEN

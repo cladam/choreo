@@ -8,7 +8,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/status/200"
+            Web http_get "https://httpbin.io/status/200"
         then:
             Web response_status_is 200
             Web response_time is_below 15s # httpbin can be really slow sometimes
@@ -18,7 +18,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/status/404"
+            Web http_get "https://httpbin.io/status/404"
         then:
             Web response_status_is 404
     }
@@ -27,7 +27,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/status/201"
+            Web http_get "https://httpbin.io/status/201"
         then:
             Web response_status is_success
     }
@@ -36,7 +36,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/status/500"
+            Web http_get "https://httpbin.io/status/500"
         then:
             Web response_status is_error
     }
@@ -45,7 +45,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/status/202"
+            Web http_get "https://httpbin.io/status/202"
         then:
             Web response_status is_in [200, 201, 202, 204]
     }
@@ -54,7 +54,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/json"
+            Web http_get "https://httpbin.io/json"
         then:
             Web response_status_is 200
             Web response_body_contains "slideshow"
@@ -68,7 +68,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/user-agent"
+            Web http_get "https://httpbin.io/user-agent"
         then:
             Web response_status_is 200
             Web response_body_matches 'user-agent":\s*"[^"]+"'
@@ -78,7 +78,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/json"
+            Web http_get "https://httpbin.io/json"
         then:
             Web response_status_is 200
             Web json_body has_path "/slideshow/title"
@@ -88,7 +88,7 @@ scenario "Testing various web conditions" {
         given:
             Test can_start
         when:
-            Web http_get "https://httpbin.org/json"
+            Web http_get "https://httpbin.io/json"
         then:
             Web response_status_is 200
             Web json_path at "/slideshow/title" equals "Sample Slide Show"
