@@ -611,7 +611,7 @@ impl WebBackend {
                 }
                 false
             }
-            Condition::ResponseBodyEqualsJson { expected } => {
+            Condition::ResponseBodyEqualsJson { expected, ignored } => {
                 // Substitute variables in the expected JSON string
                 let substituted_expected = substitute_string(expected, variables);
                 // Parse both the response body and expected JSON for comparison
@@ -619,13 +619,18 @@ impl WebBackend {
                     serde_json::from_str::<JsonValue>(&last_response.body),
                     serde_json::from_str::<JsonValue>(&substituted_expected),
                 ) {
-                    (Ok(actual), Ok(expected_json)) => {
+                    (Ok(mut actual), Ok(expected_json)) => {
                         if verbose {
                             println!(
                                 "[WEB_BACKEND] Comparing JSON response body with expected JSON"
                             );
                             //println!("[WEB_BACKEND] Actual: {}", actual);
                             //println!("[WEB_BACKEND] Expected: {}", expected_json);
+                        }
+                        // Remove ignored fields from both actual and expected JSON values
+                        for field in ignored {
+                            remove_json_field_recursive(&mut actual, field);
+                            //remove_json_field_recursive(&mut expected_json, field);
                         }
                         actual == expected_json
                     }
@@ -678,12 +683,12 @@ impl WebBackend {
             Condition::JsonValueHasSize { path, size } => {
                 if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
                     if let Some(value) = json_body.pointer(path) {
-                        match value {
-                            JsonValue::Array(arr) => return arr.len() == *size,
-                            JsonValue::String(s) => return s.len() == *size,
-                            JsonValue::Object(obj) => return obj.len() == *size,
-                            _ => return false,
-                        }
+                        return match value {
+                            JsonValue::Array(arr) => arr.len() == *size,
+                            JsonValue::String(s) => s.len() == *size,
+                            JsonValue::Object(obj) => obj.len() == *size,
+                            _ => false,
+                        };
                     }
                 }
                 false
@@ -720,6 +725,24 @@ impl WebBackend {
             }
             _ => false, // Not a web condition
         }
+    }
+}
+
+/// Recursively removes a field from a serde_json::Value.
+fn remove_json_field_recursive(value: &mut JsonValue, field_to_remove: &str) {
+    match value {
+        JsonValue::Object(map) => {
+            map.remove(field_to_remove);
+            for (_, v) in map.iter_mut() {
+                remove_json_field_recursive(v, field_to_remove);
+            }
+        }
+        JsonValue::Array(arr) => {
+            for v in arr.iter_mut() {
+                remove_json_field_recursive(v, field_to_remove);
+            }
+        }
+        _ => {}
     }
 }
 

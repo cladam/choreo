@@ -656,14 +656,24 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             Condition::ResponseBodyMatches { regex, capture_as }
         }
         Rule::response_body_equals_json => {
-            let expected = inner_cond
-                .into_inner()
-                .next()
-                .unwrap()
-                .as_str()
-                .trim_matches('"')
-                .to_string();
-            Condition::ResponseBodyEqualsJson { expected }
+            let mut inner = inner_cond.into_inner();
+            println!("[Parser] response_body_equals_json inner: {:?}", inner);
+            let expected = inner.next().unwrap().as_str().trim_matches('"').to_string();
+            let mut ignored = Vec::new();
+
+            if let Some(ignored_pair) = inner.next() {
+                // This is the list of strings
+                let mut ignored_inner = ignored_pair.into_inner();
+                // First string is mandatory if the block exists
+                if let Some(first) = ignored_inner.next() {
+                    ignored.push(unescape_string(first.as_str()));
+                    // The rest are optional
+                    for s in ignored_inner {
+                        ignored.push(unescape_string(s.as_str()));
+                    }
+                }
+            }
+            Condition::ResponseBodyEqualsJson { expected, ignored }
         }
         Rule::json_value_is_string_condition => {
             let path = inner_cond

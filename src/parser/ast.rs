@@ -269,6 +269,7 @@ pub enum Condition {
     },
     ResponseBodyEqualsJson {
         expected: String,
+        ignored: Vec<String>,
     },
     JsonBodyHasPath {
         path: String,

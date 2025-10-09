@@ -159,7 +159,8 @@ response_status_is_in_condition      = { "response_status" ~ "is_in" ~ "[" ~ num
 response_time_is_below_condition     = { "response_time" ~ "is_below" ~ wait_marker }
 response_body_contains_condition     = { "response_body_contains" ~ non_empty_string }
 response_body_matches_condition      = { "response_body_matches" ~ string ~ ("as" ~ identifier)? }
-response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string }
+//response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string }
+response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string ~ ("ignore_fields" ~ "[" ~ (string ~ ("," ~ string)*)? ~ "]")? }
 
 // Action Types
 run_action                        = { "Terminal" ~ "run" ~ non_empty_string }
