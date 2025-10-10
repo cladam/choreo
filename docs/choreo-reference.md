@@ -380,6 +380,7 @@ This is the reference for all available commands that can be used within the `te
 | `Web response_body_equals_json "..."`          | Passes if the last HTTP response body matches a json string.                         |
 | `Web json_body has_path "..."`                 | Passes if the last HTTP response body (as JSON) has the specified JSON path.         |
 | `Web json_path at "..." equals <value>`        | Passes if the value at the specified JSON path equals the given value.               |
+| `Web json_path at "..." as "..."`              | Passes if JSON path exists and saves it as a variable for later use.                 |
 | `Web json_response at "..." is_a_string`       | Passes if the value at the specified JSON path is a string.                          |
 | `Web json_response at "..." is_a_number`       | Passes if the value at the specified JSON path is a number.                          |
 | `Web json_response at "..." is_an_array`       | Passes if the value at the specified JSON path is an array.                          |

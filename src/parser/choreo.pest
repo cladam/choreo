@@ -110,6 +110,7 @@ web_condition                     = { "Web" ~ (
     response_body_equals_json |
     json_body_has_path_condition |
     json_path_equals_condition |
+    json_path_capture_condition |
     json_value_is_string_condition |
     json_value_is_number_condition |
     json_value_is_array_condition |
@@ -136,6 +137,7 @@ json_output_at_includes_condition = { "json_output" ~ "at" ~ non_empty_string ~ 
 json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ non_empty_string ~ "has_item_count" ~ number }
 json_body_has_path_condition      = { "json_body" ~ "has_path" ~ non_empty_string }
 json_path_equals_condition        = { "json_path" ~ "at" ~ non_empty_string ~ "equals" ~ (value | binary_op) }
+json_path_capture_condition       = { "json_path" ~ "at" ~ non_empty_string ~ "as" ~ identifier }
 
 
 // Terminal-specific condition parts

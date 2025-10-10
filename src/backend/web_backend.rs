@@ -723,6 +723,33 @@ impl WebBackend {
                 }
                 false
             }
+            Condition::JsonPathCapture { path, capture_as } => {
+                if let Ok(json_body) = serde_json::from_str::<JsonValue>(&last_response.body) {
+                    if let Some(value) = json_body.pointer(path) {
+                        // Convert the JSON value to a string and capture it
+                        let captured_value = match value {
+                            JsonValue::String(s) => s.clone(),
+                            JsonValue::Number(n) => n.to_string(),
+                            JsonValue::Bool(b) => b.to_string(),
+                            JsonValue::Null => "null".to_string(),
+                            _ => value.to_string(), // For arrays and objects
+                        };
+
+                        variables.insert(capture_as.clone(), captured_value);
+
+                        if verbose {
+                            println!(
+                                "[WEB_BACKEND] Captured value from path '{}': {}",
+                                path,
+                                variables.get(capture_as).unwrap()
+                            );
+                        }
+
+                        return true;
+                    }
+                }
+                false
+            }
             _ => false, // Not a web condition
         }
     }

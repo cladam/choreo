@@ -219,6 +219,7 @@ pub fn check_condition(
         | Condition::JsonValueIsObject { .. }
         | Condition::JsonValueHasSize { .. }
         | Condition::JsonBodyHasPath { .. }
+        | Condition::JsonPathCapture { .. }
         | Condition::JsonPathEquals { .. } => {
             web_backend.check_condition(condition, env_vars, verbose)
         }

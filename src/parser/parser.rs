@@ -765,6 +765,19 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                 expected_value,
             }
         }
+        Rule::json_path_capture_condition => {
+            let mut inner = inner_cond.into_inner();
+            let path = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            let capture_as = inner.next().map(|p| p.as_str().to_string()).unwrap();
+            Condition::JsonPathCapture { path, capture_as }
+        }
         _ => unreachable!("Unhandled condition: {:?}", inner_cond.as_rule()),
     }
 }

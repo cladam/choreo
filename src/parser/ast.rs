@@ -278,6 +278,10 @@ pub enum Condition {
         path: String,
         expected_value: Value,
     },
+    JsonPathCapture {
+        path: String,
+        capture_as: String,
+    },
 }
 
 // All possible actions that can be executed.
