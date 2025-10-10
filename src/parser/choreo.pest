@@ -22,10 +22,14 @@ env_def = {
     ("env" ~ "{" ~ identifier+ ~ "}") |
     ("env" ~ identifier)
 }
+
 var_def = {
     ("var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value) |
+    ("var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ array) |
     ("var:" ~ identifier ~ ("," ~ identifier)*)
 }
+
+//var_value = { string | array }
 
 actors_def = {
     ("actors:" ~ identifier ~ ("," ~ identifier)*) |
@@ -215,7 +219,8 @@ float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 duration                          = @{ ASCII_DIGIT+ ~ ("ms" | "s") }
 wait_unit                         = @{ "s" | "ms" }
 wait_marker                       = @{ float ~ wait_unit }
-value                             = { string | number }
+value                             = { string | number | array }
 //value                          = { string | number | binary_op }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
 binary_op                         = { "true" | "false" }
+array                             = { "[" ~ (value ~ ("," ~ value)*)? ~ "]" }

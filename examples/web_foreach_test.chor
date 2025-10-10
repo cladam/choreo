@@ -1,0 +1,70 @@
+feature "HTTP POST with foreach using httpbin"
+
+settings {
+    timeout_seconds = 30
+    stop_on_failure = true
+}
+
+actors {
+    Web
+    System
+}
+
+background {
+    Web set_header "User-Agent" "choreo-test-runner/1.0"
+    Web set_cookie "session_id" "abc123"
+}
+
+var URL = "https://httpbin.io"
+var PRODUCTS = ["PROD-A", "PROD-B", "PROD-C"]
+
+scenario "GET data via httpbin REST API" {
+
+    test GetInitialData "retrieve the current state of a resource" {
+        given:
+            # No preconditions needed
+            Test can_start
+            Web set_header "Accept" "application/json"
+        when:
+            Web http_get "${URL}/json"
+        then:
+            Web response_status_is 200
+            Web response_body_contains "slideshow"
+            Web json_body has_path "/slideshow/title"
+            Web json_path at "/slideshow/author" as AUTHOR
+    }
+
+    test PostRequestTest "Test POST request and response" {
+        given:
+            Test can_start
+            System log "${AUTHOR}"
+            System log "${PRODUCTS[2]}"
+        when:
+            Web set_header "Content-Type" "application/x-www-form-urlencoded"
+            Web http_post "${URL}/post" with_body "${PRODUCTS}"
+        then:
+            Web response_status_is 200
+    }
+}
+
+#scenario "Adding multiple items to the cart" {
+#    foreach item in ${PRODUCTS_TO_ADD} {
+#        test "Add ${item} to cart" {
+#            given:
+#                Test can_start
+#            when:
+#                Web http_post "/cart/add" with_body "{ \"product_id\": \"${item}\" }"
+#            then:
+#                Web response_status_is 200
+#        }
+#    }
+
+#    test "Verify final cart size" {
+#        given:
+#            Test can_start
+#        when:
+#            Web http_get "/cart"
+#        then:
+#            Web json_response at "$.items" has_size 3
+#    }
+#}

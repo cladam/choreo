@@ -2,7 +2,7 @@ use choreo::cli;
 use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
-use choreo::parser::ast::Statement;
+use choreo::parser::ast::{Statement, Value};
 use choreo::parser::helpers::substitute_string;
 use choreo::parser::{linter, parser};
 use choreo::runner::TestRunner;
@@ -166,10 +166,34 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                             env_vars.insert(var.clone(), value);
                         }
                     }
-                    Statement::VarDef(key, value) => {
-                        let substituted_value = substitute_string(&value.as_string(), &env_vars);
-                        env_vars.insert(key.clone(), substituted_value);
-                    }
+                    Statement::VarDef(name, value) => match value {
+                        Value::Array(arr) => {
+                            // Convert array to JSON string for proper substitution
+                            let json_array = serde_json::to_string(
+                                &arr.iter().map(|v| v.as_string()).collect::<Vec<_>>(),
+                            )
+                            .unwrap_or_else(|_| "[]".to_string());
+                            let substituted_value = substitute_string(&json_array, &env_vars);
+                            env_vars.insert(name.clone(), substituted_value);
+                        }
+                        _ => {
+                            let substituted_value =
+                                substitute_string(&value.as_string(), &env_vars);
+                            env_vars.insert(name.clone(), substituted_value);
+                        }
+                    },
+                    // Statement::VarDef(key, value) => {
+                    //     let string_value = match value {
+                    //         Value::Array(array) => array
+                    //             .iter()
+                    //             .map(|value| value.as_string())
+                    //             .collect::<Vec<_>>()
+                    //             .join(", "),
+                    //         _ => value.as_string(),
+                    //     };
+                    //     let substituted_value = substitute_string(&string_value, &env_vars);
+                    //     env_vars.insert(key.clone(), substituted_value);
+                    // }
                     Statement::Scenario(scenario) => scenarios.push(scenario.clone()),
                     _ => {} // Ignore other statement types
                 }

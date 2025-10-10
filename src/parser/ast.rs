@@ -1,3 +1,5 @@
+use std::fmt;
+
 // Represents the entire parsed test file
 #[derive(Debug, Clone)]
 pub struct TestSuite {
@@ -372,6 +374,7 @@ pub enum Value {
     String(String),
     Number(i32),
     Bool(bool),
+    Array(Vec<Value>),
 }
 
 impl Value {
@@ -380,6 +383,25 @@ impl Value {
             Value::String(s) => s.clone(),
             Value::Number(n) => n.to_string(),
             Value::Bool(b) => b.to_string(),
+            Value::Array(a) => a
+                .iter()
+                .map(Value::as_string)
+                .collect::<Vec<_>>()
+                .join(", "),
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::String(s) => write!(f, "{}", s),
+            Value::Number(n) => write!(f, "{}", n),
+            Value::Bool(b) => write!(f, "{}", b),
+            Value::Array(arr) => {
+                let items: Vec<String> = arr.iter().map(|v| v.to_string()).collect();
+                write!(f, "[{}]", items.join(", "))
+            }
         }
     }
 }

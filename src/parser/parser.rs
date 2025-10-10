@@ -1089,6 +1089,15 @@ fn build_value(pair: Pair<Rule>) -> Value {
             Value::String(format!("${{{}}}", var_name))
         }
         Rule::binary_op => Value::Bool(inner_pair.as_str().parse().unwrap()),
+        Rule::array => {
+            // Parse array elements
+            let elements: Vec<Value> = inner_pair
+                .into_inner()
+                .map(|element_pair| build_value(element_pair))
+                .collect();
+            Value::Array(elements)
+            //Value::Array(inner_pair.into_inner().map(build_value).collect())
+        }
         _ => {
             // Handle the case where the pair itself is a binary_op
             if pair.as_rule() == Rule::binary_op {
@@ -1113,7 +1122,7 @@ fn parse_duration(duration_str: &str) -> f32 {
 }
 
 /// Unescapes a string captured by the parser.
-fn unescape_string(s: &str) -> String {
+pub fn unescape_string(s: &str) -> String {
     s.replace("\\\"", "\"")
         .replace("\\'", "'")
         .replace("\\n", "\n")

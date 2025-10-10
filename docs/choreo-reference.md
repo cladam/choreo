@@ -107,6 +107,12 @@ var FILENAME = "my_output.txt"
 var GREETING = "Hello, Choreo!"
 ```
 
+Variables can also be defined as an array:
+
+```choreo
+var PRODUCT = ["PROD-A", "PROD-B", "PROD-C"]
+```
+
 #### `env`
 
 Declares a list of environment variables that the test suite requires. The test runner will read these from the shell
@@ -318,12 +324,12 @@ This is the reference for all available commands that can be used within the `te
 
 #### Actions
 
-| Syntax                          | Description                                                       |
-|:--------------------------------|:------------------------------------------------------------------|
-| `System pause <duration>`       | Pauses the test execution for a specified time (e.g., 1s, 500ms). |
-| `System log "..."`              | Prints a message directly to the choreo console for debugging.    |
-| `System uuid as <var_name>`     | Generates a new UUID and saves it to a variable.                  |
-| `System timestamp as <varName>` | Captures the current Unix timestamp into a variable.              |
+| Syntax                          | Description                                                      |
+|:--------------------------------|:-----------------------------------------------------------------|
+| `System pause <duration>`       | Pauses the test execution for a specified time (e.g. 1s, 500ms). |
+| `System log "..."`              | Prints a message directly to the choreo console for debugging.   |
+| `System uuid as <var_name>`     | Generates a new UUID and saves it to a variable.                 |
+| `System timestamp as <varName>` | Captures the current Unix timestamp into a variable.             |
 
 ### FileSystem Commands
 
@@ -402,4 +408,12 @@ with the variable's value before executing the step.
 var FILENAME = "output.log"  
 when:  
   Terminal run "echo 'hello' > ${FILENAME}"  
+```
+
+`choreo` also supports array indexing for variables:
+
+```choreo
+var PRODUCT = ["PROD-A", "PROD-B", "PROD-C"]
+given:
+    System log "${PRODUCT[2]}" # PROD-C
 ```

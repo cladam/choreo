@@ -2,6 +2,7 @@ use crate::backend::filesystem_backend::FileSystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
 use crate::backend::web_backend::WebBackend;
 use crate::parser::ast::{Action, Condition, GivenStep, StateCondition, TestCase, TestState};
+use crate::parser::parser::unescape_string;
 use jsonpath_lib::selector;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
@@ -262,13 +263,44 @@ pub fn _substitute_variables(action: &Action, state: &HashMap<String, String>) -
 }
 
 /// Finds and replaces all ${...} placeholders in a string.
+/// This function also support array indexing like ${...[1]}
+/// Enhanced version that supports array indexing like ${PRODUCTS[1]}
 pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> String {
     let mut result = content.to_string();
-    for (key, value) in state {
-        let placeholder = format!("${{{}}}", key);
-        result = result.replace(&placeholder, value);
-    }
-    result
+
+    // Handle array indexing like ${PRODUCTS[0]}
+    let array_pattern = regex::Regex::new(r"\$\{([^}]+)\[(\d+)\]\}").unwrap();
+    result = array_pattern
+        .replace_all(&result, |caps: &regex::Captures| {
+            let var_name = &caps[1];
+            let index: usize = caps[2].parse().unwrap_or(0);
+
+            if let Some(value) = state.get(var_name) {
+                if let Ok(array) = serde_json::from_str::<Vec<String>>(value) {
+                    array.get(index).cloned().unwrap_or_default()
+                } else {
+                    caps[0].to_string()
+                }
+            } else {
+                caps[0].to_string()
+            }
+        })
+        .to_string();
+
+    // Handle simple variable substitution like ${VAR}
+    let simple_pattern = regex::Regex::new(r"\$\{([^}]+)\}").unwrap();
+    result = simple_pattern
+        .replace_all(&result, |caps: &regex::Captures| {
+            let var_name = &caps[1];
+            state
+                .get(var_name)
+                .cloned()
+                .unwrap_or_else(|| caps[0].to_string())
+        })
+        .to_string();
+
+    // Unescape the final result to handle escaped characters
+    unescape_string(&result)
 }
 
 /// Creates a new Condition with its string values substituted from the state map.
