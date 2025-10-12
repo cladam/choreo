@@ -16,7 +16,7 @@ module Rouge
 
       # Keywords for test steps
       KEYWORD_STEP = %w(
-        given when then foreach
+        given when then foreach parallel
       ).freeze
 
       # Built-in actors and literal values
