@@ -21,7 +21,7 @@ module Rouge
 
       # Built-in actors and literal values
       BUILTIN_LITERAL = %w(
-        Web Terminal FileSystem System Test in true false
+        Web Terminal FileSystem System Test in true false run as
       ).freeze
       
       # Terminal commands (actions and conditions)
