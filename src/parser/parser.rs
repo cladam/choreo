@@ -1,11 +1,18 @@
 // parser.rs
+use crate::error::AppError;
 use crate::parser::ast::{
-    Action, Condition, GivenStep, ReportFormat, Scenario, ScenarioSpan, SettingSpan, Span,
-    StateCondition, Statement, TestCase, TestCaseSpan, TestSuite, TestSuiteSettings, Value,
+    Action, Condition, ForeachBlock, GivenStep, ReportFormat, Scenario, ScenarioBodyItem,
+    ScenarioSpan, SettingSpan, Span, StateCondition, Statement, TestCase, TestCaseSpan, TestSuite,
+    TestSuiteSettings, Value,
+};
+use crate::parser::helpers::{
+    substitute_string, substitute_variables_in_action, substitute_variables_in_condition,
+    substitute_variables_in_test_case,
 };
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
+use std::collections::HashMap;
 
 #[derive(Parser, Debug)]
 #[grammar = "parser/choreo.pest"]
@@ -237,6 +244,8 @@ fn build_scenario(pair: Pair<Rule>) -> Statement {
     });
     scenario.name = unescape_string(name_pair.into_inner().next().unwrap().as_str());
 
+    let mut body_items = Vec::new();
+
     for item in inner {
         let item_span = item.as_span();
         let span_info = Span {
@@ -247,9 +256,28 @@ fn build_scenario(pair: Pair<Rule>) -> Statement {
         };
 
         match item.as_rule() {
+            Rule::scenario_body => {
+                for body_item in item.into_inner() {
+                    for scenario_body_item in body_item.into_inner() {
+                        match scenario_body_item.as_rule() {
+                            Rule::test => {
+                                let test_case = build_test_case(scenario_body_item);
+                                body_items.push(ScenarioBodyItem::Test(test_case.clone()));
+                                scenario.tests.push(test_case); // Keep for backward compatibility
+                            }
+                            Rule::foreach_block => {
+                                let foreach_block = build_foreach_block(scenario_body_item);
+                                body_items.push(ScenarioBodyItem::Foreach(foreach_block));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
             Rule::test => {
-                scenario_spans.tests_span = Some(span_info);
-                scenario.tests.push(build_test_case(item));
+                let test_case = build_test_case(item);
+                body_items.push(ScenarioBodyItem::Test(test_case.clone()));
+                scenario.tests.push(test_case);
             }
             Rule::after_block => {
                 scenario_spans.after_span = Some(span_info);
@@ -259,6 +287,7 @@ fn build_scenario(pair: Pair<Rule>) -> Statement {
         }
     }
 
+    scenario.body = body_items;
     scenario.scenario_span = Some(scenario_spans);
     Statement::Scenario(scenario)
 }
@@ -340,6 +369,252 @@ pub fn build_test_case(pair: Pair<Rule>) -> TestCase {
         }),
         testcase_spans: Some(testcase_spans),
     }
+}
+
+fn build_foreach_block(pair: Pair<Rule>) -> ForeachBlock {
+    let mut inner = pair.into_inner();
+    let loop_variable = inner.next().unwrap().as_str().to_string();
+    let array_variable = inner.next().unwrap().as_str().to_string();
+
+    let tests: Vec<TestCase> = inner.map(|test_pair| build_test_case(test_pair)).collect();
+
+    ForeachBlock {
+        loop_variable,
+        array_variable,
+        tests,
+    }
+}
+
+pub fn expand_scenario_foreach_blocks(
+    s: &Scenario,
+    env_vars: &HashMap<String, String>,
+) -> Scenario {
+    let mut expanded_body = Vec::new();
+
+    for item in &s.body {
+        match item {
+            ScenarioBodyItem::Test(test) => {
+                expanded_body.push(ScenarioBodyItem::Test(test.clone()));
+            }
+            ScenarioBodyItem::Foreach(foreach_block) => {
+                // Get the array variable value from environment
+                let array_var_name = &foreach_block.array_variable;
+                let array_value = env_vars
+                    .get(array_var_name)
+                    .ok_or_else(|| AppError::EnvVarNotFound(array_var_name.clone()));
+
+                // Parse the JSON array
+                if let Ok(items) =
+                    serde_json::from_str::<Vec<String>>(&array_value.expect("failed to parse json"))
+                {
+                    for item_value in items {
+                        // Create a new environment with the loop variable
+                        let mut loop_env = env_vars.clone();
+                        loop_env.insert(foreach_block.loop_variable.clone(), item_value.clone());
+                        loop_env.insert(
+                            format!("${{{}}}", &foreach_block.loop_variable),
+                            item_value.clone(),
+                        );
+
+                        // Expand each test in the foreach block
+                        for test in &foreach_block.tests {
+                            let mut expanded_test = test.clone();
+
+                            // Substitute variables in test name and description
+                            expanded_test.name = substitute_string(&test.name, &loop_env);
+                            expanded_test.description =
+                                substitute_string(&test.description, &loop_env);
+
+                            // Substitute variables in given steps
+                            expanded_test.given = test
+                                .given
+                                .iter()
+                                .map(|step| match step {
+                                    GivenStep::Action(action) => GivenStep::Action(
+                                        substitute_variables_in_action(action, &loop_env),
+                                    ),
+                                    GivenStep::Condition(condition) => GivenStep::Condition(
+                                        substitute_variables_in_condition(condition, &loop_env),
+                                    ),
+                                })
+                                .collect();
+
+                            // Substitute variables in when actions
+                            expanded_test.when = test
+                                .when
+                                .iter()
+                                .map(|action| substitute_variables_in_action(action, &loop_env))
+                                .collect();
+
+                            // Substitute variables in then conditions
+                            expanded_test.then = test
+                                .then
+                                .iter()
+                                .map(|condition| {
+                                    substitute_variables_in_condition(condition, &loop_env)
+                                })
+                                .collect();
+
+                            expanded_body.push(ScenarioBodyItem::Test(expanded_test));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Scenario {
+        name: s.name.clone(),
+        tests: expanded_body
+            .iter()
+            .filter_map(|item| match item {
+                ScenarioBodyItem::Test(test) => Some(test.clone()),
+                _ => None,
+            })
+            .collect(),
+        body: expanded_body,
+        after: s.after.clone(),
+        parallel: s.parallel,
+        span: s.span.clone(),
+        scenario_span: s.scenario_span.clone(),
+    }
+}
+
+/// Expands `foreach` blocks within a scenario into a flat list of `TestCase`s.
+pub fn _expand_foreach_blocks(
+    scenario: &Scenario,
+    variables: &HashMap<String, String>,
+) -> Vec<TestCase> {
+    let mut new_scenario = scenario.clone();
+    let mut expanded_tests = Vec::new();
+
+    // Start with any existing top-level tests already parsed (if any)
+    expanded_tests.extend(new_scenario.tests.clone());
+
+    //let mut expanded_tests = Vec::new();
+
+    for item in &scenario.body {
+        println!("Extended scenario: {:?}\n", item);
+        match item {
+            ScenarioBodyItem::Test(test_case) => {
+                expanded_tests.push(test_case.clone());
+            }
+            ScenarioBodyItem::Foreach(foreach_block) => {
+                println!("Foreach Block: {}", &foreach_block.loop_variable);
+                let array_var_name = foreach_block
+                    .array_variable
+                    .trim_start_matches("${")
+                    .trim_end_matches('}');
+                if let Some(array_json_str) = variables.get(array_var_name) {
+                    if let Ok(array_values) = serde_json::from_str::<Vec<String>>(array_json_str) {
+                        for value in array_values {
+                            for test_template in &foreach_block.tests {
+                                let mut loop_vars = variables.clone();
+                                loop_vars
+                                    .insert(foreach_block.loop_variable.clone(), value.clone());
+                                println!(
+                                    "---\nLooping over: {} = {}\n---",
+                                    foreach_block.loop_variable, value
+                                );
+
+                                let substituted_test =
+                                    substitute_variables_in_test_case(test_template, &loop_vars);
+
+                                expanded_tests.push(substituted_test);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    new_scenario.tests = expanded_tests;
+    new_scenario.tests
+}
+
+pub fn expand_foreach_blocks(
+    scenario: &Scenario,
+    variables: &HashMap<String, String>,
+) -> Vec<TestCase> {
+    // Start with already parsed top-level tests (explicit tests before any foreach)
+    let mut expanded = scenario.tests.clone();
+
+    for item in &scenario.body {
+        match item {
+            ScenarioBodyItem::Test(t) => {
+                // Keep explicit tests in body (in addition to those already in `tests`)
+                if !expanded.iter().any(|e| e.name == t.name) {
+                    expanded.push(t.clone());
+                }
+            }
+            ScenarioBodyItem::Foreach(foreach_block) => {
+                let array_var_name = foreach_block
+                    .array_variable
+                    .trim_start_matches("${")
+                    .trim_end_matches('}');
+                let Some(raw_json) = variables.get(array_var_name) else {
+                    eprintln!(
+                        "[foreach] Variable '{}' not found for loop '{}'",
+                        array_var_name, foreach_block.loop_variable
+                    );
+                    continue;
+                };
+
+                let Ok(items) = serde_json::from_str::<Vec<serde_json::Value>>(raw_json) else {
+                    eprintln!(
+                        "[foreach] Variable '{}' is not a JSON array for loop '{}'",
+                        array_var_name, foreach_block.loop_variable
+                    );
+                    continue;
+                };
+
+                for item_value in items {
+                    // Build loop variable map
+                    let mut loop_scope = variables.clone();
+
+                    // Insert primary loop variable (stringified)
+                    let loop_var = foreach_block.loop_variable.clone();
+                    loop_scope.insert(
+                        loop_var.clone(),
+                        item_value
+                            .as_str()
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| item_value.to_string()),
+                    );
+
+                    // If the element is an object, expose its fields as dotted vars: ITEM.field
+                    if let serde_json::Value::Object(obj) = &item_value {
+                        for (k, v) in obj {
+                            loop_scope.insert(
+                                format!("{}.{}", loop_var, k),
+                                v.as_str()
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_else(|| v.to_string()),
+                            );
+                        }
+                    }
+
+                    for template in &foreach_block.tests {
+                        let materialized = substitute_variables_in_test_case(template, &loop_scope);
+
+                        // Optional: ensure unique test names (in case template uses ${ITEM})
+                        let final_name = if expanded.iter().any(|t| t.name == materialized.name) {
+                            format!("{} ({})", materialized.name, loop_scope[&loop_var])
+                        } else {
+                            materialized.name.clone()
+                        };
+
+                        let mut adjusted = materialized.clone();
+                        adjusted.name = final_name;
+
+                        expanded.push(adjusted);
+                    }
+                }
+            }
+        }
+    }
+
+    expanded
 }
 
 // Builds a vector of GivenSteps, which can be either an Action or a Condition.
@@ -805,7 +1080,6 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
             //let _run = inner.next().unwrap(); // Skip "run" keyword
             let command = inner.next().unwrap().into_inner().next().unwrap().as_str();
             let command = unescape_string(command);
-            println!("Terminal run: {}", command);
             Action::Run {
                 actor: "Terminal".to_string(),
                 command,
@@ -1053,21 +1327,6 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
         _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),
     }
 }
-
-// The grammar is `identifier ~ "http_get" ~ string`, so "http_get" is implicit.
-//             let url = inner
-//                 .next()
-//                 .unwrap()
-//                 .into_inner()
-//                 .next()
-//                 .unwrap()
-//                 .as_str()
-//                 .to_string();
-//             Action::HttpGet { url }
-//         }
-//         _ => unreachable!("Unhandled action: {:?}", inner_action.as_rule()),
-//     }
-// }
 
 fn build_value(pair: Pair<Rule>) -> Value {
     // The `value` rule is silent, so we need to inspect its inner pair.

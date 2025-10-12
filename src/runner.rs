@@ -10,6 +10,7 @@ use crate::parser::ast::{
 use crate::parser::helpers::{
     check_all_conditions_met, is_synchronous, substitute_variables_in_action,
 };
+use crate::parser::parser::expand_foreach_blocks;
 use crate::reporting::generate_choreo_report;
 use itertools::Itertools;
 use rayon::prelude::*;
@@ -261,6 +262,7 @@ impl TestRunner {
             last_exit_code,
             Some(Duration::from_secs(timeout_seconds)),
             env_vars,
+            self.verbose,
         ) {
             return;
         }
@@ -306,10 +308,14 @@ fn run_scenario(
     let mut last_exit_code: Option<i32> = None;
     let mut output_buffer = String::new();
 
+    let expanded_tests = expand_foreach_blocks(scenario, &variables);
+    let mut scenario_clone = scenario.clone();
+    scenario_clone.tests = expanded_tests.clone();
+
     // Initialise tests states (insert Pending entries) under lock
     {
         let mut states = test_states.lock().unwrap();
-        for test in &scenario.tests {
+        for test in &expanded_tests {
             states
                 .entry(test.name.clone())
                 .or_insert(TestState::Pending);
@@ -338,8 +344,7 @@ fn run_scenario(
         };
 
         // Determine tests to evaluate (not done)
-        let tests_to_check: Vec<TestCase> = scenario
-            .tests
+        let tests_to_check: Vec<TestCase> = expanded_tests
             .iter()
             .filter(|tc| !states_snapshot.get(&tc.name).unwrap().is_done())
             .cloned()
@@ -430,7 +435,7 @@ fn run_scenario(
         if !tests_to_start.is_empty() {
             progress_made = true;
             for (name, given_actions, is_sync) in tests_to_start {
-                let test_case = scenario.tests.iter().find(|tc| tc.name == name).unwrap();
+                let test_case = expanded_tests.iter().find(|tc| tc.name == name).unwrap();
 
                 if is_sync {
                     //println!(" ▶️ Starting SYNC test: {}", name);
@@ -683,6 +688,7 @@ fn execute_action(
         last_exit_code,
         Some(Duration::from_secs(timeout_seconds)),
         env_vars,
+        verbose,
     ) {
         return;
     }

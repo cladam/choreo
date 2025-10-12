@@ -276,6 +276,67 @@ then:
     FileSystem file_exists "output.txt"
 ```
 
+## Data-Driven Testing with `foreach`
+
+To test the same workflow with different sets of data without duplicating your test logic, `choreo` provides a powerful
+`foreach` construct.
+
+The `foreach` block iterates over an array variable and dynamically generates a test block for each item in the array.
+
+### 1. Defining Array Variables
+
+Before you can use a `foreach` loop, you must define an array of strings in your `var` block using square bracket
+`[]`syntax.
+
+**Example:**
+
+```choreo
+var PRODUCTS = ["PROD-A", "PROD-B", "PROD-C"]
+```
+
+### 2. The `foreach` Block
+
+The `foreach` block must be placed inside a `scenario`. It defines a loop variable (e.g. `ITEM`) and the array variable
+to iterate over (e.g. `${PRODUCTS}`). The parser then "unrolls" this loop, creating a separate test block for each item.
+
+The loop variable can be used with `${...}` syntax to dynamically generate test names, descriptions, and the content of
+the test steps themselves.
+
+### 3. Complete Example
+
+This example demonstrates how to use a `foreach` loop to test adding multiple products to a shopping cart. It generates
+three distinct test blocks from a single, clean definition.
+
+```choreo
+feature "HTTP POST with foreach using httpbin"
+actors: Web, System
+var URL = "https://httpbin.io"
+var PRODUCTS = ["PROD-A", "PROD-B", "PROD-C"]
+
+scenario "Adding multiple items to the cart" {
+
+    # 1. The foreach loop iterates over the PRODUCTS array.
+    foreach ITEM in ${PRODUCTS} {
+
+        # 2. A test block is defined inside. The loop variable `ITEM`
+        #    is used to create a unique and descriptive test name.
+        test AddToCart "Add ${ITEM} to cart" {
+            given:
+                Test can_start
+                System log "Adding item: ${ITEM}"
+            when:
+                Web set_header "Content-Type" "application/x-www-form-urlencoded"
+                # 3. The loop variable is used in the request body.
+                Web http_post "${URL}/post" with_body "product_id=${ITEM}"
+            then:
+                Web response_status_is 200
+                # 4. The loop variable is used in the assertion.
+                Web response_body_contains "product_id=${ITEM}"
+        }
+    }
+}
+```
+
 ## Vocabulary: Actions & Conditions
 
 This is the reference for all available commands that can be used within the `test` blocks.

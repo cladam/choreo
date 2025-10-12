@@ -38,8 +38,14 @@ actors_def = {
 }
 feature_def                       = { "feature" ~ string }
 parallel_keyword                  = { "parallel" }
-scenario_def                      = { parallel_keyword? ~ "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
+//scenario_def                      = { parallel_keyword? ~ "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
 after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
+
+scenario_body_item = { test | foreach_block }
+scenario_body = { scenario_body_item* }
+scenario_def = {  parallel_keyword? ~ "scenario" ~ string ~ "{" ~ scenario_body ~ after_block? ~ "}" }
+foreach_block = { "foreach" ~ identifier ~ "in" ~ variable_ref ~ "{" ~ test+ ~ "}" }
+variable_ref = { "${" ~ identifier ~ "}" }
 
 // Defining a test case.
 test                              = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
@@ -200,11 +206,6 @@ system_pause = { "pause" ~ wait_marker }
 system_log = { "log" ~ string }
 system_timestamp = { "timestamp" ~ "as" ~ (string | identifier) }
 system_uuid = { "uuid" ~ "as" ~ identifier }
-// system_action                     = { "System" ~ ( system_pause | system_log | system_timestamp | system_uuid ) }
-// system_pause                      = { "pause" ~ WHITESPACE* ~ wait_marker }
-// system_log                        = { "log" ~ WHITESPACE+ ~ string }
-// system_timestamp                  = { "timestamp" ~ WHITESPACE+ ~ "as" ~ WHITESPACE+ ~ (identifier | string) }
-// system_uuid                       = { "uuid" ~ WHITESPACE+ ~ "as" ~ WHITESPACE+ ~ identifier }
 
 // The basic building blocks of the choreo language.
 identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }

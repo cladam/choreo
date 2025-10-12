@@ -8,6 +8,7 @@ settings {
 actors {
     Web
     System
+    Terminal
 }
 
 background {
@@ -47,24 +48,20 @@ scenario "GET data via httpbin REST API" {
     }
 }
 
-#scenario "Adding multiple items to the cart" {
-#    foreach item in ${PRODUCTS_TO_ADD} {
-#        test "Add ${item} to cart" {
-#            given:
-#                Test can_start
-#            when:
-#                Web http_post "/cart/add" with_body "{ \"product_id\": \"${item}\" }"
-#            then:
-#                Web response_status_is 200
-#        }
-#    }
-
-#    test "Verify final cart size" {
-#        given:
-#            Test can_start
-#        when:
-#            Web http_get "/cart"
-#        then:
-#            Web json_response at "$.items" has_size 3
-#    }
-#}
+parallel scenario "Adding multiple items to the cart" {
+    foreach ITEM in ${PRODUCTS} {
+        test AddToCart "Add ${ITEM} to cart" {
+            given:
+                Test can_start
+                #System log "${ITEM}"
+            when:
+                System log "${ITEM}"
+                Terminal run "echo '${ITEM}'"
+                Web set_header "Content-Type" "application/x-www-form-urlencoded"
+                Web http_post "${URL}/post" with_body "${ITEM}"
+            then:
+                Web response_body_contains "${ITEM}"
+                Web response_status_is 200
+        }
+    }
+}

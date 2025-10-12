@@ -1,4 +1,5 @@
 use crate::parser::ast::{Action, Condition, Value};
+use crate::parser::helpers::{substitute_string, substitute_variables_in_action};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use ureq::http::StatusCode;
@@ -55,25 +56,20 @@ impl WebBackend {
         env_vars: &mut HashMap<String, String>,
         verbose: bool,
     ) -> bool {
-        match action {
+        let substituted_action = substitute_variables_in_action(action, env_vars);
+        match &substituted_action {
             Action::HttpSetHeader { key, value } => {
-                let substituted_key = substitute_string(key, env_vars);
-                let substituted_value = substitute_string(value, env_vars);
                 if verbose {
-                    println!(
-                        "[WEB_BACKEND] Setting HTTP header: {}: {}",
-                        substituted_key, substituted_value
-                    );
+                    println!("[WEB_BACKEND] Setting HTTP header: {}: {}", key, value);
                 }
-                self.headers.insert(substituted_key, substituted_value);
+                self.headers.insert(key.clone(), value.clone());
                 true
             }
             Action::HttpClearHeader { key } => {
-                let substituted_key = substitute_string(key, env_vars);
                 if verbose {
-                    println!("[WEB_BACKEND] Clearing HTTP header: {}", substituted_key);
+                    println!("[WEB_BACKEND] Clearing HTTP header: {}", key);
                 }
-                self.headers.remove(&substituted_key);
+                self.headers.remove(&*key);
                 true
             }
             Action::HttpClearHeaders => {
@@ -84,11 +80,8 @@ impl WebBackend {
                 true
             }
             Action::HttpSetCookie { key, value } => {
-                let substituted_key = substitute_string(key, env_vars);
-                let substituted_value = substitute_string(value, env_vars);
-
                 // Handle multiple cookies by appending to existing Cookie header
-                let new_cookie = format!("{}={}", substituted_key, substituted_value);
+                let new_cookie = format!("{}={}", key, value);
                 match self.headers.get("Cookie") {
                     Some(existing) => {
                         let updated_cookies = format!("{}; {}", existing, new_cookie);
@@ -100,10 +93,7 @@ impl WebBackend {
                 }
 
                 if verbose {
-                    println!(
-                        "[WEB_BACKEND] Added cookie: {}={}",
-                        substituted_key, substituted_value
-                    );
+                    println!("[WEB_BACKEND] Added cookie: {}={}", key, value);
                     println!(
                         "[WEB_BACKEND] Current Cookie header: {}",
                         self.headers.get("Cookie").unwrap_or(&"".to_string())
@@ -112,8 +102,6 @@ impl WebBackend {
                 true
             }
             Action::HttpClearCookie { key } => {
-                let substituted_key = substitute_string(key, env_vars);
-
                 if let Some(cookie_header) = self.headers.get("Cookie") {
                     // Parse and filter out the specific cookie
                     let cookies: Vec<&str> = cookie_header.split(';').collect();
@@ -121,7 +109,7 @@ impl WebBackend {
                         .into_iter()
                         .filter(|cookie| {
                             let cookie_trimmed = cookie.trim();
-                            !cookie_trimmed.starts_with(&format!("{}=", substituted_key))
+                            !cookie_trimmed.starts_with(&format!("{}=", key))
                         })
                         .collect();
 
@@ -134,7 +122,7 @@ impl WebBackend {
                 }
 
                 if verbose {
-                    println!("[WEB_BACKEND] Cleared cookie: {}", substituted_key);
+                    println!("[WEB_BACKEND] Cleared cookie: {}", key);
                 }
                 true
             }
@@ -146,13 +134,12 @@ impl WebBackend {
                 true
             }
             Action::HttpGet { url, .. } => {
-                let substituted_url = substitute_string(url, env_vars);
                 if verbose {
-                    println!("[WEB_BACKEND] Performing HTTP GET to: {}", substituted_url);
+                    println!("[WEB_BACKEND] Performing HTTP GET to: {}", url);
                 }
 
                 let start_time = std::time::Instant::now();
-                let mut request = self.agent.get(&substituted_url);
+                let mut request = self.agent.get(url);
                 // Add any headers that have been set.
                 for (key, value) in &self.headers {
                     request = request.header(key, value);
@@ -233,16 +220,14 @@ impl WebBackend {
                 if verbose {
                     println!("[WEB_BACKEND] Performing HTTP POST to: {}", url);
                 }
-                let substituted_url = substitute_string(url, env_vars);
-                let substituted_body = substitute_string(body, env_vars);
 
                 if verbose {
-                    println!("[WEB_BACKEND] POST URL: {}", substituted_url);
-                    println!("[WEB_BACKEND] POST body: {}", substituted_body);
+                    println!("[WEB_BACKEND] POST URL: {}", url);
+                    println!("[WEB_BACKEND] POST body: {}", body);
                 }
 
                 let start_time = std::time::Instant::now();
-                let mut request = self.agent.post(&substituted_url);
+                let mut request = self.agent.post(url);
 
                 // Apply headers
                 for (key, value) in &self.headers {
@@ -250,7 +235,7 @@ impl WebBackend {
                 }
 
                 // Send request and handle response
-                match request.send(&substituted_body) {
+                match request.send(body) {
                     Ok(response) => {
                         let duration = start_time.elapsed();
                         let status = response.status();
@@ -315,22 +300,19 @@ impl WebBackend {
                 }
             }
             Action::HttpPut { url, body } => {
-                let substituted_url = substitute_string(url, env_vars);
-                let substituted_body = substitute_string(body, env_vars);
-
                 if verbose {
-                    println!("  [WEB] PUT {}", substituted_url);
+                    println!("  [WEB] PUT {}", url);
                 }
 
                 let start_time = std::time::Instant::now();
-                let mut request = self.agent.put(&substituted_url);
+                let mut request = self.agent.put(url);
 
                 // Add headers and cookies (same as POST)
                 for (key, value) in &self.headers {
                     request = request.header(key, value);
                 }
 
-                match request.send(substituted_body) {
+                match request.send(body) {
                     Ok(response) => {
                         let duration = start_time.elapsed();
                         let status = response.status();
@@ -389,25 +371,19 @@ impl WebBackend {
                 }
             }
             Action::HttpPatch { url, body } => {
-                let substituted_url = substitute_string(url, env_vars);
-                let substituted_body = substitute_string(body, env_vars);
-
                 if verbose {
-                    println!(
-                        "[WEB_BACKEND] Performing HTTP PATCH to: {}",
-                        substituted_url
-                    );
+                    println!("[WEB_BACKEND] Performing HTTP PATCH to: {}", url);
                 }
 
                 let start_time = std::time::Instant::now();
-                let mut request = self.agent.patch(&substituted_url);
+                let mut request = self.agent.patch(url);
 
                 // Add headers
                 for (key, value) in &self.headers {
                     request = request.header(key, value);
                 }
 
-                match request.send(substituted_body) {
+                match request.send(body) {
                     Ok(response) => {
                         let duration = start_time.elapsed();
                         let status = response.status();
@@ -467,17 +443,12 @@ impl WebBackend {
                 }
             }
             Action::HttpDelete { url } => {
-                let substituted_url = substitute_string(url, env_vars);
-
                 if verbose {
-                    println!(
-                        "[WEB_BACKEND] Performing HTTP DELETE to: {}",
-                        substituted_url
-                    );
+                    println!("[WEB_BACKEND] Performing HTTP DELETE to: {}", url);
                 }
 
                 let start_time = std::time::Instant::now();
-                let mut request = self.agent.delete(&substituted_url);
+                let mut request = self.agent.delete(url);
 
                 // Add headers
                 for (key, value) in &self.headers {
@@ -771,14 +742,4 @@ fn remove_json_field_recursive(value: &mut JsonValue, field_to_remove: &str) {
         }
         _ => {}
     }
-}
-
-/// Simple helper for variable substitution in URLs.
-fn substitute_string(content: &str, state: &HashMap<String, String>) -> String {
-    let mut result = content.to_string();
-    for (key, value) in state {
-        let placeholder = format!("${{{}}}", key);
-        result = result.replace(&placeholder, value);
-    }
-    result
 }

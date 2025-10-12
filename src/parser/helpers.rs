@@ -1,7 +1,9 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
 use crate::backend::web_backend::WebBackend;
-use crate::parser::ast::{Action, Condition, GivenStep, StateCondition, TestCase, TestState};
+use crate::parser::ast::{
+    Action, Condition, GivenStep, StateCondition, TestCase, TestState, Value,
+};
 use crate::parser::parser::unescape_string;
 use jsonpath_lib::selector;
 use std::collections::HashMap;
@@ -276,8 +278,11 @@ pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> Stri
             let index: usize = caps[2].parse().unwrap_or(0);
 
             if let Some(value) = state.get(var_name) {
-                if let Ok(array) = serde_json::from_str::<Vec<String>>(value) {
-                    array.get(index).cloned().unwrap_or_default()
+                if let Ok(array) = serde_json::from_str::<Vec<serde_json::Value>>(value) {
+                    array
+                        .get(index)
+                        .map(|v| v.as_str().unwrap_or_default().to_string())
+                        .unwrap_or_default()
                 } else {
                     caps[0].to_string()
                 }
@@ -292,10 +297,15 @@ pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> Stri
     result = simple_pattern
         .replace_all(&result, |caps: &regex::Captures| {
             let var_name = &caps[1];
-            state
-                .get(var_name)
-                .cloned()
-                .unwrap_or_else(|| caps[0].to_string())
+            state.get(var_name).cloned().unwrap_or_else(|| {
+                // If direct lookup fails, it might be a JSON string that needs unquoting
+                if let Some(val) = state.get(var_name) {
+                    if let Ok(s) = serde_json::from_str::<String>(val) {
+                        return s;
+                    }
+                }
+                caps[0].to_string()
+            })
         })
         .to_string();
 
@@ -345,6 +355,54 @@ pub fn substitute_variables_in_condition(
             Condition::OutputEndsWith(substitute_string(text, state))
         }
         Condition::OutputEquals(text) => Condition::OutputEquals(substitute_string(text, state)),
+        Condition::ResponseBodyContains { value } => Condition::ResponseBodyContains {
+            value: substitute_string(value, state),
+        },
+        Condition::ResponseBodyMatches { regex, capture_as } => Condition::ResponseBodyMatches {
+            regex: substitute_string(regex, state),
+            capture_as: capture_as.clone(),
+        },
+        Condition::ResponseBodyEqualsJson { expected, ignored } => {
+            Condition::ResponseBodyEqualsJson {
+                expected: substitute_string(expected, state),
+                ignored: ignored
+                    .iter()
+                    .map(|f| substitute_string(f, state))
+                    .collect(),
+            }
+        }
+        Condition::JsonBodyHasPath { path } => Condition::JsonBodyHasPath {
+            path: substitute_string(path, state),
+        },
+        Condition::JsonPathEquals {
+            path,
+            expected_value,
+        } => Condition::JsonPathEquals {
+            path: substitute_string(path, state),
+            expected_value: substitute_value(expected_value, state),
+        },
+        Condition::JsonPathCapture { path, capture_as } => Condition::JsonPathCapture {
+            path: substitute_string(path, state),
+            capture_as: capture_as.clone(),
+        },
+        // JSON value type checks (paths)
+        Condition::JsonValueIsString { path } => Condition::JsonValueIsString {
+            path: substitute_string(path, state),
+        },
+        Condition::JsonValueIsNumber { path } => Condition::JsonValueIsNumber {
+            path: substitute_string(path, state),
+        },
+        Condition::JsonValueIsArray { path } => Condition::JsonValueIsArray {
+            path: substitute_string(path, state),
+        },
+        Condition::JsonValueIsObject { path } => Condition::JsonValueIsObject {
+            path: substitute_string(path, state),
+        },
+        Condition::JsonValueHasSize { path, size } => Condition::JsonValueHasSize {
+            path: substitute_string(path, state),
+            size: *size,
+        },
+        // fallback
         _ => condition.clone(),
     }
 }
@@ -409,6 +467,47 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
             key: substitute_string(key, state),
         },
         _ => action.clone(),
+    }
+}
+
+/// Creates a new TestCase with its string values substituted from the state map.
+pub fn substitute_variables_in_test_case(
+    test_case: &TestCase,
+    state: &HashMap<String, String>,
+) -> TestCase {
+    TestCase {
+        name: substitute_string(&test_case.name, state),
+        description: substitute_string(&test_case.description, state),
+        given: test_case
+            .given
+            .iter()
+            .map(|step| match step {
+                GivenStep::Action(a) => GivenStep::Action(substitute_variables_in_action(a, state)),
+                GivenStep::Condition(c) => {
+                    GivenStep::Condition(substitute_variables_in_condition(c, state))
+                }
+            })
+            .collect(),
+        when: test_case
+            .when
+            .iter()
+            .map(|action| substitute_variables_in_action(action, state))
+            .collect(),
+        then: test_case
+            .then
+            .iter()
+            .map(|condition| substitute_variables_in_condition(condition, state))
+            .collect(),
+        span: test_case.span.clone(),
+        testcase_spans: test_case.testcase_spans.clone(),
+    }
+}
+
+fn substitute_value(v: &Value, state: &HashMap<String, String>) -> Value {
+    match v {
+        Value::String(s) => Value::String(substitute_string(s, state)),
+        Value::Array(arr) => Value::Array(arr.iter().map(|x| substitute_value(x, state)).collect()),
+        _ => v.clone(),
     }
 }
 

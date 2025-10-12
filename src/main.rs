@@ -141,17 +141,19 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 match s {
                     Statement::BackgroundDef(steps) => {
                         // Convert background steps to a scenario
+                        let bg_test_case = choreo::parser::ast::TestCase {
+                            name: "Background Setup".to_string(),
+                            description: "Setup steps from Background".to_string(),
+                            given: steps.clone(),
+                            when: vec![],
+                            then: vec![],
+                            span: None,
+                            testcase_spans: None,
+                        };
                         let bg_scenario = choreo::parser::ast::Scenario {
                             name: "Background".to_string(),
-                            tests: vec![choreo::parser::ast::TestCase {
-                                name: "Background Setup".to_string(),
-                                description: "Setup steps from Background".to_string(),
-                                given: steps.clone(),
-                                when: vec![],
-                                then: vec![],
-                                span: None,
-                                testcase_spans: None,
-                            }],
+                            tests: vec![bg_test_case.clone()],
+                            body: vec![choreo::parser::ast::ScenarioBodyItem::Test(bg_test_case)],
                             after: vec![],
                             parallel: false,
                             scenario_span: None,
@@ -174,26 +176,16 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                             )
                             .unwrap_or_else(|_| "[]".to_string());
                             let substituted_value = substitute_string(&json_array, &env_vars);
-                            env_vars.insert(name.clone(), substituted_value);
+                            env_vars.insert(name.clone(), substituted_value.clone());
+                            //env_vars.insert(format!("${{{}}}", name), substituted_value);
                         }
                         _ => {
                             let substituted_value =
                                 substitute_string(&value.as_string(), &env_vars);
-                            env_vars.insert(name.clone(), substituted_value);
+                            env_vars.insert(name.clone(), substituted_value.clone());
+                            //env_vars.insert(format!("${{{}}}", name), substituted_value);
                         }
                     },
-                    // Statement::VarDef(key, value) => {
-                    //     let string_value = match value {
-                    //         Value::Array(array) => array
-                    //             .iter()
-                    //             .map(|value| value.as_string())
-                    //             .collect::<Vec<_>>()
-                    //             .join(", "),
-                    //         _ => value.as_string(),
-                    //     };
-                    //     let substituted_value = substitute_string(&string_value, &env_vars);
-                    //     env_vars.insert(key.clone(), substituted_value);
-                    // }
                     Statement::Scenario(scenario) => scenarios.push(scenario.clone()),
                     _ => {} // Ignore other statement types
                 }

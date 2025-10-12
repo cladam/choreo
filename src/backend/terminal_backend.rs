@@ -125,6 +125,7 @@ impl TerminalBackend {
         last_exit_code: &mut Option<i32>,
         timeout: Option<Duration>,
         _env_vars: &mut HashMap<String, String>,
+        verbose: bool,
     ) -> bool {
         let action = substitute_variables_in_action(action, _env_vars);
         match action {
@@ -242,6 +243,17 @@ impl TerminalBackend {
                         None
                     }
                 });
+
+                if verbose {
+                    if self.last_stdout.trim().is_empty() {
+                        println!("[TERMINAL] (stdout empty)");
+                    } else {
+                        println!("[TERMINAL] stdout:\n{}", self.last_stdout);
+                    }
+                }
+                if !self.last_stderr.trim().is_empty() && verbose {
+                    eprintln!("[TERMINAL] stderr:\n{}", self.last_stderr);
+                }
 
                 true
             }

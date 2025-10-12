@@ -132,9 +132,23 @@ pub enum Statement {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct ForeachBlock {
+    pub loop_variable: String,
+    pub array_variable: String,
+    pub tests: Vec<TestCase>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ScenarioBodyItem {
+    Test(TestCase),
+    Foreach(ForeachBlock),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Scenario {
     pub name: String,
     pub tests: Vec<TestCase>,
+    pub body: Vec<ScenarioBodyItem>,
     pub after: Vec<Action>,
     pub parallel: bool,
     pub span: Option<Span>,
@@ -146,6 +160,7 @@ impl Default for Scenario {
         Self {
             name: String::new(),
             tests: Vec::new(),
+            body: Vec::new(),
             after: Vec::new(),
             parallel: false,
             span: None,
