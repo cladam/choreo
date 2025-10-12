@@ -11,17 +11,17 @@ module Rouge
 
       # Keywords for blocks and declarations
       KEYWORD_DECLARATION = %w(
-        feature actors actor settings background scenario after test var env
+        feature actors actor settings background scenario after test var env Test in
       ).freeze
 
       # Keywords for test steps
       KEYWORD_STEP = %w(
-        given when then
+        given when then foreach
       ).freeze
 
       # Built-in actors and literal values
       BUILTIN_LITERAL = %w(
-        Web Terminal FileSystem true false
+        Web Terminal FileSystem System true false
       ).freeze
       
       # Terminal commands (actions and conditions)
