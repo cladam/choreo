@@ -28,7 +28,7 @@ module Rouge
       TERMINAL_COMMANDS = %w(
         runs types presses last_command succeeded failed exit_code_is output_contains 
         stdout_is_empty stderr_is_empty stderr_contains output_starts_with output_ends_with 
-        output_equals output_matches output_is_valid_json json_output has_path
+        output_equals output_matches output_is_valid_json json_output has_path log pause timestamp uuid
       ).freeze
       
       # FileSystem commands (actions and conditions)  
@@ -49,7 +49,7 @@ module Rouge
       
       # Combined array for the lexer rule
       COMMANDS_AND_ASSERTIONS = (TERMINAL_COMMANDS + FILESYSTEM_COMMANDS + WEB_COMMANDS + %w(
-        wait timeout_seconds stop_on_failure shell_path report_path expected_failures
+        wait timeout_seconds stop_on_failure shell_path report_path expected_failures can_start
       )).freeze
 
       state :root do
