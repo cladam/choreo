@@ -11,7 +11,7 @@ module Rouge
 
       # Keywords for blocks and declarations
       KEYWORD_DECLARATION = %w(
-        feature actors actor settings background scenario after test var env Test in
+        feature actors actor settings background scenario after test var env
       ).freeze
 
       # Keywords for test steps
@@ -21,7 +21,7 @@ module Rouge
 
       # Built-in actors and literal values
       BUILTIN_LITERAL = %w(
-        Web Terminal FileSystem System true false
+        Web Terminal FileSystem System Test in true false
       ).freeze
       
       # Terminal commands (actions and conditions)
