@@ -12,8 +12,7 @@ scenarios. This page breaks down those fundamental building blocks.
 ## The Anatomy of a `.chor` File
 
 Think of a `.chor` file as a script for a play. It has a main theme (**feature**) and a cast of characters (**actors**).
-The play is broken into scenes (**scenarios**), and each scene contains one or more specific sequences of action (*
-*tests**).
+The play is broken into scenes (**scenarios**), and each scene contains one or more specific sequences of action (**tests**).
 Finally, the `given`, `when`, `then` **steps** act as the stage directions and dialogue that describe the plot of each
 test.
 
@@ -48,12 +47,13 @@ feature "A short, descriptive name for the functionality"
 
 ## 2. Actors: The "Who"
 
-`actors` are the components or systems that will perform actions in your tests. Choreo has three built-in actors that
+`actors` are the components or systems that will perform actions in your tests. Choreo has four built-in actors that
 act as specialised backends:
 
 - **`Web`**: For making HTTP requests and testing APIs.
 - **`Terminal`**: For running shell commands and inspecting their output.
 - **`FileSystem`**: For creating, reading, and verifying files and directories.
+- **`System`**: For debugging, controlling test flow, and managing the test environment.
 
 You must declare which actors your feature will use at the top of the file.
 
