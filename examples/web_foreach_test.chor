@@ -19,7 +19,7 @@ background {
 var URL = "https://httpbin.io"
 var PRODUCTS = ["PROD-A", "PROD-B", "PROD-C"]
 
-scenario "GET data via httpbin REST API" {
+parallel scenario "GET data via httpbin REST API" {
 
     test GetInitialData "retrieve the current state of a resource" {
         given:

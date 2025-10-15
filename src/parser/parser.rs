@@ -494,13 +494,11 @@ pub fn _expand_foreach_blocks(
     //let mut expanded_tests = Vec::new();
 
     for item in &scenario.body {
-        println!("Extended scenario: {:?}\n", item);
         match item {
             ScenarioBodyItem::Test(test_case) => {
                 expanded_tests.push(test_case.clone());
             }
             ScenarioBodyItem::Foreach(foreach_block) => {
-                println!("Foreach Block: {}", &foreach_block.loop_variable);
                 let array_var_name = foreach_block
                     .array_variable
                     .trim_start_matches("${")
@@ -512,10 +510,6 @@ pub fn _expand_foreach_blocks(
                                 let mut loop_vars = variables.clone();
                                 loop_vars
                                     .insert(foreach_block.loop_variable.clone(), value.clone());
-                                println!(
-                                    "---\nLooping over: {} = {}\n---",
-                                    foreach_block.loop_variable, value
-                                );
 
                                 let substituted_test =
                                     substitute_variables_in_test_case(test_template, &loop_vars);
@@ -595,16 +589,16 @@ pub fn expand_foreach_blocks(
                     }
 
                     for template in &foreach_block.tests {
-                        let materialized = substitute_variables_in_test_case(template, &loop_scope);
+                        let materialised = substitute_variables_in_test_case(template, &loop_scope);
 
                         // Optional: ensure unique test names (in case template uses ${ITEM})
-                        let final_name = if expanded.iter().any(|t| t.name == materialized.name) {
-                            format!("{} ({})", materialized.name, loop_scope[&loop_var])
+                        let final_name = if expanded.iter().any(|t| t.name == materialised.name) {
+                            format!("{} ({})", materialised.name, loop_scope[&loop_var])
                         } else {
-                            materialized.name.clone()
+                            materialised.name.clone()
                         };
 
-                        let mut adjusted = materialized.clone();
+                        let mut adjusted = materialised.clone();
                         adjusted.name = final_name;
 
                         expanded.push(adjusted);
@@ -932,7 +926,7 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
         }
         Rule::response_body_equals_json => {
             let mut inner = inner_cond.into_inner();
-            println!("[Parser] response_body_equals_json inner: {:?}", inner);
+            //println!("[Parser] response_body_equals_json inner: {:?}", inner);
             let expected = inner.next().unwrap().as_str().trim_matches('"').to_string();
             let mut ignored = Vec::new();
 

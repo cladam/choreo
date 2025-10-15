@@ -41,7 +41,7 @@ pub fn check_all_conditions_met(
         );
         if verbose {
             println!(
-                "  [DEBUG] Checking {} condition: {:?} -> {}",
+                "  [DEBUG] Checking {} condition: {:#?} -> {}",
                 block_name, substituted_c, result
             );
         }

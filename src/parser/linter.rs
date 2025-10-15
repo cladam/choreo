@@ -854,7 +854,7 @@ impl Visitor for Linter {
     }
 
     fn visit_actor_def(&mut self, actors: &Vec<String>) {
-        const VALID_ACTORS: &[&str] = &["Web", "Terminal", "FileSystem"];
+        const VALID_ACTORS: &[&str] = &["Web", "Terminal", "System", "FileSystem"];
 
         let mut seen_actors = HashSet::new();
 

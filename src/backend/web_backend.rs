@@ -2,14 +2,48 @@ use crate::parser::ast::{Action, Condition, Value};
 use crate::parser::helpers::{substitute_string, substitute_variables_in_action};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-use ureq::http::StatusCode;
-use ureq::Agent;
+use std::fmt;
+use std::fmt::{Debug, Display};
+use ureq::http::{Response, StatusCode};
+use ureq::{Agent, Body};
+
+#[derive(Debug)]
+enum CompatResult {
+    Success(Response<Body>),
+    ClientError(Response<Body>),
+    ServerError(Response<Body>),
+    TransportError(ureq::Error),
+}
+
+impl Display for CompatResult {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CompatResult::Success(response) => {
+                write!(
+                    f,
+                    "HTTP request succeeded with status {}",
+                    response.status()
+                )
+            }
+            CompatResult::ClientError(response) => {
+                write!(f, "HTTP client error: {}", response.status())
+            }
+            CompatResult::ServerError(response) => {
+                write!(f, "HTTP server error: {}", response.status())
+            }
+            CompatResult::TransportError(error) => {
+                write!(f, "HTTP transport error: {}", error)
+            }
+        }
+    }
+}
 
 /// State of the last web request made.
 #[derive(Debug, Clone, Default)]
 pub struct LastResponse {
     pub status: StatusCode,
     pub body: String,
+    pub message: Option<String>,
     pub response_time_ms: u128,
 }
 
@@ -30,20 +64,20 @@ impl WebBackend {
         wb
     }
 
-    // Return a cloned map of current headers so caller can capture them
     pub fn get_headers(&self) -> HashMap<String, String> {
         // Adjust to match the actual internal representation (this assumes a HashMap field named headers)
         self.headers.clone()
     }
 
-    // Ensure you have a `set_header` method (used above). If it doesn't exist, implement it:
     pub fn set_header(&mut self, key: &str, value: &str) {
         self.headers.insert(key.to_string(), value.to_string());
     }
     /// Creates a new WebBackend with a persistent HTTP client.
     pub fn new() -> Self {
+        let config = Agent::config_builder().http_status_as_error(false).build();
+        let agent: Agent = config.into();
         Self {
-            agent: Agent::new_with_defaults(),
+            agent,
             headers: HashMap::new(),
             last_response: None,
         }
@@ -56,28 +90,43 @@ impl WebBackend {
         env_vars: &mut HashMap<String, String>,
         verbose: bool,
     ) -> bool {
+        self.last_response = None;
         let substituted_action = substitute_variables_in_action(action, env_vars);
-        match &substituted_action {
+        let start_time = std::time::Instant::now();
+        let result: Result<Response<Body>, ureq::Error> = match &substituted_action {
             Action::HttpSetHeader { key, value } => {
                 if verbose {
                     println!("[WEB_BACKEND] Setting HTTP header: {}: {}", key, value);
                 }
                 self.headers.insert(key.clone(), value.clone());
-                true
+
+                // This isn't a request but need to return a response
+                let response = Response::builder()
+                    .status(200)
+                    .body(Body::builder().data("choreo"));
+                Ok(response.expect("hmm"))
             }
             Action::HttpClearHeader { key } => {
                 if verbose {
                     println!("[WEB_BACKEND] Clearing HTTP header: {}", key);
                 }
                 self.headers.remove(&*key);
-                true
+                // This isn't a request but need to return a response
+                let response = Response::builder()
+                    .status(200)
+                    .body(Body::builder().data("choreo"));
+                Ok(response.expect("hmm"))
             }
             Action::HttpClearHeaders => {
                 if verbose {
                     println!("[WEB_BACKEND] Clearing all HTTP headers");
                 }
                 self.headers.clear();
-                true
+                // This isn't a request but need to return a response
+                let response = Response::builder()
+                    .status(200)
+                    .body(Body::builder().data("choreo"));
+                Ok(response.expect("hmm"))
             }
             Action::HttpSetCookie { key, value } => {
                 // Handle multiple cookies by appending to existing Cookie header
@@ -99,7 +148,11 @@ impl WebBackend {
                         self.headers.get("Cookie").unwrap_or(&"".to_string())
                     );
                 }
-                true
+                // This isn't a request but need to return a response
+                let response = Response::builder()
+                    .status(200)
+                    .body(Body::builder().data("choreo"));
+                Ok(response.expect("hmm"))
             }
             Action::HttpClearCookie { key } => {
                 if let Some(cookie_header) = self.headers.get("Cookie") {
@@ -124,330 +177,83 @@ impl WebBackend {
                 if verbose {
                     println!("[WEB_BACKEND] Cleared cookie: {}", key);
                 }
-                true
+                // This isn't a request but need to return a response
+                let response = Response::builder()
+                    .status(200)
+                    .body(Body::builder().data("choreo"));
+                Ok(response.expect("hmm"))
             }
             Action::HttpClearCookies => {
                 if verbose {
                     println!("[WEB_BACKEND] Clearing all HTTP cookies");
                 }
                 self.headers.remove("Cookie");
-                true
+                // This isn't a request but need to return a response
+                let response = Response::builder()
+                    .status(200)
+                    .body(Body::builder().data("choreo"));
+                Ok(response.expect("hmm"))
             }
             Action::HttpGet { url, .. } => {
                 if verbose {
                     println!("[WEB_BACKEND] Performing HTTP GET to: {}", url);
                 }
 
-                let start_time = std::time::Instant::now();
                 let mut request = self.agent.get(url);
-                // Add any headers that have been set.
-                for (key, value) in &self.headers {
-                    request = request.header(key, value);
-                }
-                let response_result = request.call();
-                let response_time_ms = start_time.elapsed().as_millis();
-
-                match response_result {
-                    Ok(response) => {
-                        let status = response.status();
-                        {
-                            let mut body_reader = response.into_body();
-                            match body_reader.read_to_string() {
-                                Ok(res) => {
-                                    if verbose {
-                                        println!("[WEB_BACKEND] Received response body: {}", res);
-                                    }
-                                    self.last_response = Some(LastResponse {
-                                        status,
-                                        body: res.clone(),
-                                        response_time_ms,
-                                    });
-                                    res
-                                }
-                                Err(e) => {
-                                    let error_message = format!(
-                                        "[WEB_BACKEND] Failed to read response body: {}",
-                                        e
-                                    );
-                                    self.last_response = Some(LastResponse {
-                                        status,
-                                        body: error_message.clone(),
-                                        response_time_ms,
-                                    });
-                                    println!("{}", error_message);
-                                    error_message
-                                }
-                            }
-                        };
-                        if verbose {
-                            println!("[WEB_BACKEND] Received response status: {}", status);
-                        }
-
-                        true
-                    }
-                    Err(e) => match &e {
-                        ureq::Error::StatusCode(code) => {
-                            if verbose {
-                                println!(
-                                    "[WEB_BACKEND] HTTP request returned error status: {}",
-                                    code
-                                );
-                            }
-                            self.last_response = Some(LastResponse {
-                                status: StatusCode::from_u16(*code)
-                                    .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-                                body: format!("HTTP error with status code: {}", code),
-                                response_time_ms,
-                            });
-                            true
-                        }
-                        _ => {
-                            let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
-                            if verbose {
-                                println!("{}", error_message);
-                            }
-                            self.last_response = Some(LastResponse {
-                                status: StatusCode::INTERNAL_SERVER_ERROR,
-                                body: error_message,
-                                response_time_ms,
-                            });
-                            false
-                        }
-                    },
-                }
-            }
-            Action::HttpPost { url, body } => {
-                if verbose {
-                    println!("[WEB_BACKEND] Performing HTTP POST to: {}", url);
-                }
-
-                if verbose {
-                    println!("[WEB_BACKEND] POST URL: {}", url);
-                    println!("[WEB_BACKEND] POST body: {}", body);
-                }
-
-                let start_time = std::time::Instant::now();
-                let mut request = self.agent.post(url);
-
-                // Apply headers
-                for (key, value) in &self.headers {
-                    request = request.header(key, value);
-                }
-
-                // Send request and handle response
-                match request.send(body) {
-                    Ok(response) => {
-                        let duration = start_time.elapsed();
-                        let status = response.status();
-                        self.last_response =
-                            Some(response.into_body().read_to_string().map_or_else(
-                                |e| LastResponse {
-                                    status: StatusCode::INTERNAL_SERVER_ERROR,
-                                    body: format!("Failed to read response body: {}", e),
-                                    response_time_ms: duration.as_millis(),
-                                },
-                                |body| LastResponse {
-                                    status,
-                                    body,
-                                    response_time_ms: duration.as_millis(),
-                                },
-                            ));
-
-                        if verbose {
-                            if let Some(ref resp) = self.last_response {
-                                println!(
-                                    "[WEB_BACKEND] POST completed with {} in {:.2}ms",
-                                    resp.status,
-                                    duration.as_millis()
-                                );
-                            }
-                        }
-                        true // Successfully handled
-                    }
-                    Err(ureq::Error::StatusCode(code)) => {
-                        // HTTP error status codes should still be treated as valid responses
-                        let duration = start_time.elapsed();
-                        let status =
-                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-
-                        self.last_response = Some(LastResponse {
-                            status,
-                            body: format!("HTTP error with status code: {}", code),
-                            response_time_ms: duration.as_millis(),
-                        });
-
-                        if verbose {
-                            println!(
-                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
-                                code,
-                                duration.as_millis()
-                            );
-                        }
-                        true // Still return true as the request was made successfully
-                    }
-                    Err(e) => {
-                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
-                        if verbose {
-                            println!("{}", error_message);
-                        }
-                        self.last_response = Some(LastResponse {
-                            status: StatusCode::INTERNAL_SERVER_ERROR,
-                            body: error_message,
-                            response_time_ms: 0,
-                        });
-                        false
-                    }
-                }
-            }
-            Action::HttpPut { url, body } => {
-                if verbose {
-                    println!("  [WEB] PUT {}", url);
-                }
-
-                let start_time = std::time::Instant::now();
-                let mut request = self.agent.put(url);
-
-                // Add headers and cookies (same as POST)
-                for (key, value) in &self.headers {
-                    request = request.header(key, value);
-                }
-
-                match request.send(body) {
-                    Ok(response) => {
-                        let duration = start_time.elapsed();
-                        let status = response.status();
-                        let body = response
-                            .into_body()
-                            .read_to_string()
-                            .unwrap_or_else(|e| format!("Failed to read response body: {}", e));
-                        if verbose {
-                            println!(
-                                "  [WEB] PUT completed with status {} in {}ms",
-                                status,
-                                duration.as_millis()
-                            );
-                            println!("  [WEB] Response body: {}", body);
-                        }
-                        self.last_response = Some(LastResponse {
-                            status,
-                            body,
-                            response_time_ms: duration.as_millis(),
-                        });
-                        true
-                    }
-                    Err(ureq::Error::StatusCode(code)) => {
-                        // HTTP error status codes should still be treated as valid responses
-                        let duration = start_time.elapsed();
-                        let status =
-                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-
-                        self.last_response = Some(LastResponse {
-                            status,
-                            body: format!("HTTP error with status code: {}", code),
-                            response_time_ms: duration.as_millis(),
-                        });
-
-                        if verbose {
-                            println!(
-                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
-                                code,
-                                duration.as_millis()
-                            );
-                        }
-                        true // Still return true as the request was made successfully
-                    }
-                    Err(e) => {
-                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
-                        if verbose {
-                            println!("{}", error_message);
-                        }
-                        self.last_response = Some(LastResponse {
-                            status: StatusCode::INTERNAL_SERVER_ERROR,
-                            body: error_message,
-                            response_time_ms: 0,
-                        });
-                        false
-                    }
-                }
-            }
-            Action::HttpPatch { url, body } => {
-                if verbose {
-                    println!("[WEB_BACKEND] Performing HTTP PATCH to: {}", url);
-                }
-
-                let start_time = std::time::Instant::now();
-                let mut request = self.agent.patch(url);
 
                 // Add headers
                 for (key, value) in &self.headers {
                     request = request.header(key, value);
                 }
 
-                match request.send(body) {
-                    Ok(response) => {
-                        let duration = start_time.elapsed();
-                        let status = response.status();
-                        let body = response
-                            .into_body()
-                            .read_to_string()
-                            .unwrap_or_else(|e| format!("Failed to read response body: {}", e));
-
-                        if verbose {
-                            println!(
-                                "[WEB_BACKEND] PATCH completed with status {} in {}ms",
-                                status,
-                                duration.as_millis()
-                            );
-                        }
-
-                        self.last_response = Some(LastResponse {
-                            status,
-                            body,
-                            response_time_ms: duration.as_millis(),
-                        });
-                        true
-                    }
-                    Err(ureq::Error::StatusCode(code)) => {
-                        // HTTP error status codes should still be treated as valid responses
-                        let duration = start_time.elapsed();
-                        let status =
-                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-
-                        self.last_response = Some(LastResponse {
-                            status,
-                            body: format!("HTTP error with status code: {}", code),
-                            response_time_ms: duration.as_millis(),
-                        });
-
-                        if verbose {
-                            println!(
-                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
-                                code,
-                                duration.as_millis()
-                            );
-                        }
-                        true // Still return true as the request was made successfully
-                    }
-                    Err(e) => {
-                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
-                        if verbose {
-                            println!("{}", error_message);
-                        }
-                        self.last_response = Some(LastResponse {
-                            status: StatusCode::INTERNAL_SERVER_ERROR,
-                            body: error_message,
-                            response_time_ms: 0,
-                        });
-                        false
-                    }
+                request.call()
+            }
+            Action::HttpPost { url, body } => {
+                if verbose {
+                    println!("[WEB_BACKEND] Performing HTTP POST to: {}", url);
                 }
+
+                let mut request = self.agent.post(url);
+
+                // Add headers
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+
+                request.send(body)
+            }
+            Action::HttpPut { url, body } => {
+                if verbose {
+                    println!("[WEB_BACKEND] Performing HTTP PUT to: {}", url);
+                }
+
+                let mut request = self.agent.put(url);
+
+                // Add headers
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+
+                request.send(body)
+            }
+            Action::HttpPatch { url, body } => {
+                if verbose {
+                    println!("[WEB_BACKEND] Performing HTTP PATCH to: {}", url);
+                }
+
+                let mut request = self.agent.patch(url);
+
+                for (key, value) in &self.headers {
+                    request = request.header(key, value);
+                }
+
+                request.send(body)
             }
             Action::HttpDelete { url } => {
                 if verbose {
                     println!("[WEB_BACKEND] Performing HTTP DELETE to: {}", url);
                 }
 
-                let start_time = std::time::Instant::now();
                 let mut request = self.agent.delete(url);
 
                 // Add headers
@@ -455,67 +261,87 @@ impl WebBackend {
                     request = request.header(key, value);
                 }
 
-                match request.call() {
-                    Ok(response) => {
-                        let duration = start_time.elapsed();
-                        let status = response.status();
-                        let body = response
-                            .into_body()
-                            .read_to_string()
-                            .unwrap_or_else(|e| format!("Failed to read response body: {}", e));
+                request.call()
+            }
+            _ => return false,
+        };
 
-                        if verbose {
-                            println!(
-                                "[WEB_BACKEND] DELETE completed with status {} in {}ms",
-                                status,
-                                duration.as_millis()
-                            );
-                        }
-
-                        self.last_response = Some(LastResponse {
-                            status,
-                            body,
-                            response_time_ms: duration.as_millis(),
-                        });
-                        true
-                    }
-                    Err(ureq::Error::StatusCode(code)) => {
-                        // HTTP error status codes should still be treated as valid responses
-                        let duration = start_time.elapsed();
-                        let status =
-                            StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-
-                        self.last_response = Some(LastResponse {
-                            status,
-                            body: format!("HTTP error with status code: {}", code),
-                            response_time_ms: duration.as_millis(),
-                        });
-
-                        if verbose {
-                            println!(
-                                "[WEB_BACKEND] POST completed with error status {} in {}ms",
-                                code,
-                                duration.as_millis()
-                            );
-                        }
-                        true // Still return true as the request was made successfully
-                    }
-                    Err(e) => {
-                        let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
-                        if verbose {
-                            println!("{}", error_message);
-                        }
-                        self.last_response = Some(LastResponse {
-                            status: StatusCode::INTERNAL_SERVER_ERROR,
-                            body: error_message,
-                            response_time_ms: 0,
-                        });
-                        false
-                    }
+        let compat_result = match result {
+            Ok(response) => {
+                let status = response.status();
+                match status.as_u16() {
+                    200..=299 => CompatResult::Success(response),
+                    400..=499 => CompatResult::ClientError(response),
+                    500..=599 => CompatResult::ServerError(response),
+                    _ => CompatResult::Success(response), // Handle other cases like redirects if needed
                 }
             }
-            _ => false,
+            Err(e) => CompatResult::TransportError(e),
+        };
+
+        let mut process_response = |response: Response<Body>, message: String| {
+            let status = response.status();
+            let content_type = response
+                .headers()
+                .get("content-type")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("")
+                .to_string();
+
+            let body = response
+                .into_body()
+                .read_to_string()
+                .unwrap_or_else(|e| format!("[choreo] Failed to read response body: {}", e));
+
+            let body_json = if content_type.contains("application/json") {
+                // Pretty print JSON for better readability
+                serde_json::from_str::<serde_json::Value>(&body)
+                    .map(|v| serde_json::to_string_pretty(&v).unwrap_or(body.clone()))
+                    .unwrap_or(body.clone())
+            } else {
+                body
+            };
+
+            let response_time_ms = start_time.elapsed().as_millis();
+            self.last_response = Some(LastResponse {
+                status,
+                body: body_json.clone(),
+                message: Some(message.to_string()),
+                response_time_ms,
+            });
+        };
+
+        match compat_result {
+            CompatResult::Success(response) => {
+                // 200 success
+                let status = response.status();
+                let message = format!("HTTP request succeeded with status {}", status);
+                process_response(response, message);
+            }
+            CompatResult::ClientError(response) => {
+                // client error (4xx)
+                let status = response.status();
+                let message = format!("HTTP client error: {}", status);
+                process_response(response, message);
+            }
+            CompatResult::ServerError(response) => {
+                // server error (5xx)
+                let status = response.status();
+                let message = format!("HTTP server error: {}", status);
+                process_response(response, message);
+            }
+            CompatResult::TransportError(e) => {
+                // Transport-level errors.
+                let error_message = format!("[WEB_BACKEND] HTTP request failed: {}", e);
+                self.last_response = Some(LastResponse {
+                    status: StatusCode::from_u16(599).unwrap(),
+                    body: error_message.clone(),
+                    response_time_ms: 0,
+                    message: Some(error_message),
+                });
+            }
         }
+        true
     }
 
     /// Checks a single web-related condition against the last response.
@@ -583,37 +409,67 @@ impl WebBackend {
                 false
             }
             Condition::ResponseBodyEqualsJson { expected, ignored } => {
+                if self.last_response.is_none() {
+                    if verbose {
+                        println!("[WEB_BACKEND] No response available for JSON comparison");
+                    }
+                    return false;
+                }
                 // Substitute variables in the expected JSON string
                 let substituted_expected = substitute_string(expected, variables);
                 // Parse both the response body and expected JSON for comparison
                 match (
                     serde_json::from_str::<JsonValue>(&last_response.body),
-                    serde_json::from_str::<JsonValue>(&substituted_expected),
+                    serde_json::from_str::<JsonValue>(&expected),
                 ) {
-                    (Ok(mut actual), Ok(expected_json)) => {
+                    (Ok(mut actual), Ok(mut expected_json)) => {
                         if verbose {
                             println!(
                                 "[WEB_BACKEND] Comparing JSON response body with expected JSON"
                             );
-                            //println!("[WEB_BACKEND] Actual: {}", actual);
-                            //println!("[WEB_BACKEND] Expected: {}", expected_json);
                         }
                         // Remove ignored fields from both actual and expected JSON values
                         for field in ignored {
                             remove_json_field_recursive(&mut actual, field);
-                            //remove_json_field_recursive(&mut expected_json, field);
+                            remove_json_field_recursive(&mut expected_json, field);
                         }
-                        actual == expected_json
+
+                        // Normalise both JSON values by serializing and re-parsing
+                        // for consistent field ordering and formatting. Apparently many JVM libraries do unordered json....
+                        let actual_normalised = serde_json::to_string(&actual)
+                            .and_then(|s| serde_json::from_str::<JsonValue>(&s));
+                        let expected_normalised = serde_json::to_string(&expected_json)
+                            .and_then(|s| serde_json::from_str::<JsonValue>(&s));
+
+                        let result = match (actual_normalised, expected_normalised) {
+                            (Ok(actual_norm), Ok(expected_norm)) => actual_norm == expected_norm,
+                            _ => actual == expected_json, // Fallback to direct comparison
+                        };
+
+                        if !result && verbose {
+                            println!("[WEB_BACKEND] JSON comparison failed");
+                            println!(
+                                "[WEB_BACKEND] Actual (after ignoring fields): {}",
+                                serde_json::to_string_pretty(&actual).unwrap_or_default()
+                            );
+                            println!(
+                                "[WEB_BACKEND] Expected (after ignoring fields): {}",
+                                serde_json::to_string_pretty(&expected_json).unwrap_or_default()
+                            );
+                        }
+                        result
                     }
                     (Err(e), _) => {
                         if verbose {
                             println!("[WEB_BACKEND] Failed to parse response body as JSON: {}", e);
+                            println!("[WEB_BACKEND] Response body: {}", last_response.body);
                         }
                         false
                     }
                     (_, Err(e)) => {
                         if verbose {
                             println!("[WEB_BACKEND] Failed to parse expected JSON: {}", e);
+                            println!("[WEB_BACKEND] Expected JSON: {}", substituted_expected);
                         }
                         false
                     }
