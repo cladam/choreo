@@ -1,6 +1,6 @@
 [package]
 name = "choreo"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Claes Adamsson <claes.adamsson@gmail.com>"]
 homepage = "https://cladam.github.io/choreo/"
 repository = "https://github.com/cladam/choreo"
@@ -16,7 +16,7 @@ pest = "2.8.3"
 pest_derive = "2.8.3"
 strip-ansi-escapes = "0.2.1"
 terminal_size = "0.4.3"
-clap = { version = "4.5.48", features = ["derive"] }
+clap = { version = "4.5.49", features = ["derive"] }
 colored = "3.0.0"
 uuid = { version = "1.18.1", features = ["v4"] }
 thiserror = "2.0.17"
@@ -28,7 +28,7 @@ ureq = { version = "3.1.2", features = ["json", "charset"] }
 chrono = { version = "0.4.42", features = ["serde"] }
 portable-pty = "0.9.0"
 rayon = "1.11.0"
-regex = "1.12.1"
+regex = "1.12.2"
 itertools = "0.14.0"
 self_update = "0.42.0"
 [target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
