@@ -56,7 +56,6 @@ background {
     Web set_header "User-Agent" "choreo-test-runner/1.0"
     Web set_header "Content-Type" "application/json"
     Web set_header "x-legal-company" "${LEGAL_COMPANY}"
-    #Web set_header "x-flow-id" "${UUID}" # This should be generated
 }
 
 # This scenario corresponds to the first one in the .feature file.
