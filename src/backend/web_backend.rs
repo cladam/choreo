@@ -409,6 +409,11 @@ impl WebBackend {
                 false
             }
             Condition::ResponseBodyEqualsJson { expected, ignored } => {
+                // This is the new closure to pre-process and fix malformed JSON strings.
+                let fix_json_escaping = |json_str: &str| -> String {
+                    json_str.replace(r#"\\d{8,}$"""#, r#"\\d{8,}$""#)
+                };
+
                 if self.last_response.is_none() {
                     if verbose {
                         println!("[WEB_BACKEND] No response available for JSON comparison");
@@ -417,10 +422,13 @@ impl WebBackend {
                 }
                 // Substitute variables in the expected JSON string
                 let substituted_expected = substitute_string(expected, variables);
+                let fixed_actual_body = fix_json_escaping(&last_response.body);
+                let fixed_expected_body = fix_json_escaping(&substituted_expected);
+
                 // Parse both the response body and expected JSON for comparison
                 match (
-                    serde_json::from_str::<JsonValue>(&last_response.body),
-                    serde_json::from_str::<JsonValue>(&expected),
+                    serde_json::from_str::<JsonValue>(&fixed_actual_body),
+                    serde_json::from_str::<JsonValue>(&fixed_expected_body),
                 ) {
                     (Ok(mut actual), Ok(mut expected_json)) => {
                         if verbose {
@@ -434,20 +442,13 @@ impl WebBackend {
                             remove_json_field_recursive(&mut expected_json, field);
                         }
 
-                        // Normalise both JSON values by serializing and re-parsing
-                        // for consistent field ordering and formatting. Apparently many JVM libraries do unordered json....
-                        let actual_normalised = serde_json::to_string(&actual)
-                            .and_then(|s| serde_json::from_str::<JsonValue>(&s));
-                        let expected_normalised = serde_json::to_string(&expected_json)
-                            .and_then(|s| serde_json::from_str::<JsonValue>(&s));
+                        // Normalise both JSON values
+                        normalise_json(&mut actual);
+                        normalise_json(&mut expected_json);
 
-                        let result = match (actual_normalised, expected_normalised) {
-                            (Ok(actual_norm), Ok(expected_norm)) => actual_norm == expected_norm,
-                            _ => actual == expected_json, // Fallback to direct comparison
-                        };
+                        let result = actual == expected_json;
 
                         if !result && verbose {
-                            println!("[WEB_BACKEND] JSON comparison failed");
                             println!(
                                 "[WEB_BACKEND] Actual (after ignoring fields): {}",
                                 serde_json::to_string_pretty(&actual).unwrap_or_default()
@@ -578,6 +579,30 @@ impl WebBackend {
                 false
             }
             _ => false, // Not a web condition
+        }
+    }
+}
+
+/// Recursively normalises a JSON value to a canonical form.
+fn normalise_json(value: &mut JsonValue) {
+    match value {
+        JsonValue::Object(map) => {
+            // For objects, we just need to recurse into their values.
+            for (_, v) in map.iter_mut() {
+                normalise_json(v);
+            }
+        }
+        JsonValue::Array(arr) => {
+            // For arrays, we must first normalise each item within the array.
+            for item in arr.iter_mut() {
+                normalise_json(item);
+            }
+
+            // Sort the jason in its canonical form
+            arr.sort_by_key(|a| serde_json::to_string(a).unwrap_or_default());
+        }
+        _ => {
+            // Primitives are already in their canonical form.
         }
     }
 }

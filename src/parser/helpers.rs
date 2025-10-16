@@ -4,7 +4,6 @@ use crate::backend::web_backend::WebBackend;
 use crate::parser::ast::{
     Action, Condition, GivenStep, StateCondition, TestCase, TestState, Value,
 };
-use crate::parser::parser::unescape_string;
 use jsonpath_lib::selector;
 use std::collections::HashMap;
 use strip_ansi_escapes::strip;
@@ -39,12 +38,12 @@ pub fn check_all_conditions_met(
             web_backend,
             verbose,
         );
-        if verbose {
-            println!(
-                "  [DEBUG] Checking {} condition: {:#?} -> {}",
-                block_name, substituted_c, result
-            );
-        }
+        // if verbose {
+        //     println!(
+        //         "  [DEBUG] Checking {} condition: {:?} -> {}",
+        //         block_name, substituted_c, result
+        //     );
+        // }
         result
     })
 }
@@ -309,8 +308,7 @@ pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> Stri
         })
         .to_string();
 
-    // Unescape the final result to handle escaped characters
-    unescape_string(&result)
+    result
 }
 
 /// Creates a new Condition with its string values substituted from the state map.
