@@ -320,7 +320,7 @@ scenario "Adding multiple items to the cart" {
 
         # 2. A test block is defined inside. The loop variable `ITEM`
         #    is used to create a unique and descriptive test name.
-        test AddToCart "Add ${ITEM} to cart" {
+        test "AddToCart_${ITEM}" "Add ${ITEM} to cart" {
             given:
                 Test can_start
                 System log "Adding item: ${ITEM}"
@@ -374,9 +374,9 @@ This is the reference for all available commands that can be used within the `te
 | `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal run` command was empty.              |
 | `Terminal stderr_is_empty`                 | Passes if the stderr from the last `Terminal run` command was empty.              |
 | `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal run` command contains the substring. |
-| `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `runs` command starts with the string.   |
-| `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `runs` command ends with the string.     |
-| `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `runs` command is an exact match.        |
+| `Terminal output_starts_with "..."`        | Passes if the trimmed stdout of the last `run` command starts with the string.    |
+| `Terminal output_ends_with "..."`          | Passes if the trimmed stdout of the last `run` command ends with the string.      |
+| `Terminal output_equals "..."`             | Passes if the trimmed stdout of the last `run` command is an exact match.         |
 | `Terminal output_matches "..."`            | Passes if the combined stdout/stderr stream from the PTY matches the regex.       |
 | `Terminal output_is_valid_json`            | Passes if the combined stdout/stderr stream from the PTY is valid JSON.           |
 | `Terminal json_output has_path "..."`      | Passes if the JSON output has the specified JSON path.                            |
@@ -443,7 +443,7 @@ This is the reference for all available commands that can be used within the `te
 | `Web response_status is_in [num, num, num]`    | Passes if the last HTTP response status code is in the specified list.               |
 | `Web response_time is_below 1s/200ms`          | Passes if the last HTTP response was received in under the specified time.           |
 | `Web response_body_contains "..."`             | Passes if the last HTTP response body contains the specified substring.              |
-| `Web response_body_matches "..." [as JSON]`    | Passes if the last HTTP response body matches the specified regex.                   |
+| `Web response_body_matches "..." [as "..."]`   | Passes if the last HTTP response body matches the specified regex.                   |
 | `Web response_body_equals_json "..."`          | Passes if the last HTTP response body matches a json string.                         |
 | `Web json_body has_path "..."`                 | Passes if the last HTTP response body (as JSON) has the specified JSON path.         |
 | `Web json_path at "..." equals <value>`        | Passes if the value at the specified JSON path equals the given value.               |
