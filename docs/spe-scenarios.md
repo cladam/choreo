@@ -5,8 +5,31 @@ title: SPE BDD Scenarios
 
 # Translated G1.F1.cart.feature
 
-Here is a translated Gherkin`.feature` file. Not all scenarios are translated but the majority to show that `choreo` has
+Here is a translated Gherkin`.feature` file. Not all scenarios are translated but the majority is to show the fetures of
+`choreo` and that it has
 parity.
+
+### Gherkin
+
+```gherkin
+@parallel
+Scenario: G1-F1-S02 Test private cart with only goods that has regular sales price
+Given that cart is valid for "G1-F1-S02" to execute "step1"
+#Step 1 : Request without provide single view flag
+When request is sent to SPE for "G1-F1-S02"
+Then response of scenario "G1-F1-S02" must have 200 statuscode
+And response of step "step1" must match with the expected result
+#Step 2 : Request having provide single view flag as true
+When request sent to SPE for step "step2"
+Then response of scenario "G1-F1-S02" must have 200 statuscode
+And response of step "step2" must match with the expected result
+#Step 3 : Request having provide single view flag as false
+When request sent to SPE for step "step3"
+Then response of scenario "G1-F1-S02" must have 200 statuscode
+And response of step "step3" must match with the expected result
+```
+
+### `choreo` DSL as a `.chor` file
 
 ```choreo
 feature "G1-F1 - Cart Scenarios"
