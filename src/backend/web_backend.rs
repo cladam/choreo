@@ -370,8 +370,9 @@ impl WebBackend {
             }
             Condition::ResponseTimeIsBelow { duration } => {
                 if let Some(last_response) = &self.last_response {
+                    // `duration` is expected in seconds (float). Compare correctly.
                     let actual_time_seconds = last_response.response_time_ms as f32 / 1000.0;
-                    let result = duration > &actual_time_seconds;
+                    let result = actual_time_seconds < *duration;
                     if verbose {
                         println!(
                             "[WEB_BACKEND] Response time: {}ms ({:.3}s), expected below: {:.3}s -> {}",
@@ -414,12 +415,6 @@ impl WebBackend {
                     json_str.replace(r#"\\d{8,}$"""#, r#"\\d{8,}$""#)
                 };
 
-                if self.last_response.is_none() {
-                    if verbose {
-                        println!("[WEB_BACKEND] No response available for JSON comparison");
-                    }
-                    return false;
-                }
                 // Substitute variables in the expected JSON string
                 let substituted_expected = substitute_string(expected, variables);
                 let fixed_actual_body = fix_json_escaping(&last_response.body);
@@ -446,7 +441,7 @@ impl WebBackend {
                         normalise_json(&mut actual);
                         normalise_json(&mut expected_json);
 
-                        let result = actual == expected_json;
+                        let result = json_values_equal(&actual, &expected_json);
 
                         if !result && verbose {
                             println!(
@@ -540,7 +535,14 @@ impl WebBackend {
                         // Convert the serde_json::Value to our AST Value for comparison.
                         let our_value = match actual_value {
                             JsonValue::String(s) => Value::String(s.clone()),
-                            JsonValue::Number(n) => Value::Number(n.as_f64().unwrap_or(0.0) as i32),
+                            JsonValue::Number(n) => {
+                                // Prefer integer if available, otherwise fall back to float -> i32
+                                if let Some(i) = n.as_i64() {
+                                    Value::Number(i as i32)
+                                } else {
+                                    Value::Number(n.as_f64().unwrap_or(0.0) as i32)
+                                }
+                            }
                             JsonValue::Bool(b) => Value::Bool(*b),
                             // Add other type conversions as needed.
                             // I'm lacking Object, Array abd null - TODO
@@ -622,5 +624,51 @@ fn remove_json_field_recursive(value: &mut JsonValue, field_to_remove: &str) {
             }
         }
         _ => {}
+    }
+}
+
+fn numbers_equal(a: &serde_json::Number, b: &serde_json::Number) -> bool {
+    // Fast path: identical representation
+    if a == b {
+        return true;
+    }
+    // Compare as f64 with small epsilon to allow int vs float equality (23 == 23.0)
+    match (a.as_f64(), b.as_f64()) {
+        (Some(af), Some(bf)) => (af - bf).abs() < 1e-9,
+        _ => false,
+    }
+}
+
+fn json_values_equal(a: &JsonValue, b: &JsonValue) -> bool {
+    match (a, b) {
+        (JsonValue::Null, JsonValue::Null) => true,
+        (JsonValue::Bool(x), JsonValue::Bool(y)) => x == y,
+        (JsonValue::String(x), JsonValue::String(y)) => x == y,
+        (JsonValue::Number(x), JsonValue::Number(y)) => numbers_equal(x, y),
+        (JsonValue::Array(ax), JsonValue::Array(bx)) => {
+            if ax.len() != bx.len() {
+                return false;
+            }
+            for (av, bv) in ax.iter().zip(bx.iter()) {
+                if !json_values_equal(av, bv) {
+                    return false;
+                }
+            }
+            true
+        }
+        (JsonValue::Object(am), JsonValue::Object(bm)) => {
+            if am.len() != bm.len() {
+                return false;
+            }
+            for (k, av) in am {
+                match bm.get(k) {
+                    Some(bv) if json_values_equal(av, bv) => continue,
+                    _ => return false,
+                }
+            }
+            true
+        }
+        // allow equality between integer-like string and number? keep strict for other mismatches
+        _ => false,
     }
 }

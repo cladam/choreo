@@ -48,7 +48,7 @@ foreach_block = { "foreach" ~ identifier ~ "in" ~ variable_ref ~ "{" ~ test+ ~ "
 variable_ref = { "${" ~ identifier ~ "}" }
 
 // Defining a test case.
-test                              = { "test" ~ identifier ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
+test                              = { "test" ~ (identifier | string | variable_ref) ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
 given_block                       = { "given:" ~ (action | condition)* }
 when_block                        = { "when:"  ~ action+ }
 then_block                        = { "then:"  ~ condition+ }
