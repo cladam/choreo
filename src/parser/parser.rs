@@ -1,5 +1,3 @@
-// parser.rs
-use crate::error::AppError;
 use crate::parser::ast::{
     Action, Condition, ForeachBlock, GivenStep, ReportFormat, Scenario, ScenarioBodyItem,
     ScenarioSpan, SettingSpan, Span, StateCondition, Statement, TestCase, TestCaseSpan, TestSuite,
@@ -133,8 +131,10 @@ fn build_settings_def(pair: Pair<Rule>) -> Statement {
             }
             "stop_on_failure" => {
                 setting_spans.stop_on_failure_span = Some(span_info);
-                if value_pair.as_rule() == Rule::binary_op {
-                    settings.stop_on_failure = value_pair.as_str().parse().unwrap();
+
+                if let Value::Bool(b) = build_value(value_pair) {
+                    println!("Value: {}", b);
+                    settings.stop_on_failure = Some(b).is_some();
                 } else {
                     panic!("'stop_on_failure' setting must be a boolean (true/false)");
                 }
@@ -397,66 +397,96 @@ pub fn expand_scenario_foreach_blocks(
                 expanded_body.push(ScenarioBodyItem::Test(test.clone()));
             }
             ScenarioBodyItem::Foreach(foreach_block) => {
-                // Get the array variable value from environment
+                // attempt to get the array variable value from environment
                 let array_var_name = &foreach_block.array_variable;
-                let array_value = env_vars
-                    .get(array_var_name)
-                    .ok_or_else(|| AppError::EnvVarNotFound(array_var_name.clone()));
+                let array_value_opt = env_vars.get(array_var_name);
 
-                // Parse the JSON array
-                if let Ok(items) =
-                    serde_json::from_str::<Vec<String>>(&array_value.expect("failed to parse json"))
-                {
-                    for item_value in items {
-                        // Create a new environment with the loop variable
-                        let mut loop_env = env_vars.clone();
-                        loop_env.insert(foreach_block.loop_variable.clone(), item_value.clone());
-                        loop_env.insert(
-                            format!("${{{}}}", &foreach_block.loop_variable),
-                            item_value.clone(),
-                        );
+                // if env var missing, keep the foreach block unchanged
+                let array_value_str = match array_value_opt {
+                    Some(v) => v,
+                    None => {
+                        expanded_body.push(ScenarioBodyItem::Foreach(foreach_block.clone()));
+                        continue;
+                    }
+                };
 
-                        // Expand each test in the foreach block
-                        for test in &foreach_block.tests {
-                            let mut expanded_test = test.clone();
-
-                            // Substitute variables in test name and description
-                            expanded_test.name = substitute_string(&test.name, &loop_env);
-                            expanded_test.description =
-                                substitute_string(&test.description, &loop_env);
-
-                            // Substitute variables in given steps
-                            expanded_test.given = test
-                                .given
-                                .iter()
-                                .map(|step| match step {
-                                    GivenStep::Action(action) => GivenStep::Action(
-                                        substitute_variables_in_action(action, &loop_env),
-                                    ),
-                                    GivenStep::Condition(condition) => GivenStep::Condition(
-                                        substitute_variables_in_condition(condition, &loop_env),
-                                    ),
+                // Try parsing as JSON first. If it's an array use it, if single JSON value wrap it,
+                // otherwise fall back to splitting on commas into strings.
+                let items_json: Vec<serde_json::Value> =
+                    match serde_json::from_str::<serde_json::Value>(array_value_str) {
+                        Ok(serde_json::Value::Array(arr)) => arr,
+                        Ok(single) => vec![single],
+                        Err(_) => {
+                            // fallback: comma-separated string values
+                            array_value_str
+                                .split(',')
+                                .map(|s| serde_json::Value::String(s.trim().to_string()))
+                                .filter(|v| match v {
+                                    serde_json::Value::String(s) => !s.is_empty(),
+                                    _ => true,
                                 })
-                                .collect();
-
-                            // Substitute variables in when actions
-                            expanded_test.when = test
-                                .when
-                                .iter()
-                                .map(|action| substitute_variables_in_action(action, &loop_env))
-                                .collect();
-
-                            // Substitute variables in then conditions
-                            expanded_test.then = test
-                                .then
-                                .iter()
-                                .map(|condition| {
-                                    substitute_variables_in_condition(condition, &loop_env)
-                                })
-                                .collect();
-
-                            expanded_body.push(ScenarioBodyItem::Test(expanded_test));
+                                .collect()
                         }
+                    };
+
+                // For each item element create loop_env and expand tests
+                for element in items_json {
+                    // Convert element to a string suitable for substitution
+                    let item_value_str = match &element {
+                        serde_json::Value::String(s) => s.clone(),
+                        serde_json::Value::Number(n) => n.to_string(),
+                        serde_json::Value::Bool(b) => b.to_string(),
+                        serde_json::Value::Null => "null".to_string(),
+                        other => serde_json::to_string(other).unwrap_or_else(|_| other.to_string()),
+                    };
+
+                    // Create a new environment with the loop variable
+                    let mut loop_env = env_vars.clone();
+                    loop_env.insert(foreach_block.loop_variable.clone(), item_value_str.clone());
+                    loop_env.insert(
+                        format!("${{{}}}", &foreach_block.loop_variable),
+                        item_value_str.clone(),
+                    );
+
+                    // Expand each test in the foreach block
+                    for test in &foreach_block.tests {
+                        let mut expanded_test = test.clone();
+
+                        // Substitute variables in test name and description
+                        expanded_test.name = substitute_string(&test.name, &loop_env);
+                        expanded_test.description = substitute_string(&test.description, &loop_env);
+
+                        // Substitute variables in given steps
+                        expanded_test.given = test
+                            .given
+                            .iter()
+                            .map(|step| match step {
+                                GivenStep::Action(action) => GivenStep::Action(
+                                    substitute_variables_in_action(action, &loop_env),
+                                ),
+                                GivenStep::Condition(condition) => GivenStep::Condition(
+                                    substitute_variables_in_condition(condition, &loop_env),
+                                ),
+                            })
+                            .collect();
+
+                        // Substitute variables in when actions
+                        expanded_test.when = test
+                            .when
+                            .iter()
+                            .map(|action| substitute_variables_in_action(action, &loop_env))
+                            .collect();
+
+                        // Substitute variables in then conditions
+                        expanded_test.then = test
+                            .then
+                            .iter()
+                            .map(|condition| {
+                                substitute_variables_in_condition(condition, &loop_env)
+                            })
+                            .collect();
+
+                        expanded_body.push(ScenarioBodyItem::Test(expanded_test));
                     }
                 }
             }
@@ -1350,6 +1380,26 @@ fn build_value(pair: Pair<Rule>) -> Value {
                 .collect();
             Value::Array(elements)
             //Value::Array(inner_pair.into_inner().map(build_value).collect())
+        }
+        Rule::object => {
+            // Parse object: expect inner pairs for each key/value entry
+            let mut map: HashMap<String, Value> = HashMap::new();
+            for entry in inner_pair.into_inner() {
+                // Each entry likely has two inner pairs: key and value
+                let mut kv = entry.into_inner();
+                let key_pair = kv.next().unwrap();
+                let value_pair = kv.next().unwrap();
+
+                let key = if key_pair.as_rule() == Rule::string {
+                    unescape_string(key_pair.into_inner().next().unwrap().as_str())
+                } else {
+                    key_pair.as_str().to_string()
+                };
+
+                let val = build_value(value_pair);
+                map.insert(key, val);
+            }
+            Value::Object(map)
         }
         _ => {
             // Handle the case where the pair itself is a binary_op

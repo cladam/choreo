@@ -44,8 +44,13 @@ after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
 scenario_body_item = { test | foreach_block }
 scenario_body = { scenario_body_item* }
 scenario_def = {  parallel_keyword? ~ "scenario" ~ string ~ "{" ~ scenario_body ~ after_block? ~ "}" }
-foreach_block = { "foreach" ~ identifier ~ "in" ~ variable_ref ~ "{" ~ test+ ~ "}" }
-variable_ref = { "${" ~ identifier ~ "}" }
+//foreach_block = { "foreach" ~ identifier ~ "in" ~ variable_ref ~ "{" ~ test+ ~ "}" }
+// foreach: allow the collection to be supplied as a variable_ref or a bare identifier
+foreach_block = { "foreach" ~ identifier ~ "in" ~ (variable_ref | identifier) ~ "{" ~ test+ ~ "}" }
+//variable_ref = { "${" ~ identifier ~ "}" }
+// variable refs: allow ${VAR}, ${VAR[0]}, ${VAR.field}, ${VAR[0].field} etc.
+variable_ref = { "${" ~ identifier ~ ( ("[" ~ number ~ "]") | ("." ~ identifier) )* ~ "}" }
+
 
 // Defining a test case.
 test                              = { "test" ~ (identifier | string | variable_ref) ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
@@ -220,8 +225,12 @@ float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 duration                          = @{ ASCII_DIGIT+ ~ ("ms" | "s") }
 wait_unit                         = @{ "s" | "ms" }
 wait_marker                       = @{ float ~ wait_unit }
-value                             = { string | number | array }
+value                             = { string | number | array | object | binary_op }
 //value                          = { string | number | binary_op }
 comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
 binary_op                         = { "true" | "false" }
-array                             = { "[" ~ (value ~ ("," ~ value)*)? ~ "]" }
+//array                             = { "[" ~ (value ~ ("," ~ value)*)? ~ "]" }
+array                             = { "[" ~ WHITESPACE* ~ (value ~ ("," ~ value)*)? ~ WHITESPACE* ~ "]" }
+object                            = { "{" ~ WHITESPACE* ~ (pair ~ ("," ~ pair)*)? ~ WHITESPACE* ~ "}" }
+pair                              = { (identifier | string) ~ WHITESPACE* ~ ":" ~ WHITESPACE* ~ value }
+

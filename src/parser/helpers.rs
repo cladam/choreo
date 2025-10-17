@@ -263,13 +263,10 @@ pub fn _substitute_variables(action: &Action, state: &HashMap<String, String>) -
     }
 }
 
-/// Finds and replaces all ${...} placeholders in a string.
-/// This function also support array indexing like ${...[1]}
-/// Enhanced version that supports array indexing like ${PRODUCTS[1]}
 pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> String {
     let mut result = content.to_string();
 
-    // Handle array indexing like ${PRODUCTS[0]}
+    // Handle array indexing like ${VAR[0]}
     let array_pattern = regex::Regex::new(r"\$\{([^}]+)\[(\d+)\]\}").unwrap();
     result = array_pattern
         .replace_all(&result, |caps: &regex::Captures| {
@@ -291,20 +288,134 @@ pub fn substitute_string(content: &str, state: &HashMap<String, String>) -> Stri
         })
         .to_string();
 
-    // Handle simple variable substitution like ${VAR}
+    // Helper to resolve dotted/indexed paths like `user.name` or `products[0].id`
+    fn resolve_path(expr: &str, state: &HashMap<String, String>) -> Option<String> {
+        use serde_json::Value as JsonValue;
+
+        // Find base var name (up to first '.' or '[')
+        let mut i = 0usize;
+        for (idx, ch) in expr.char_indices() {
+            if ch == '.' || ch == '[' {
+                i = idx;
+                break;
+            }
+            i = idx + ch.len_utf8();
+        }
+        let base = if i == 0 && !expr.is_empty() {
+            expr
+        } else {
+            &expr[..i]
+        };
+
+        let mut rest = if i < expr.len() { &expr[i..] } else { "" };
+
+        // Lookup base in state
+        let base_val = state.get(base)?;
+        // Try parse base as JSON; if not JSON, only allow exact base (no further path)
+        let mut current: JsonValue = if let Ok(j) = serde_json::from_str::<JsonValue>(base_val) {
+            j
+        } else {
+            // if there's no rest (no path), return the raw base_val (unquote if it is quoted JSON string)
+            if rest.is_empty() {
+                if let Ok(s) = serde_json::from_str::<String>(base_val) {
+                    return Some(s);
+                } else {
+                    return Some(base_val.clone());
+                }
+            } else {
+                return None;
+            }
+        };
+
+        // Walk the rest of the path
+        while !rest.is_empty() {
+            if rest.starts_with('.') {
+                // field access
+                rest = &rest[1..];
+                // take field until next '.' or '[' or end
+                let mut j = 0usize;
+                for (idx, ch) in rest.char_indices() {
+                    if ch == '.' || ch == '[' {
+                        j = idx;
+                        break;
+                    }
+                    j = idx + ch.len_utf8();
+                }
+                let field = if j == 0 && !rest.is_empty() {
+                    rest
+                } else {
+                    &rest[..j]
+                };
+                rest = if j < rest.len() { &rest[j..] } else { "" };
+                match &current {
+                    JsonValue::Object(map) => {
+                        if let Some(next) = map.get(field) {
+                            current = next.clone();
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => return None,
+                }
+            } else if rest.starts_with('[') {
+                // array index access
+                // find closing bracket
+                if let Some(end_idx) = rest.find(']') {
+                    let idx_str = &rest[1..end_idx];
+                    let idx: usize = idx_str.parse().ok()?;
+                    rest = &rest[end_idx + 1..];
+                    match &current {
+                        JsonValue::Array(arr) => {
+                            if let Some(next) = arr.get(idx) {
+                                current = next.clone();
+                            } else {
+                                return None;
+                            }
+                        }
+                        _ => return None,
+                    }
+                } else {
+                    return None;
+                }
+            } else {
+                // unexpected token
+                return None;
+            }
+        }
+
+        // Convert final JsonValue to a string suitable for substitution
+        match current {
+            JsonValue::String(s) => Some(s),
+            JsonValue::Number(n) => Some(n.to_string()),
+            JsonValue::Bool(b) => Some(b.to_string()),
+            JsonValue::Null => Some("null".to_string()),
+            other => serde_json::to_string(&other).ok(),
+        }
+    }
+
+    // Handle simple variable substitution like ${VAR} and complex expressions like ${user.name}
     let simple_pattern = regex::Regex::new(r"\$\{([^}]+)\}").unwrap();
     result = simple_pattern
         .replace_all(&result, |caps: &regex::Captures| {
-            let var_name = &caps[1];
-            state.get(var_name).cloned().unwrap_or_else(|| {
-                // If direct lookup fails, it might be a JSON string that needs unquoting
-                if let Some(val) = state.get(var_name) {
-                    if let Ok(s) = serde_json::from_str::<String>(val) {
-                        return s;
-                    }
+            let expr = &caps[1];
+
+            // Try dotted/indexed resolution first
+            if expr.contains('.') || expr.contains('[') {
+                if let Some(resolved) = resolve_path(expr, state) {
+                    return resolved;
                 }
+            }
+
+            // Fallback: exact lookup or unquote JSON string
+            if let Some(val) = state.get(expr) {
+                if let Ok(s) = serde_json::from_str::<String>(val) {
+                    s
+                } else {
+                    val.clone()
+                }
+            } else {
                 caps[0].to_string()
-            })
+            }
         })
         .to_string();
 

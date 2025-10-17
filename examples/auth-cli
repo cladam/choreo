@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# A mock command-line tool to check user permissions based on roles.
+
+usage() {
+  echo "Usage: $0 check --user <name> --role <role>"
+  echo "Roles supported: admin, guest"
+  exit 1
+}
+
+# Check if the main command is 'check'
+if [ "$1" != "check" ]; then
+  echo "Error: Unknown command '$1'"
+  usage
+fi
+
+shift
+USER=""
+ROLE=""
+
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    --user) USER="$2"; shift ;;
+    --role) ROLE="$2"; shift ;;
+    *) echo "Unknown parameter passed: $1"; usage ;;
+  esac
+  shift
+done
+
+# --- Validate that arguments were provided ---
+if [ -z "$USER" ] || [ -z "$ROLE" ]; then
+  echo "Error: Missing required arguments --user or --role."
+  usage
+fi
+
+# Check the role and print to stdout
+case "$ROLE" in
+  "admin")
+    echo "Access Granted"
+    exit 0
+    ;;
+  "guest")
+    echo "Access Denied"
+    exit 0
+    ;;
+  *)
+    echo "Error: Unknown role '$ROLE'"
+    exit 1
+    ;;
+esac

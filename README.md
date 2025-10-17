@@ -53,7 +53,7 @@ examples in the [examples](examples) directory.
 ### Full Documentation
 
 For a complete guide to all keywords, actions, conditions, and features, please see the
-official [Choreo DSL Reference](docs/REFERENCE.md).
+official [Choreo DSL Reference](https://cladam.github.io/choreo/docs/choreo-reference/).
 
 ### Getting Started
 
@@ -145,12 +145,11 @@ choreo run --file "examples/redirecting_output_tee.chor" --verbose
 
 ### Status & Roadmap
 
-`choreo` is currently in the **alpha stage**. The core engine is functional, but it is not yet ready for production use.
+`choreo` is currently in the **beta stage**. The core engine is functional, but more to add before production-ready.
 
 The journey ahead includes:
 
 * [ ] A dedicated editor with syntax highlighting and linting.
-* [ ] Parallel execution of scenarios
 
 ### **Contributing**
 

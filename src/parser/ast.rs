@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt;
 
 // Represents the entire parsed test file
@@ -390,6 +391,7 @@ pub enum Value {
     Number(i32),
     Bool(bool),
     Array(Vec<Value>),
+    Object(HashMap<String, Value>),
 }
 
 impl Value {
@@ -403,6 +405,32 @@ impl Value {
                 .map(Value::as_string)
                 .collect::<Vec<_>>()
                 .join(", "),
+            Value::Object(_) => {
+                // Serialize to compact JSON string for object representation
+                match self.to_json_value() {
+                    serde_json::Value::String(s) => s,
+                    other => other.to_string(),
+                }
+            }
+        }
+    }
+
+    fn to_json_value(&self) -> serde_json::Value {
+        match self {
+            Value::String(s) => serde_json::Value::String(s.clone()),
+            Value::Number(n) => serde_json::Value::Number(serde_json::Number::from(*n)),
+            Value::Bool(b) => serde_json::Value::Bool(*b),
+            Value::Array(arr) => {
+                let vec = arr.iter().map(|v| v.to_json_value()).collect();
+                serde_json::Value::Array(vec)
+            }
+            Value::Object(map) => {
+                let mut obj = serde_json::Map::new();
+                for (k, v) in map {
+                    obj.insert(k.clone(), v.to_json_value());
+                }
+                serde_json::Value::Object(obj)
+            }
         }
     }
 }
@@ -416,6 +444,11 @@ impl fmt::Display for Value {
             Value::Array(arr) => {
                 let items: Vec<String> = arr.iter().map(|v| v.to_string()).collect();
                 write!(f, "[{}]", items.join(", "))
+            }
+            Value::Object(_) => {
+                // Print compact JSON for objects
+                let json = self.to_json_value();
+                write!(f, "{}", json)
             }
         }
     }

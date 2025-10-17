@@ -1,0 +1,37 @@
+feature "CLI Command Authorisation"
+
+# User Story:
+# * As an administrator
+# * I want to verify that a command-line tool correctly handles permissions
+# * for different user roles.
+#
+# Acceptance Criteria:
+# * Admin users should be granted access.
+# * Guest users should be denied access.
+actor Terminal
+
+var USER_PERMISSIONS = [
+    { NAME: "admin", ROLE: "admin", EXPECTED_OUTPUT: "Access Granted" },
+    { NAME: "guest", ROLE: "guest", EXPECTED_OUTPUT: "Access Denied" }]
+
+scenario "Verify command access for different user roles" {
+
+    # The `foreach` loop iterates over the array of examples.
+    # On each iteration, the 'user' variable will be one of the objects.
+    foreach user in ${USER_PERMISSIONS} {
+
+        # The test name and description are now dynamic, using dot notation
+        # to access the properties of the 'user' object.
+        test "CheckPermissionsFor_${user.NAME}" "it correctly checks permissions for user '${user.NAME}'" {
+            given:
+                Test can_start
+            when:
+                # The values from the current row are substituted into the CLI command.
+                Terminal run "$(pwd)/auth-cli check --user ${user.NAME} --role ${user.ROLE}"
+            then:
+                Terminal last_command succeeded
+                # The expected output is also substituted from the data table.
+                Terminal output_contains "${user.EXPECTED_OUTPUT}"
+        }
+    }
+}
