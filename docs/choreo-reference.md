@@ -456,7 +456,18 @@ This is the reference for all available commands that can be used within the `te
 
 ## Variables
 
-`choreo` supports both environment variables and file-defined variables for making tests dynamic.
+`choreo` supports both environment variables and file-defined variables for making tests dynamic. File-defined variables
+can be `string`, `number`, `list` or an `array`.
+
+```choreo
+var TEST1 = 0
+var TEST2 = "test"
+var TEST_LIST = ["TEST1", "TEST2", "TEST3"]
+var TEST_ARRAY = [
+    { NAME: "test1", VALUE: "test", NOTE: "First test" },
+    { NAME: "test2", VALUE: "test", NOTE: "Second test" }
+]
+```
 
 ### Substitution
 
@@ -471,7 +482,7 @@ when:
   Terminal run "echo 'hello' > ${FILENAME}"  
 ```
 
-`choreo` also supports array indexing for variables:
+`choreo` also supports list indexing for variables:
 
 ```choreo
 var PRODUCT = ["PROD-A", "PROD-B", "PROD-C"]

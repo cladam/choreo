@@ -4,13 +4,16 @@ feature "Advanced Terminal Matchers"
 
 setting: shell_path = "/bin/bash"
 
-actors: Terminal
+actor Terminal
 
 scenario "Verifying precise terminal output" {
 
     test StartsWith "output_starts_with matches the beginning of the output" {
         given:
             Test can_start
+            System log "${TEST2}"
+            System log "${TEST_LIST[2]}"
+            System log "${TEST_ARRAY.NAME}"
         when:
             Terminal run "echo 'Hello Choreo World'"
         then:

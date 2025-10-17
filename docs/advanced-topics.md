@@ -95,6 +95,34 @@ scenario "User Profile Tests" {
 }
 ```
 
+#### List and array variables
+
+`choreo` support creating lists and arrays as variables that will be substituted, this can be used in the `foreach` loop
+which makes `choreo` very powerful and it enables **data-driven** testing.
+
+```choreo
+feature "Fetch users profile"
+actor Web
+
+var BASE_URL = "https://api.staging.myapp.com"
+var USERS = ["user-123", "user-321", "user-213"]
+
+scenario "User Profile Tests" {
+    foreach USER in ${USERS} {
+        test "FetchProfile_${USER}" "Fetch user profile for user ${USER}" {
+            given:
+                Test can_start
+            when:
+                Web http_get "${BASE_URL}/users/${USER}"
+                System log "Fetching ${USER}'s profile"
+            then:
+                Web response_status is_success
+                Web json_path at "/myapp/user" equals "${USER}"
+        }
+    }
+}
+```
+
 #### Environment Variables for Secrets
 
 For sensitive data like API keys or passwords, it's best practice to pass them in from the environment.
