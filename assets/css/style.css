@@ -256,8 +256,8 @@ pre code {
         /* Revert to a single-column layout on mobile */
         grid-template-columns: 1fr;
         grid-template-areas:
-            "header"
-            "main";
+            "main"
+            "footer";
     }
 
     /* Adjust header for mobile */
