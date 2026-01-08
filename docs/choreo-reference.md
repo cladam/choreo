@@ -457,7 +457,7 @@ This is the reference for all available commands that can be used within the `te
 ## Variables
 
 `choreo` supports both environment variables and file-defined variables for making tests dynamic. File-defined variables
-can be `string`, `number`, `list` or an `array`.
+can be `string`, `number`, `list of strings` or an `list of objects`.
 
 ```choreo
 var TEST1 = 0
