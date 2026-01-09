@@ -10,7 +10,7 @@
       <h3 class="nav-category-title">Getting Started</h3>
     <ul>
       <li>
-        <a href="{{ '/docs/intro' | relative_url }}" {% if page.url == "/" %}class="active"{% endif %}>
+        <a href="{{ '/docs/intro' | relative_url }}" {% if page.url == "/docs/intro'" %}class="active"{% endif %}>
           Introduction
         </a>
       </li>
@@ -77,16 +77,16 @@
               System Examples
               </a>
           </li>
-        <li>
-          <a href="{{ '/docs/examples-filesystem' | relative_url }}" {% if page.url == "/docs/examples-filesystem" %}class="active"{% endif %}>
-            FileSystem Examples
-          </a>
-        </li>
-        <li>
-          <a href="{{ '/docs/examples-web' | relative_url }}" {% if page.url == "/docs/examples-web" %}class="active"{% endif %}>
-            Web Examples
-          </a>
-        </li>
+          <li>
+              <a href="{{ '/docs/examples-filesystem' | relative_url }}" {% if page.url == "/docs/examples-filesystem" %}class="active"{% endif %}>
+              FileSystem Examples
+              </a>
+          </li>
+          <li>
+              <a href="{{ '/docs/examples-web' | relative_url }}" {% if page.url == "/docs/examples-web" %}class="active"{% endif %}>
+              Web Examples
+              </a>
+          </li>
       </ul>
     </div>
   </nav>
