@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>choreo - The Model Client for CLI and APIs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .selection-teal::selection {
+            background-color: rgba(74, 145, 158, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-[#FCFCFC] text-[#333333] selection-teal">
+<div id="root"></div>
+
+<script type="text/babel">
+    const {useState, useEffect} = React;
+
+    // Custom Lucide Icon Component for CDN usage
+    const Icon = ({name, size = 24, className = "", style = {}}) => {
+        const [iconContent, setIconContent] = useState("");
+
+        useEffect(() => {
+            // Initialize lucide icons after rendering
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }, [name]);
+
+        return <i data-lucide={name} className={className} style={{width: size, height: size, ...style}}></i>;
+    };
+
+    const App = () => {
+        const theme = {
+            teal: '#4a919e',
+            orange: '#e67e22',
+            primary: '#2c3e50',
+            secondary: '#7f8c8d',
+            bgLight: '#f8f9fa',
+            border: '#e5e5e5',
+            codeBg: '#F2F2F2',
+            syntax: {
+                keyword: '#8250df',
+                builtin: '#0550ae',
+                function: '#116875',
+                string: '#22863a',
+                comment: '#6a737d',
+                punctuation: '#57606a'
+            }
+        };
+
+        const navLinks = [
+            {name: 'Documentation', href: 'https://cladam.github.io/choreo/intro'},
+            {name: 'GitHub', href: 'https://github.com/cladam/choreo'},
+        ];
+
+        return (
+            <div className="min-h-screen flex flex-col">
+                {/* Navigation
+                <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#e5e5e5]">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between h-16 items-center">
+                            <div className="flex items-center gap-3">
+                                <img src="assets/choreo-logo.png" alt="Choreo Icon" className="h-8 w-auto"
+                                     onError={(e) => e.target.style.display = 'none'}/>
+                            </div>
+                            <div className="hidden md:flex items-center gap-8">
+                                {navLinks.map((link) => (
+                                    <a key={link.name} href={link.href}
+                                       className="text-sm font-semibold text-[#7f8c8d] hover:text-[#4a919e] transition-colors">
+                                        {link.name}
+                                    </a>
+                                ))}
+                                <a href="https://github.com/cladam/choreo"
+                                   className="bg-[#2c3e50] text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-[#1a252f] transition-all flex items-center gap-2 shadow-sm">
+                                    <Icon name="github" size={16}/> Star on GitHub
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+                */}
+
+                {/* Hero Section */}
+                <header className="relative pt-20 pb-20 overflow-hidden bg-white border-b border-[#f8f9fa]">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+                        <div className="flex justify-center mb-8">
+                            <img src="assets/choreo-logo.png" alt="Choreo Logo" className="h-24 w-auto"
+                                 onError={(e) => e.target.style.display = 'none'}/>
+                        </div>
+                        <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight text-[#2c3e50] mb-6">
+                            The <span style={{color: theme.teal}}>Model Client</span> for CLI and APIs.
+                        </h1>
+                        <p className="text-xl md:text-2xl text-[#7f8c8d] max-w-3xl mx-auto mb-12 leading-relaxed font-medium">
+                            An executable DSL for writing readable, human-centric scenarios.
+                            Describe <strong>behaviour</strong>, not plumbing.
+                            No glue code. No boilerplate.
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                            <a
+                                href="https://cladam.github.io/choreo/intro"
+                                className="px-8 py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all flex items-center justify-center gap-2"
+                                style={{backgroundColor: theme.teal}}
+                            >
+                                Read the documentation <Icon name="arrow-right" size={20}/>
+                            </a>
+                            <a
+                                href="https://github.com/cladam/choreo"
+                                className="bg-white text-[#2c3e50] border-2 border-[#e5e5e5] px-8 py-4 rounded-xl font-bold text-lg hover:border-[#4a919e]/30 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Icon name="github" size={20}/> View on GitHub
+                            </a>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Code Demo Section */}
+                <section className="py-12 bg-[#f8f9fa]">
+                    <div className="max-w-5xl mx-auto px-4 lg:px-0">
+                        <div className="bg-[#F2F2F2] rounded-2xl shadow-xl overflow-hidden border border-[#e5e5e5]">
+                            <div
+                                className="flex items-center justify-between px-6 py-4 bg-white/50 border-b border-[#e5e5e5]">
+                                <div className="flex gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-slate-200"></div>
+                                    <div className="w-3 h-3 rounded-full bg-slate-200"></div>
+                                    <div className="w-3 h-3 rounded-full bg-slate-200"></div>
+                                </div>
+                                <div
+                                    className="text-xs font-bold font-mono text-[#7f8c8d] tracking-widest">web_health_check.chor
+                                </div>
+                                <div className="w-10"></div>
+                            </div>
+                            <div
+                                className="p-8 md:p-12 font-mono text-sm md:text-base leading-loose overflow-x-auto text-[#24292f]">
+                                <div className="flex gap-6">
+                                    <div
+                                        className="text-[#adb5bd] select-none text-right w-8 border-r border-slate-200 pr-4">
+                                        1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20<br/>21<br/>22
+                                    </div>
+
+                                    <div className="flex-1 whitespace-pre">
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>feature </span>
+                                        <span style={{color: theme.syntax.string}}>"API Health Check"</span>{"\n"}
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>actor</span>
+                                        <span style={{color: theme.syntax.builtin}}> Web</span>{"\n\n"}
+                                        <span
+                                            style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>background </span>
+                                        <span style={{color: theme.syntax.punctuation}}>{"{"}</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>set_header </span>
+                                        <span
+                                            style={{color: theme.syntax.string}}>"User-Agent" "choreo-test-runner/1.0"</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>set_header </span>
+                                        <span
+                                            style={{color: theme.syntax.string}}>"Accept" "application/json"</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>set_cookie </span>
+                                        <span style={{color: theme.syntax.string}}>"session_id" "abc123"</span>{"\n"}
+                                        <span style={{color: theme.syntax.punctuation}}>{"}"}</span>{"\n\n"}
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>var </span>
+                                        <span className="text-[#24292f]">url </span>
+                                        <span style={{color: theme.syntax.punctuation}}>= </span>
+                                        <span
+                                            style={{color: theme.syntax.string}}>"https://httpbin.io/bearer"</span>{"\n"}
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>var </span>
+                                        <span className="text-[#24292f]">bearer_token </span>
+                                        <span style={{color: theme.syntax.punctuation}}>= </span>
+                                        <span style={{color: theme.syntax.string}}>"choreo-token-xyz"</span>{"\n\n"}
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>scenario </span>
+                                        <span
+                                            style={{color: theme.syntax.string}}>"Health check for a web API endpoint" </span>
+                                        <span style={{color: theme.syntax.punctuation}}>{"{"}</span>{"\n"}
+                                        {"  "}<span
+                                        style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>test </span>
+                                        <span className="text-[#24292f]">HealthCheck </span>
+                                        <span
+                                            style={{color: theme.syntax.string}}>"Verify the API endpoint is healthy" </span>
+                                        <span style={{color: theme.syntax.punctuation}}>{"{"}</span>{"\n"}
+                                        {"    "}<span
+                                        style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>given</span>
+                                        <span style={{color: theme.syntax.punctuation}}>:</span>{"\n"}
+                                        {"      "}<span
+                                        style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>Test </span>
+                                        <span style={{color: theme.syntax.builtin}}>can_start</span>{"\n"}
+                                        {"    "}<span
+                                        style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>when</span>
+                                        <span style={{color: theme.syntax.punctuation}}>:</span>{"\n"}
+                                        {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>set_header </span>
+                                        <span
+                                            style={{color: theme.syntax.string}}>"Authorization" "Bearer $&#123;bearer_token&#125;"</span>{"\n"}
+                                        {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>http_get </span>
+                                        <span style={{color: theme.syntax.string}}>"$&#123;url&#125;"</span>{"\n"}
+                                        {"    "}<span
+                                        style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>then</span>
+                                        <span style={{color: theme.syntax.punctuation}}>:</span>{"\n"}
+                                        {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>response_status </span>
+                                        <span style={{color: theme.syntax.builtin}}>is_success</span>{"\n"}
+                                        {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>response_time </span>
+                                        <span style={{color: theme.syntax.builtin}}>is_below </span>
+                                        <span style={{color: theme.syntax.string}}>2s</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.punctuation}}>{"}"}</span>{"\n"}
+                                        {"  "}<span
+                                        style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>after </span>
+                                        <span style={{color: theme.syntax.punctuation}}>{"{"}</span>{"\n"}
+                                        {"    "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>clear_header </span>
+                                        <span style={{color: theme.syntax.string}}>"Authorization"</span>{"\n"}
+                                        {"    "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>clear_cookie </span>
+                                        <span style={{color: theme.syntax.string}}>"session_id"</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.punctuation}}>{"}"}</span>{"\n"}
+                                        <span style={{color: theme.syntax.punctuation}}>{"}"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-white p-5 border-t border-[#e5e5e5] flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center text-white"
+                                     style={{backgroundColor: theme.teal}}>
+                                    <Icon name="check-circle-2" size={14}/>
+                                </div>
+                                <span className="text-sm font-bold text-[#2c3e50]">The specification <strong>is</strong> the implementation. No glue code needed.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Philosophy Section */}
+                <section className="py-24 bg-white overflow-hidden">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="grid md:grid-cols-2 gap-16 items-center">
+                            <div className="relative">
+                                <div
+                                    className="absolute -top-10 -left-10 w-32 h-32 opacity-10 bg-[#4a919e] rounded-full blur-3xl"></div>
+                                <h2 className="text-4xl font-bold mb-6 text-[#2c3e50]">Why Choreo exists.</h2>
+                                <p className="text-lg text-[#7f8c8d] mb-6 leading-relaxed">
+                                    Traditional BDD frameworks separate the specification from the implementation,
+                                    creating a brittle system of "Glue Code" and Regex-based step definitions.
+                                </p>
+                                <div
+                                    className="bg-[#f8f9fa] p-6 rounded-xl border-l-4 border-[#4a919e] italic text-[#2c3e50] font-medium mb-8">
+                                    "Behaviour-driven testing is about communication to get work done. Its biggest
+                                    failure is allowing layers of abstraction to get in the way of the behaviour we're
+                                    trying to verify."
+                                </div>
+                                <p className="text-[#7f8c8d] leading-relaxed">
+                                    Choreo is built to remove that indirection. It serves as a <strong>Direct
+                                    Execution</strong> engine, bridging the gap between intent and outcome by treating
+                                    the specification as a first-class client of the system.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-6">
+                                {[
+                                    {
+                                        title: "No Glue Code",
+                                        desc: "Remove the 'regex tax'. Steps are directly executable without separate implementation files.",
+                                        icon: "zap"
+                                    },
+                                    {
+                                        title: "Human Readable",
+                                        desc: "Structured for people, but optimized for machines. Tests that double as documentation.",
+                                        icon: "message-square"
+                                    },
+                                    {
+                                        title: "Single Binary",
+                                        desc: "Built with Rust. No heavyweight runtimes or dependency hell. Drop in and run.",
+                                        icon: "cpu"
+                                    }
+                                ].map(item => (
+                                    <div key={item.title}
+                                         className="bg-white p-6 rounded-2xl border border-[#e5e5e5] shadow-sm hover:shadow-md transition-shadow flex gap-4">
+                                        <div
+                                            className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+                                            style={{backgroundColor: `${theme.teal}10`, color: theme.teal}}>
+                                            <Icon name={item.icon} size={24}/>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-[#2c3e50] mb-1">{item.title}</h3>
+                                            <p className="text-sm text-[#7f8c8d]">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Features Grid */}
+                <section className="py-24 bg-[#f8f9fa] border-y border-[#e5e5e5]">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center mb-16">
+                            <h2 className="text-4xl font-bold text-[#2c3e50] mb-4 text-center">Engineered for System
+                                Boundaries.</h2>
+                            <p className="text-xl text-[#7f8c8d] font-medium max-w-2xl mx-auto">
+                                A powerful vocabulary of conditions and actions built to test the edge of your software.
+                            </p>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-8">
+                            {[
+                                {
+                                    icon: 'terminal',
+                                    name: 'Terminal Actor',
+                                    desc: 'Interact with shells and CLI tools. Execute commands, verify exit codes, and perform rich assertions on stdout/stderr output.'
+                                },
+                                {
+                                    icon: 'files',
+                                    name: 'FileSystem Actor',
+                                    desc: 'Manage the file system to verify side effects. Create, delete, and verify file and directory states to check system impact.'
+                                },
+                                {
+                                    icon: 'globe',
+                                    name: 'Web Actor',
+                                    desc: 'Validate HTTP API contracts. Perform requests with native JSON response validation, header checks, and cookie management.'
+                                },
+                                {
+                                    icon: 'refresh-cw',
+                                    name: 'Stateful Scenarios',
+                                    desc: 'Capture dynamic variables from output and reuse them across subsequent steps to model complex system workflows.'
+                                },
+                                {
+                                    icon: 'shield-check',
+                                    name: 'Rich Assertions',
+                                    desc: 'Verify outcomes with a native vocabulary for terminal output, exit status, file contents, and JSON API responses. Use regex and JSONPath for high-precision validation.'
+                                },
+                                {
+                                    icon: 'layers',
+                                    name: 'CI Ready',
+                                    desc: 'Eliminate the manual grind with per-run JSON reports. Visualise bottlenecks and test results directly in your pipeline for fast, reliable feedback.'
+                                }
+                            ].map(feature => (
+                                <div key={feature.name}
+                                     className="bg-white p-8 rounded-2xl shadow-sm border border-[#e5e5e5] hover:shadow-md transition-all">
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
+                                         style={{backgroundColor: `${theme.teal}15`, color: theme.teal}}>
+                                        <Icon name={feature.icon} size={24}/>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-3 text-[#2c3e50]">{feature.name}</h3>
+                                    <p className="text-[#7f8c8d] text-sm leading-relaxed font-medium">{feature.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Workflow Position */}
+                <section className="py-24 bg-white">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-4xl font-bold mb-16 text-[#2c3e50]">Where Choreo fits.</h2>
+                        <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+                            <div className="w-full bg-[#f8f9fa] p-8 rounded-2xl border border-dashed border-[#e5e5e5]">
+                                <span className="block font-bold text-[#7f8c8d] mb-1 uppercase tracking-widest text-xs">UNIT TESTS</span>
+                                <span className="text-sm font-bold text-[#2c3e50]">Logic & Edge Cases</span>
+                            </div>
+                            <Icon name="arrow-right" className="text-[#e5e5e5] hidden md:block"/>
+                            <div className="w-full p-8 rounded-2xl border-2"
+                                 style={{backgroundColor: `${theme.teal}08`, borderColor: theme.teal}}>
+                                <span className="block font-bold mb-1 tracking-[0.2em] text-xs uppercase"
+                                      style={{color: theme.teal}}>CHOREO</span>
+                                <span className="text-sm font-extrabold text-[#2c3e50]">End-to-End Behaviour</span>
+                            </div>
+                            <Icon name="arrow-right" className="text-[#e5e5e5] hidden md:block"/>
+                            <div className="w-full bg-[#f8f9fa] p-8 rounded-2xl border border-dashed border-[#e5e5e5]">
+                                <span
+                                    className="block font-bold text-[#7f8c8d] mb-1 uppercase tracking-widest text-xs">RELEASE</span>
+                                <span className="text-sm font-bold text-[#2c3e50]">User-Visible Outcomes</span>
+                            </div>
+                        </div>
+                        <p className="mt-16 text-xl text-[#7f8c8d] max-w-2xl mx-auto leading-relaxed">
+                            Choreo sits at the <strong>edge of your system</strong>, ensuring that your user-visible
+                            outcomes remain consistent as your internals evolve.
+                        </p>
+                    </div>
+                </section>
+
+                {/* Call to Action */}
+                <section className="py-24 bg-[#2c3e50] relative overflow-hidden">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+                        <h2 className="text-4xl md:text-5xl font-bold text-white mb-10">Ready to start
+                            choreographing?</h2>
+                        <div className="flex flex-col sm:flex-row justify-center gap-5">
+                            <a
+                                href="https://cladam.github.io/choreo/intro"
+                                className="px-10 py-4 rounded-xl font-bold text-lg text-white hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg"
+                                style={{backgroundColor: theme.teal}}
+                            >
+                                <Icon name="book-open" size={20}/> Read Documentation
+                            </a>
+                            <a href="https://github.com/cladam/choreo"
+                               className="bg-transparent border-2 border-white/20 text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                                <Icon name="github" size={20}/> Explore Source
+                            </a>
+                        </div>
+                    </div>
+                    <div className="absolute top-0 right-0 w-96 h-96 opacity-20 blur-[120px]"
+                         style={{backgroundColor: theme.teal}}></div>
+                    <div className="absolute bottom-0 left-0 w-96 h-96 opacity-10 blur-[120px]"
+                         style={{backgroundColor: theme.orange}}></div>
+                </section>
+
+                {/* Footer */}
+                <footer className="py-16 bg-white border-t border-[#e5e5e5]">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div
+                            className="flex flex-col md:flex-row justify-between items-center gap-10 text-[#7f8c8d] text-sm">
+                            <div className="flex items-center gap-5">
+                                <div className="flex items-center gap-2">
+                                    <img src="assets/choreo-logo.png" alt="Choreo Logo" className="h-6 w-auto"
+                                         onError={(e) => e.target.style.display = 'none'}/>
+                                </div>
+                                <span className="text-[#e5e5e5]">|</span>
+                                <span className="font-medium">Open source project by <a href="https://cladam.github.io"
+                                                                                        className="hover:text-[#4a919e] underline decoration-2 underline-offset-4 transition-colors">Claes Adamsson</a></span>
+                            </div>
+                            <div className="flex items-center gap-8 font-semibold">
+                                <a href="https://github.com/cladam/choreo/issues"
+                                   className="hover:text-[#2c3e50] transition-colors">Report Issue</a>
+                                <div className="flex gap-4">
+                                    <a href="https://github.com/cladam/choreo">
+                                        <Icon name="github" size={20}
+                                              className="hover:text-[#2c3e50] cursor-pointer transition-colors"/>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App/>);
+</script>
+</body>
+</html>
