@@ -18,6 +18,7 @@ on:
       - '_plugins/**'
       - 'assets/**'
       - 'index.md'
+      - 'index.html'
       - 'Gemfile'
       - 'Gemfile.lock'
   pull_request:
