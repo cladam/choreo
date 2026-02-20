@@ -1,6 +1,6 @@
 [package]
 name = "choreo"
-version = "0.8.3"
+version = "0.9.0"
 authors = ["Claes Adamsson <claes.adamsson@gmail.com>"]
 homepage = "https://cladam.github.io/choreo/"
 repository = "https://github.com/cladam/choreo"
@@ -12,23 +12,23 @@ categories = ["command-line-utilities", "development-tools"]
 edition = "2021"
 
 [dependencies]
-pest = "2.8.5"
+pest = "2.8.6"
 pest_derive = "2.8.5"
 strip-ansi-escapes = "0.2.1"
 terminal_size = "0.4.3"
-clap = { version = "4.5.54", features = ["derive"] }
-colored = "3.0.0"
-uuid = { version = "1.19.0", features = ["v4"] }
-thiserror = "2.0.17"
+clap = { version = "4.5.60", features = ["derive"] }
+colored = "3.1.1"
+uuid = { version = "1.21.0", features = ["v4"] }
+thiserror = "2.0.18"
 anyhow = "1.0.100"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 jsonpath_lib2 = "0.3.3"
-ureq = { version = "3.1.4", features = ["json", "charset"] }
-chrono = { version = "0.4.42", features = ["serde"] }
+ureq = { version = "3.2.0", features = ["json", "charset"] }
+chrono = { version = "0.4.43", features = ["serde"] }
 portable-pty = "0.9.0"
 rayon = "1.11.0"
-regex = "1.12.2"
+regex = "1.12.3"
 itertools = "0.14.0"
 self_update = "0.42.0"
 [target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
