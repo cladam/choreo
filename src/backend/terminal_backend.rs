@@ -1,7 +1,6 @@
 use crate::colours;
 use crate::parser::ast::{Action, TestSuiteSettings};
 use crate::parser::helpers::substitute_variables_in_action;
-use chrono::Utc;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::collections::HashMap;
 use std::io::Read;
@@ -13,7 +12,6 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 use terminal_size::{terminal_size, Height, Width};
-use uuid as rust_uuid;
 
 pub struct TerminalBackend {
     pty_output_receiver: Receiver<String>,
@@ -255,49 +253,6 @@ impl TerminalBackend {
                     eprintln!("[TERMINAL] stderr:\n{}", self.last_stderr);
                 }
 
-                true
-            }
-
-            // System log: surface the message into the interactive output and log it.
-            Action::Log { message } => {
-                colours::info(&format!("[SYSTEM] {}", message));
-                if !self.last_stdout.is_empty() && !self.last_stdout.ends_with('\n') {
-                    self.last_stdout.push('\n');
-                }
-                self.last_stdout.push_str(&format!("System: {}\n", message));
-                true
-            }
-
-            // Pause: sleep for the specified duration (seconds).
-            Action::Pause { duration } => {
-                // Expecting `duration` as a floating-point number of seconds.
-                let dur = Duration::from_secs_f32(duration);
-                thread::sleep(dur);
-                true
-            }
-
-            // Timestamp: set a variable to the current timestamp (seconds.nanos).
-            Action::Timestamp { variable } => {
-                let now = Utc::now();
-                let ts = now.format("%Y-%m-%d_%H:%M:%S").to_string();
-                _env_vars.insert(variable.clone(), ts.clone());
-                if !self.last_stdout.is_empty() && !self.last_stdout.ends_with('\n') {
-                    self.last_stdout.push('\n');
-                }
-                self.last_stdout
-                    .push_str(&format!("Timestamp {} = {}\n", variable, ts));
-                true
-            }
-
-            // Uuid: set a variable to a generated v4 UUID.
-            Action::Uuid { variable } => {
-                let uid = rust_uuid::Uuid::new_v4().to_string();
-                _env_vars.insert(variable.clone(), uid.clone());
-                if !self.last_stdout.is_empty() && !self.last_stdout.ends_with('\n') {
-                    self.last_stdout.push('\n');
-                }
-                self.last_stdout
-                    .push_str(&format!("Uuid {} = {}\n", variable, uid));
                 true
             }
 

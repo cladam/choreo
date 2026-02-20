@@ -1,4 +1,5 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
+use crate::backend::system_backend::SystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
 use crate::backend::web_backend::WebBackend;
 use crate::colours;
@@ -303,6 +304,7 @@ fn run_scenario(
     let mut terminal_backend = TerminalBackend::new(base_dir.clone(), settings.clone());
     let fs_backend = FileSystemBackend::new();
     let mut web_backend = WebBackend::with_headers(initial_http_headers);
+    let mut system_backend = SystemBackend::new();
     let mut variables = env_vars.clone();
     let test_timeout = Duration::from_secs(settings.timeout_seconds);
     let mut last_exit_code: Option<i32> = None;
@@ -383,6 +385,7 @@ fn run_scenario(
                         &fs_backend,
                         &mut terminal_backend,
                         &mut web_backend,
+                        &system_backend,
                         verbose,
                     ) {
                         tests_to_start.push((
@@ -414,6 +417,7 @@ fn run_scenario(
                         &fs_backend,
                         &mut terminal_backend,
                         &mut web_backend,
+                        &system_backend,
                         verbose,
                     ) {
                         tests_to_pass.push(test_case.name.clone());
@@ -457,6 +461,7 @@ fn run_scenario(
                             &mut terminal_backend,
                             &fs_backend,
                             &mut web_backend,
+                            &mut system_backend,
                             &mut last_exit_code,
                             settings.timeout_seconds,
                             &mut variables,
@@ -471,6 +476,7 @@ fn run_scenario(
                             &mut terminal_backend,
                             &fs_backend,
                             &mut web_backend,
+                            &mut system_backend,
                             &mut last_exit_code,
                             settings.timeout_seconds,
                             &mut variables,
@@ -501,6 +507,7 @@ fn run_scenario(
                         &fs_backend,
                         &mut terminal_backend,
                         &mut web_backend,
+                        &system_backend,
                         verbose,
                     );
 
@@ -553,6 +560,7 @@ fn run_scenario(
                             &mut terminal_backend,
                             &fs_backend,
                             &mut web_backend,
+                            &mut system_backend,
                             &mut last_exit_code,
                             settings.timeout_seconds,
                             &mut variables,
@@ -567,6 +575,7 @@ fn run_scenario(
                             &mut terminal_backend,
                             &fs_backend,
                             &mut web_backend,
+                            &mut system_backend,
                             &mut last_exit_code,
                             settings.timeout_seconds,
                             &mut variables,
@@ -622,6 +631,7 @@ fn run_scenario(
                         &mut terminal_backend,
                         &fs_backend,
                         &mut web_backend,
+                        &mut system_backend,
                         &mut last_exit_code,
                         settings.timeout_seconds,
                         &mut variables,
@@ -671,6 +681,7 @@ fn execute_action(
     terminal: &mut TerminalBackend,
     fs: &FileSystemBackend,
     web: &mut WebBackend,
+    system: &mut SystemBackend,
     last_exit_code: &mut Option<i32>,
     timeout_seconds: u64,
     env_vars: &mut HashMap<String, String>,
@@ -681,6 +692,11 @@ fn execute_action(
     }
     // Substitute variables in the action
     let substituted_action = substitute_variables_in_action(action, env_vars);
+
+    // Check if it's a system action first
+    if system.execute_action(&substituted_action, env_vars, verbose) {
+        return;
+    }
 
     // Check if it's a terminal action
     if terminal.execute_action(

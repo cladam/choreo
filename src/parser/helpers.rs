@@ -1,4 +1,5 @@
 use crate::backend::filesystem_backend::FileSystemBackend;
+use crate::backend::system_backend::SystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
 use crate::backend::web_backend::WebBackend;
 use crate::parser::ast::{
@@ -10,7 +11,7 @@ use strip_ansi_escapes::strip;
 
 /// Checks if all conditions in a list are met.
 pub fn check_all_conditions_met(
-    block_name: &str,
+    _block_name: &str,
     conditions: &[Condition],
     test_states: &HashMap<String, TestState>,
     output_buffer: &str,
@@ -21,6 +22,7 @@ pub fn check_all_conditions_met(
     fs_backend: &FileSystemBackend,
     terminal_backend: &mut TerminalBackend,
     web_backend: &WebBackend,
+    system_backend: &SystemBackend,
     verbose: bool,
 ) -> bool {
     conditions.iter().all(|condition| {
@@ -36,12 +38,13 @@ pub fn check_all_conditions_met(
             fs_backend,
             terminal_backend,
             web_backend,
+            system_backend,
             verbose,
         );
         // if verbose {
         //     println!(
         //         "  [DEBUG] Checking {} condition: {:?} -> {}",
-        //         block_name, substituted_c, result
+        //         _block_name, substituted_c, result
         //     );
         // }
         result
@@ -60,6 +63,7 @@ pub fn check_condition(
     fs_backend: &FileSystemBackend,
     terminal_backend: &mut TerminalBackend,
     web_backend: &WebBackend,
+    system_backend: &SystemBackend,
     verbose: bool,
 ) -> bool {
     let cleaned_buffer = strip(output_buffer);
@@ -225,6 +229,20 @@ pub fn check_condition(
         | Condition::JsonPathEquals { .. } => {
             web_backend.check_condition(condition, env_vars, verbose)
         }
+        // --- System Conditions ---
+        Condition::ServiceIsRunning { name } => {
+            system_backend.check_service_is_running(name, verbose)
+        }
+        Condition::ServiceIsStopped { name } => {
+            system_backend.check_service_is_stopped(name, verbose)
+        }
+        Condition::ServiceIsInstalled { name } => {
+            system_backend.check_service_is_installed(name, verbose)
+        }
+        Condition::PortIsListening { port } => {
+            system_backend.check_port_is_listening(*port, verbose)
+        }
+        Condition::PortIsClosed { port } => system_backend.check_port_is_closed(*port, verbose),
         _ => false, // Other conditions not implemented yet
     }
 }
@@ -511,6 +529,18 @@ pub fn substitute_variables_in_condition(
             path: substitute_string(path, state),
             size: *size,
         },
+        // --- System Conditions ---
+        Condition::ServiceIsRunning { name } => Condition::ServiceIsRunning {
+            name: substitute_string(name, state),
+        },
+        Condition::ServiceIsStopped { name } => Condition::ServiceIsStopped {
+            name: substitute_string(name, state),
+        },
+        Condition::ServiceIsInstalled { name } => Condition::ServiceIsInstalled {
+            name: substitute_string(name, state),
+        },
+        Condition::PortIsListening { port } => Condition::PortIsListening { port: *port },
+        Condition::PortIsClosed { port } => Condition::PortIsClosed { port: *port },
         // fallback
         _ => condition.clone(),
     }

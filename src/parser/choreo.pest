@@ -1,6 +1,5 @@
 // choreo - A DSL for defining interactive test scenarios.
 // This grammar defines the DSL structure and syntax.
-// Human-readable documentation will be available in chromeo/README.md
 
 // Ignore whitespace and comments.
 WHITESPACE                        = _{ " " | "\t" | NEWLINE }
@@ -29,28 +28,22 @@ var_def = {
     ("var:" ~ identifier ~ ("," ~ identifier)*)
 }
 
-//var_value = { string | array }
-
 actors_def = {
     ("actors:" ~ identifier ~ ("," ~ identifier)*) |
     ("actors" ~ "{" ~ identifier+ ~ "}") |
     ("actor" ~ identifier)
 }
+
 feature_def                       = { "feature" ~ string }
 parallel_keyword                  = { "parallel" }
-//scenario_def                      = { parallel_keyword? ~ "scenario" ~ string ~ "{" ~ test* ~ after_block? ~ "}" }
-after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
 
 scenario_body_item = { test | foreach_block }
 scenario_body = { scenario_body_item* }
 scenario_def = {  parallel_keyword? ~ "scenario" ~ string ~ "{" ~ scenario_body ~ after_block? ~ "}" }
-//foreach_block = { "foreach" ~ identifier ~ "in" ~ variable_ref ~ "{" ~ test+ ~ "}" }
-// foreach: allow the collection to be supplied as a variable_ref or a bare identifier
-foreach_block = { "foreach" ~ identifier ~ "in" ~ (variable_ref | identifier) ~ "{" ~ test+ ~ "}" }
-//variable_ref = { "${" ~ identifier ~ "}" }
-// variable refs: allow ${VAR}, ${VAR[0]}, ${VAR.field}, ${VAR[0].field} etc.
-variable_ref = { "${" ~ identifier ~ ( ("[" ~ number ~ "]") | ("." ~ identifier) )* ~ "}" }
+after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
 
+foreach_block = { "foreach" ~ identifier ~ "in" ~ (variable_ref | identifier) ~ "{" ~ test+ ~ "}" }
+variable_ref = { "${" ~ identifier ~ ( ("[" ~ number ~ "]") | ("." ~ identifier) )* ~ "}" }
 
 // Defining a test case.
 test                              = { "test" ~ (identifier | string | variable_ref) ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
@@ -58,7 +51,7 @@ given_block                       = { "given:" ~ (action | condition)* }
 when_block                        = { "when:"  ~ action+ }
 then_block                        = { "then:"  ~ condition+ }
 
-// --- Generic Rule Block (for non-test logic) ---
+// --- Generic Rule Block ---
 rule                              = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }
 when_block_rule                   = { "when:" ~ condition+ }
 then_block_rule                   = { "then:" ~ action+ }
@@ -67,10 +60,27 @@ then_block_rule                   = { "then:" ~ action+ }
 condition = {
     wait_condition |
     state_condition |
+    system_condition |
     filesystem_condition |
     terminal_condition |
     web_condition
 }
+
+// --- System Conditions ---
+system_condition = { "System" ~ (
+    service_is_running_condition |
+    service_is_stopped_condition |
+    service_is_installed_condition |
+    port_is_listening_condition |
+    port_is_closed_condition
+) }
+
+service_is_running_condition   = { "service_is_running" ~ non_empty_string }
+service_is_stopped_condition   = { "service_is_stopped" ~ non_empty_string }
+service_is_installed_condition = { "service_is_installed" ~ non_empty_string }
+port_is_listening_condition    = { "port_is_listening" ~ number }
+port_is_closed_condition       = { "port_is_closed" ~ number }
+
 action = {
     system_action |
     filesystem_action |
@@ -94,6 +104,7 @@ filesystem_condition              = { "FileSystem" ~ (
     file_is_not_empty_condition |
     file_is_empty_condition
 ) }
+
 // --- Terminal Conditions ---
 terminal_condition                = { "Terminal" ~ (
     output_contains_condition |
@@ -113,6 +124,7 @@ terminal_condition                = { "Terminal" ~ (
     json_output_at_includes_condition |
     json_output_at_has_item_count_condition
 ) }
+
 // --- Web Conditions ---
 web_condition                     = { "Web" ~ (
     response_status_is_condition |
@@ -138,7 +150,6 @@ web_condition                     = { "Web" ~ (
     json_output_at_has_item_count_condition
 ) }
 
-
 // Json-specific condition parts
 json_value_is_string_condition = { "json_response" ~ "at" ~ non_empty_string ~ "is_a_string" }
 json_value_is_number_condition = { "json_response" ~ "at" ~ non_empty_string ~ "is_a_number" }
@@ -153,7 +164,6 @@ json_output_at_has_item_count_condition = { "json_output" ~ "at" ~ non_empty_str
 json_body_has_path_condition      = { "json_body" ~ "has_path" ~ non_empty_string }
 json_path_equals_condition        = { "json_path" ~ "at" ~ non_empty_string ~ "equals" ~ (value | binary_op) }
 json_path_capture_condition       = { "json_path" ~ "at" ~ non_empty_string ~ "as" ~ identifier }
-
 
 // Terminal-specific condition parts
 output_contains_condition         = { "output_contains" ~ non_empty_string }
@@ -176,7 +186,6 @@ response_status_is_in_condition      = { "response_status" ~ "is_in" ~ "[" ~ num
 response_time_is_below_condition     = { "response_time" ~ "is_below" ~ wait_marker }
 response_body_contains_condition     = { "response_body_contains" ~ non_empty_string }
 response_body_matches_condition      = { "response_body_matches" ~ string ~ ("as" ~ identifier)? }
-//response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string }
 response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string ~ ("ignore_fields" ~ "[" ~ (string ~ ("," ~ string)*)? ~ "]")? }
 
 // Action Types
@@ -195,6 +204,7 @@ web_action_type = {
     ("http_patch" ~ non_empty_string ~ "with_body" ~ string) |
     ("http_delete" ~ non_empty_string)
 }
+
 filesystem_action                 = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? ~ ("as" ~ identifier)? }
 filesystem_action_keyword         = @{ "file" | "create_dir" | "delete_file" | "delete_dir" | "create_file" | "read_file" }
 
@@ -213,24 +223,21 @@ system_timestamp = { "timestamp" ~ "as" ~ (string | identifier) }
 system_uuid = { "uuid" ~ "as" ~ identifier }
 
 // The basic building blocks of the choreo language.
-identifier                        = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
-string                            = ${ "\"" ~ within_double ~ "\"" | "'" ~ within_single ~ "'" }
-within_double                     = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
-within_single                     = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
-non_empty_string                  = ${ "\"" ~ within_double_non_empty ~ "\"" | "'" ~ within_single_non_empty ~ "'" }
-within_double_non_empty           = @{ ( "\\" ~ ANY | !"\"" ~ ANY )+ }
-within_single_non_empty           = @{ ( "\\" ~ ANY | !"'" ~ ANY )+ }
-number                            = @{ ASCII_DIGIT+ }
-float                             = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
-duration                          = @{ ASCII_DIGIT+ ~ ("ms" | "s") }
-wait_unit                         = @{ "s" | "ms" }
-wait_marker                       = @{ float ~ wait_unit }
-value                             = { string | number | array | object | binary_op }
-//value                          = { string | number | binary_op }
-comparison_op                     = @{ ">=" | "<=" | "==" | ">" | "<" }
-binary_op                         = { "true" | "false" }
-//array                             = { "[" ~ (value ~ ("," ~ value)*)? ~ "]" }
-array                             = { "[" ~ WHITESPACE* ~ (value ~ ("," ~ value)*)? ~ WHITESPACE* ~ "]" }
-object                            = { "{" ~ WHITESPACE* ~ (pair ~ ("," ~ pair)*)? ~ WHITESPACE* ~ "}" }
-pair                              = { (identifier | string) ~ WHITESPACE* ~ ":" ~ WHITESPACE* ~ value }
-
+identifier                     = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
+string                         = ${ "\"" ~ within_double ~ "\"" | "'" ~ within_single ~ "'" }
+within_double                  = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
+within_single                  = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
+non_empty_string               = ${ "\"" ~ within_double_non_empty ~ "\"" | "'" ~ within_single_non_empty ~ "'"  }
+within_double_non_empty        = @{ ( "\\" ~ ANY | !"\"" ~ ANY )+ }
+within_single_non_empty        = @{ ( "\\" ~ ANY | !"'" ~ ANY )+ }
+number                         = @{ ASCII_DIGIT+ }
+float                          = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+duration                       = @{ ASCII_DIGIT+ ~ ("ms" | "s") }
+wait_unit                      = @{ "s" | "ms" }
+wait_marker                    = @{ float ~ wait_unit }
+value                          = { string | number | array | object | binary_op }
+comparison_op                  = @{ ">=" | "<=" | "==" | ">" | "<" }
+binary_op                      = { "true" | "false" }
+array                          = { "[" ~ WHITESPACE* ~ (value ~ ("," ~ value)*)? ~ WHITESPACE* ~ "]" }
+object                         = { "{" ~ WHITESPACE* ~ (pair ~ ("," ~ pair)*)? ~ WHITESPACE* ~ "}" }
+pair                           = { (identifier | string) ~ WHITESPACE* ~ ":" ~ WHITESPACE* ~ value }

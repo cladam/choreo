@@ -300,6 +300,22 @@ pub enum Condition {
         path: String,
         capture_as: String,
     },
+    // --- System Conditions ---
+    ServiceIsRunning {
+        name: String,
+    },
+    ServiceIsStopped {
+        name: String,
+    },
+    ServiceIsInstalled {
+        name: String,
+    },
+    PortIsListening {
+        port: u16,
+    },
+    PortIsClosed {
+        port: u16,
+    },
 }
 
 // All possible actions that can be executed.

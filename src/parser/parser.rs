@@ -1077,6 +1077,70 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             let capture_as = inner.next().map(|p| p.as_str().to_string()).unwrap();
             Condition::JsonPathCapture { path, capture_as }
         }
+        // --- System Conditions ---
+        Rule::system_condition => {
+            let inner = inner_cond.into_inner().next().unwrap();
+            build_condition_from_specific(inner)
+        }
+        Rule::service_is_running_condition => {
+            let name = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            Condition::ServiceIsRunning { name }
+        }
+        Rule::service_is_stopped_condition => {
+            let name = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            Condition::ServiceIsStopped { name }
+        }
+        Rule::service_is_installed_condition => {
+            let name = unescape_string(
+                inner_cond
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .into_inner()
+                    .next()
+                    .unwrap()
+                    .as_str(),
+            );
+            Condition::ServiceIsInstalled { name }
+        }
+        Rule::port_is_listening_condition => {
+            let port: u16 = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .parse()
+                .unwrap();
+            Condition::PortIsListening { port }
+        }
+        Rule::port_is_closed_condition => {
+            let port: u16 = inner_cond
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .parse()
+                .unwrap();
+            Condition::PortIsClosed { port }
+        }
         _ => unreachable!("Unhandled condition: {:?}", inner_cond.as_rule()),
     }
 }

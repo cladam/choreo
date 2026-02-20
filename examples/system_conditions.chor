@@ -1,0 +1,25 @@
+feature "System Conditions Example"
+
+actors: System, Terminal
+
+scenario "System service and port checks" {
+    test PortClosedCheck "Verify an unused port is closed" {
+        given:
+            Test can_start
+        when:
+            Terminal run "echo 'Checking that port 12345 is closed'"
+        then:
+            Terminal last_command succeeded
+            System port_is_closed 12345
+    }
+
+    test AnotherPortClosedCheck "Verify another unused port" {
+        given:
+            Test can_start
+        when:
+            Terminal run "echo 'Checking that port 23456 is closed'"
+        then:
+            Terminal last_command succeeded
+            System port_is_closed 23456
+    }
+}

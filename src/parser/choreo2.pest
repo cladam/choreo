@@ -1,0 +1,227 @@
+// choreo - A DSL for defining interactive test scenarios.
+// This grammar defines the DSL structure and syntax.
+
+// Ignore whitespace and comments.
+WHITESPACE                        = _{ " " | "\t" | NEWLINE }
+COMMENT                           = _{ "#" ~ (!NEWLINE ~ ANY)* }
+
+// choreo DSL is a series of statements.
+grammar                           = { SOI ~ statement* ~ EOI }
+statement                         = { feature_def | settings_def | env_def | var_def | actors_def | background_def | scenario_def }
+
+// Setting up the test suite.
+settings_def = {
+    ("setting:" ~ setting ~ ("," ~ setting)*) |
+    ("settings" ~ "{" ~ setting+ ~ "}")
+}
+setting                           = { identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ (value | binary_op) }
+background_def                    = { "background" ~ "{" ~ (action | condition)+ ~ "}" }
+env_def = {
+    ("env:" ~ identifier ~ ("," ~ identifier)*) |
+    ("env" ~ "{" ~ identifier+ ~ "}") |
+    ("env" ~ identifier)
+}
+
+var_def = {
+    ("var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ value) |
+    ("var" ~ identifier ~ WHITESPACE* ~ "=" ~ WHITESPACE* ~ array) |
+    ("var:" ~ identifier ~ ("," ~ identifier)*)
+}
+
+actors_def = {
+    ("actors:" ~ identifier ~ ("," ~ identifier)*) |
+    ("actors" ~ "{" ~ identifier+ ~ "}") |
+    ("actor" ~ identifier)
+}
+
+feature_def                       = { "feature" ~ string }
+parallel_keyword                  = { "parallel" }
+
+scenario_body_item = { test | foreach_block }
+scenario_body = { scenario_body_item* }
+scenario_def = {  parallel_keyword? ~ "scenario" ~ string ~ "{" ~ scenario_body ~ after_block? ~ "}" }
+after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
+
+foreach_block = { "foreach" ~ identifier ~ "in" ~ (variable_ref | identifier) ~ "{" ~ test+ ~ "}" }
+variable_ref = { "${" ~ identifier ~ ( ("[" ~ number ~ "]") | ("." ~ identifier) )* ~ "}" }
+
+// Defining a test case.
+test                              = { "test" ~ (identifier | string | variable_ref) ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
+given_block                       = { "given:" ~ (action | condition)* }
+when_block                        = { "when:"  ~ action+ }
+then_block                        = { "then:"  ~ condition+ }
+
+// --- Generic Rule Block ---
+rule                              = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }
+when_block_rule                   = { "when:" ~ condition+ }
+then_block_rule                   = { "then:" ~ action+ }
+
+// --- Conditions & Actions ---
+condition = {
+    wait_for_condition |
+    check_state |
+    check_filesystem |
+    check_terminal |
+    check_web
+}
+
+action = {
+    perform_system_action |
+    perform_filesystem_action |
+    perform_terminal_run |
+    perform_web_action
+}
+
+// Condition Types (Imperative Verb-Subject)
+wait_for_condition                = { "wait" ~ WHITESPACE* ~ comparison_op ~ WHITESPACE* ~ wait_marker }
+check_state                       = { "Test" ~ (expect_success | expect_startable) }
+expect_success                    = { "expect_success" ~ identifier }
+expect_startable                  = { "expect_startable" }
+
+// --- Filesystem Conditions ---
+check_file_not_empty              = { "file" ~ non_empty_string ~ "is_not_empty" }
+check_file_empty                  = { "file" ~ non_empty_string ~ "is_empty" }
+filesystem_condition_keyword      = @{ "expect_file" | "expect_no_file" | "expect_dir" | "expect_no_dir" | "expect_content" }
+check_filesystem                  = { "FileSystem" ~ (
+    (filesystem_condition_keyword ~ non_empty_string ~ "with_content" ~ string) |
+    (filesystem_condition_keyword ~ non_empty_string) |
+    check_file_not_empty |
+    check_file_empty
+) }
+
+// --- Terminal Conditions ---
+check_terminal                    = { "Terminal" ~ (
+    expect_output_contains |
+    expect_output_matches |
+    expect_command_success |
+    expect_command_failure |
+    expect_exit_code |
+    expect_stdout_empty |
+    expect_stderr_empty |
+    expect_stderr_contains |
+    expect_output_prefix |
+    expect_output_suffix |
+    expect_output_equals |
+    expect_valid_json |
+    expect_json_path |
+    expect_json_equals |
+    expect_json_includes |
+    expect_json_item_count
+) }
+
+// --- Web Conditions ---
+check_web                         = { "Web" ~ (
+    expect_status_code |
+    expect_status_success |
+    expect_status_error |
+    expect_status_in_range |
+    expect_response_time_below |
+    expect_body_contains |
+    expect_body_matches |
+    expect_body_json_equals |
+    expect_json_body_path |
+    expect_json_path_value |
+    capture_json_path |
+    expect_json_string |
+    expect_json_number |
+    expect_json_array |
+    expect_json_object |
+    expect_json_size |
+    expect_valid_json |
+    expect_json_output_path |
+    expect_json_output_equals |
+    expect_json_output_includes |
+    expect_json_output_count
+) }
+
+// Json-specific condition parts (Imperative)
+expect_json_string             = { "json_response" ~ "at" ~ non_empty_string ~ "is_string" }
+expect_json_number             = { "json_response" ~ "at" ~ non_empty_string ~ "is_number" }
+expect_json_array              = { "json_response" ~ "at" ~ non_empty_string ~ "is_array" }
+expect_json_object             = { "json_response" ~ "at" ~ non_empty_string ~ "is_object" }
+expect_json_size               = { "json_response" ~ "at" ~ non_empty_string ~ "has_size" ~ number }
+expect_valid_json              = { "check_valid_json" }
+expect_json_output_path        = { "json_output" ~ "has_path" ~ non_empty_string }
+expect_json_output_equals      = { "json_output" ~ "at" ~ non_empty_string ~ "equals" ~ value }
+expect_json_output_includes    = { "json_output" ~ "at" ~ non_empty_string ~ "includes" ~ value }
+expect_json_output_count       = { "json_output" ~ "at" ~ non_empty_string ~ "has_count" ~ number }
+expect_json_body_path          = { "json_body" ~ "has_path" ~ non_empty_string }
+expect_json_path_value         = { "json_path" ~ "at" ~ non_empty_string ~ "equals" ~ (value | binary_op) }
+capture_json_path              = { "json_path" ~ "at" ~ non_empty_string ~ "capture_as" ~ identifier }
+
+// Terminal-specific condition parts (Imperative)
+expect_output_contains         = { "expect_contains" ~ non_empty_string }
+expect_output_matches          = { "expect_matches" ~ non_empty_string ~ ("as" ~ identifier)? }
+expect_command_success         = { "expect_success" }
+expect_command_failure         = { "expect_failure" }
+expect_exit_code               = { "expect_exit_code" ~ number }
+expect_stdout_empty            = { "expect_stdout_empty" }
+expect_stderr_empty            = { "expect_stderr_empty" }
+expect_stderr_contains         = { "expect_stderr_contains" ~ non_empty_string }
+expect_output_prefix           = { "expect_starts_with" ~ non_empty_string }
+expect_output_suffix           = { "expect_ends_with" ~ non_empty_string }
+expect_output_equals           = { "expect_equals" ~ non_empty_string }
+
+// Web-specific condition parts (Imperative)
+expect_status_code             = { "expect_status" ~ ( number | string ) }
+expect_status_success          = { "expect_status_success" }
+expect_status_error            = { "expect_status_error" }
+expect_status_in_range         = { "expect_status_in" ~ "[" ~ number ~ ("," ~ number)* ~ "]" }
+expect_response_time_below     = { "expect_response_below" ~ wait_marker }
+expect_body_contains           = { "expect_body_contains" ~ non_empty_string }
+expect_body_matches            = { "expect_body_matches" ~ string ~ ("as" ~ identifier)? }
+expect_body_json_equals        = { "expect_body_json" ~ non_empty_string ~ ("ignore_fields" ~ "[" ~ (string ~ ("," ~ string)*)? ~ "]")? }
+
+// Action Types (Imperative)
+perform_terminal_run           = { "Terminal" ~ "run" ~ non_empty_string }
+perform_web_action             = { "Web" ~ web_action_type }
+web_action_type = {
+    ("set_header" ~ string ~ string) |
+    ("clear_header" ~ string) |
+    ("clear_headers") |
+    ("set_cookie" ~ string ~ string) |
+    ("clear_cookie" ~ string) |
+    ("clear_cookies") |
+    ("http_get" ~ non_empty_string) |
+    ("http_post" ~ non_empty_string ~ "with_body" ~ string) |
+    ("http_put" ~ non_empty_string ~ "with_body" ~ string) |
+    ("http_patch" ~ non_empty_string ~ "with_body" ~ string) |
+    ("http_delete" ~ non_empty_string)
+}
+
+perform_filesystem_action      = { "FileSystem" ~ filesystem_action_keyword ~ string ~ ("with_content" ~ string)? ~ ("as" ~ identifier)? }
+filesystem_action_keyword      = @{ "write_file" | "create_directory" | "delete_file" | "delete_directory" | "create_file" | "read_file" }
+
+// --- System Actor (Imperative) ---
+perform_system_action          = { "System" ~ system_action_type }
+system_action_type = {
+    pause_system |
+    log_message |
+    capture_timestamp |
+    generate_uuid
+}
+
+pause_system                   = { "pause" ~ wait_marker }
+log_message                    = { "log" ~ string }
+capture_timestamp              = { "timestamp" ~ "as" ~ (string | identifier) }
+generate_uuid                  = { "uuid" ~ "as" ~ identifier }
+
+// The basic building blocks of the choreo language.
+identifier                     = @{ ( "_" | 'a'..'z' | 'A'..'Z' ) ~ ( "_" | 'a'..'z' | 'A'..'Z' | '0'..'9' )* }
+string                         = ${ "\"" ~ within_double ~ "\"" | "'" ~ within_single ~ "'" }
+within_double                  = @{ ( "\\" ~ ANY | !"\"" ~ ANY )* }
+within_single                  = @{ ( "\\" ~ ANY | !"'" ~ ANY )* }
+non_empty_string               = ${ "\"" ~ within_double_non_empty ~ "\"" | "'" ~ within_single_non_empty ~ "'"  }
+within_double_non_empty        = @{ ( "\\" ~ ANY | !"\"" ~ ANY )+ }
+within_single_non_empty        = @{ ( "\\" ~ ANY | !"'" ~ ANY )+ }
+number                         = @{ ASCII_DIGIT+ }
+float                          = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+duration                       = @{ ASCII_DIGIT+ ~ ("ms" | "s") }
+wait_unit                      = @{ "s" | "ms" }
+wait_marker                    = @{ float ~ wait_unit }
+value                          = { string | number | array | object | binary_op }
+comparison_op                  = @{ ">=" | "<=" | "==" | ">" | "<" }
+binary_op                      = { "true" | "false" }
+array                          = { "[" ~ WHITESPACE* ~ (value ~ ("," ~ value)*)? ~ WHITESPACE* ~ "]" }
+object                         = { "{" ~ WHITESPACE* ~ (pair ~ ("," ~ pair)*)? ~ WHITESPACE* ~ "}" }
+pair                           = { (identifier | string) ~ WHITESPACE* ~ ":" ~ WHITESPACE* ~ value }
