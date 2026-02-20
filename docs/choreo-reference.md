@@ -392,6 +392,16 @@ This is the reference for all available commands that can be used within the `te
 | `System uuid as <var_name>`     | Generates a new UUID and saves it to a variable.                 |
 | `System timestamp as <varName>` | Captures the current Unix timestamp into a variable.             |
 
+#### Conditions
+
+| Syntax                              | Description                                                               |
+|:------------------------------------|:--------------------------------------------------------------------------|
+| `System service_is_running "..."`   | Passes if the named service is currently running.                         |
+| `System service_is_stopped "..."`   | Passes if the named service is not currently running.                     |
+| `System service_is_installed "..."` | Passes if the named service is installed on the system.                   |
+| `System port_is_listening <port>`   | Passes if something is listening on the specified port.                   |
+| `System port_is_closed <port>`      | Passes if nothing is listening on the specified port (port is available). |
+
 ### FileSystem Commands
 
 #### Actions
