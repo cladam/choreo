@@ -432,11 +432,13 @@ This is the reference for all available commands that can be used within the `te
 
 #### Conditions
 
+> **Note:** All System conditions are cross-platform and work on Windows, macOS, and Linux.
+
 | Syntax                              | Description                                                               |
 |:------------------------------------|:--------------------------------------------------------------------------|
-| `System service_is_running "..."`   | Passes if the named service is currently running.                         |
-| `System service_is_stopped "..."`   | Passes if the named service is not currently running.                     |
-| `System service_is_installed "..."` | Passes if the named service is installed on the system.                   |
+| `System service_is_running "..."`   | Passes if the named service/process is currently running.                 |
+| `System service_is_stopped "..."`   | Passes if the named service/process is not currently running.             |
+| `System service_is_installed "..."` | Passes if the named service/executable is installed on the system.        |
 | `System port_is_listening <port>`   | Passes if something is listening on the specified port.                   |
 | `System port_is_closed <port>`      | Passes if nothing is listening on the specified port (port is available). |
 

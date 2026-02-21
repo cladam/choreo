@@ -4,6 +4,7 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
+use sysinfo::System;
 use uuid as rust_uuid;
 
 /// SystemBackend handles System actor actions and conditions.
@@ -87,71 +88,36 @@ impl SystemBackend {
 
     // --- System Condition Checks ---
 
-    /// Checks if a service is running using platform-specific commands.
+    /// Checks if a service/process is running using cross-platform sysinfo crate.
     pub fn check_service_is_running(&self, name: &str, verbose: bool) -> bool {
         if verbose {
-            println!("[SYSTEM] Checking if service '{}' is running", name);
+            println!("[SYSTEM] Checking if service/process '{}' is running", name);
         }
 
-        #[cfg(target_os = "macos")]
-        {
-            // Try launchctl first (for launchd services)
-            let launchctl_output = std::process::Command::new("launchctl")
-                .args(["list"])
-                .output();
+        let mut sys = System::new();
+        sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
 
-            if let Ok(output) = launchctl_output {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                if stdout.lines().any(|line| line.contains(name)) {
-                    return true;
+        // Check if any process matches the name (case-insensitive on Windows)
+        let name_lower = name.to_lowercase();
+        for process in sys.processes().values() {
+            let process_name = process.name().to_string_lossy().to_lowercase();
+            // Match exact name or name without extension (for Windows .exe)
+            if process_name == name_lower
+                || process_name == format!("{}.exe", name_lower)
+                || process_name.trim_end_matches(".exe") == name_lower
+            {
+                if verbose {
+                    println!(
+                        "[SYSTEM] Found process '{}' with PID {}",
+                        process.name().to_string_lossy(),
+                        process.pid()
+                    );
                 }
+                return true;
             }
-
-            // Fall back to checking if process is running via pgrep
-            let pgrep_output = std::process::Command::new("pgrep")
-                .args(["-x", name])
-                .output();
-
-            if let Ok(output) = pgrep_output {
-                return output.status.success();
-            }
-
-            false
         }
 
-        #[cfg(target_os = "linux")]
-        {
-            // Try systemctl first
-            let systemctl_output = std::process::Command::new("systemctl")
-                .args(["is-active", name])
-                .output();
-
-            if let Ok(output) = systemctl_output {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                if stdout.trim() == "active" {
-                    return true;
-                }
-            }
-
-            // Fall back to service command
-            let service_output = std::process::Command::new("service")
-                .args([name, "status"])
-                .output();
-
-            if let Ok(output) = service_output {
-                return output.status.success();
-            }
-
-            false
-        }
-
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-        {
-            if verbose {
-                println!("[SYSTEM] Service check not supported on this platform");
-            }
-            false
-        }
+        false
     }
 
     /// Checks if a service is stopped (not running).
@@ -162,12 +128,24 @@ impl SystemBackend {
         !self.check_service_is_running(name, false)
     }
 
-    /// Checks if a service is installed on the system.
+    /// Checks if a service/executable is installed on the system (cross-platform).
     pub fn check_service_is_installed(&self, name: &str, verbose: bool) -> bool {
         if verbose {
-            println!("[SYSTEM] Checking if service '{}' is installed", name);
+            println!(
+                "[SYSTEM] Checking if service/executable '{}' is installed",
+                name
+            );
         }
 
+        // Use the `which` crate for cross-platform executable lookup
+        if which::which(name).is_ok() {
+            if verbose {
+                println!("[SYSTEM] Found '{}' in PATH", name);
+            }
+            return true;
+        }
+
+        // Platform-specific additional checks for service definitions
         #[cfg(target_os = "macos")]
         {
             // Check launchd plist files
@@ -183,24 +161,12 @@ impl SystemBackend {
 
             for path in &launchd_paths {
                 if std::path::Path::new(path).exists() {
+                    if verbose {
+                        println!("[SYSTEM] Found launchd plist at {}", path);
+                    }
                     return true;
                 }
             }
-
-            // Check if the executable exists in common paths
-            let executable_paths = [
-                format!("/usr/local/bin/{}", name),
-                format!("/opt/homebrew/bin/{}", name),
-                format!("/usr/bin/{}", name),
-            ];
-
-            for path in &executable_paths {
-                if std::path::Path::new(path).exists() {
-                    return true;
-                }
-            }
-
-            false
         }
 
         #[cfg(target_os = "linux")]
@@ -214,6 +180,9 @@ impl SystemBackend {
 
             for path in &systemd_paths {
                 if std::path::Path::new(path).exists() {
+                    if verbose {
+                        println!("[SYSTEM] Found systemd unit at {}", path);
+                    }
                     return true;
                 }
             }
@@ -221,19 +190,31 @@ impl SystemBackend {
             // Check init.d
             let initd_path = format!("/etc/init.d/{}", name);
             if std::path::Path::new(&initd_path).exists() {
+                if verbose {
+                    println!("[SYSTEM] Found init.d script at {}", initd_path);
+                }
                 return true;
             }
-
-            false
         }
 
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        #[cfg(target_os = "windows")]
         {
-            if verbose {
-                println!("[SYSTEM] Service installation check not supported on this platform");
+            // Check Windows services using sc query
+            let output = std::process::Command::new("sc")
+                .args(["query", name])
+                .output();
+
+            if let Ok(output) = output {
+                if output.status.success() {
+                    if verbose {
+                        println!("[SYSTEM] Found Windows service '{}'", name);
+                    }
+                    return true;
+                }
             }
-            false
         }
+
+        false
     }
 
     /// Checks if a port is currently listening for connections.
@@ -306,7 +287,25 @@ impl SystemBackend {
             false
         }
 
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+        #[cfg(target_os = "windows")]
+        {
+            let output = std::process::Command::new("netstat").args(["-an"]).output();
+
+            if let Ok(output) = output {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                if verbose {
+                    println!("[SYSTEM] netstat output (checking for port {})", port);
+                }
+                // Look for LISTENING state on the specified port
+                let port_pattern = format!(":{}", port);
+                return stdout.lines().any(|line| {
+                    line.contains(&port_pattern) && line.to_uppercase().contains("LISTENING")
+                });
+            }
+            false
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
         {
             if verbose {
                 println!("[SYSTEM] Port check not fully supported on this platform");

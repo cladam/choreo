@@ -83,22 +83,36 @@ when:
 The `System` actor also provides conditions for checking system state. These are useful for verifying that required
 services are running or that ports are available before running tests.
 
+> **Cross-Platform Support:** All system conditions work on **Windows**, **macOS**, and **Linux**. The underlying
+> implementation uses the `sysinfo` crate for process enumeration and the `which` crate for executable lookup, providing
+> consistent behavior across all major operating systems.
+
 ### Service Conditions
 
 #### `service_is_running`
 
-Checks if a service is currently running on the system. On macOS, this checks launchd services and running processes.
-On Linux, this checks systemd and init.d services.
+Checks if a service or process is currently running on the system. This uses cross-platform process enumeration to find
+matching processes by name.
+
+- On **Windows**, it matches process names with or without the `.exe` extension
+- On **macOS** and **Linux**, it matches process names directly
+
 **Syntax:** `System service_is_running "<service_name>"`
 
 #### `service_is_stopped`
 
-Checks if a service is not currently running.
+Checks if a service or process is not currently running.
 **Syntax:** `System service_is_stopped "<service_name>"`
 
 #### `service_is_installed`
 
-Checks if a service is installed on the system (regardless of whether it's running).
+Checks if a service or executable is installed on the system (regardless of whether it's running). This performs
+a cross-platform PATH lookup first, then falls back to platform-specific service definition checks:
+
+- On **Windows**, checks Windows services via `sc query`
+- On **macOS**, checks launchd plist files in standard locations
+- On **Linux**, checks systemd unit files and init.d scripts
+
 **Syntax:** `System service_is_installed "<service_name>"`
 
 #### Example:
@@ -116,6 +130,10 @@ test DatabaseReady "Ensure database is ready before tests" {
 ```
 
 ### Port Conditions
+
+Port conditions work cross-platform by attempting to bind to the port. If binding fails with "address already in use",
+it means something is listening on that port. For privileged ports or special cases, platform-specific fallback commands
+are used (`lsof` on macOS, `ss` on Linux, `netstat` on Windows).
 
 #### `port_is_listening`
 
