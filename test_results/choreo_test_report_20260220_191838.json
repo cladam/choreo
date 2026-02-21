@@ -1,0 +1,60 @@
+[
+  {
+    "uri": "/Users/claes.adamsson/Offwork/code/choreo/examples/setting_demo.chor",
+    "keyword": "Feature",
+    "name": "Choreo Configuration",
+    "elements": [
+      {
+        "keyword": "Scenario",
+        "name": "A simple test to confirm settings are used",
+        "steps": [
+          {
+            "name": "QuickTest",
+            "description": "it runs a quick command",
+            "result": {
+              "status": "passed",
+              "durationInMs": 1315
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "A scenario with a failing test",
+        "steps": [
+          {
+            "name": "FailingTest",
+            "description": "it should fail and stop the run",
+            "result": {
+              "status": "failed",
+              "durationInMs": 172,
+              "errorMessage": "Synchronous test conditions not met"
+            }
+          }
+        ],
+        "after": []
+      },
+      {
+        "keyword": "Scenario",
+        "name": "A second scenario that should not run",
+        "steps": [
+          {
+            "name": "SkippedTest",
+            "description": "this test should be skipped",
+            "result": {
+              "status": "skipped",
+              "durationInMs": 0
+            }
+          }
+        ],
+        "after": []
+      }
+    ],
+    "summary": {
+      "tests": 3,
+      "failures": 1,
+      "totalTimeInSeconds": 2.341136
+    }
+  }
+]

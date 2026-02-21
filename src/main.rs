@@ -2,7 +2,7 @@ use choreo::cli;
 use choreo::cli::{Cli, Commands};
 use choreo::colours;
 use choreo::error::AppError;
-use choreo::parser::ast::{Statement, Value};
+use choreo::parser::ast::{Statement, TaskDef, Value};
 use choreo::parser::helpers::substitute_string;
 use choreo::parser::{linter, parser};
 use choreo::runner::TestRunner;
@@ -131,6 +131,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut scenarios: Vec<choreo::parser::ast::Scenario> = Vec::new();
+            let mut tasks: HashMap<String, TaskDef> = HashMap::new();
             let test_file_path = std::path::Path::new(&file);
             let base_dir = test_file_path
                 .parent()
@@ -139,6 +140,9 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
 
             for s in &test_suite.statements {
                 match s {
+                    Statement::TaskDef(task_def) => {
+                        tasks.insert(task_def.name.clone(), task_def.clone());
+                    }
                     Statement::BackgroundDef(steps) => {
                         // Convert background steps to a scenario
                         let bg_test_case = choreo::parser::ast::TestCase {
@@ -195,6 +199,7 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 test_suite,
                 base_dir.to_path_buf(),
                 env_vars.clone(),
+                tasks,
                 verbose,
             );
 

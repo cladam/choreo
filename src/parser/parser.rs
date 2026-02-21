@@ -1,11 +1,11 @@
 use crate::parser::ast::{
     Action, Condition, ForeachBlock, GivenStep, ReportFormat, Scenario, ScenarioBodyItem,
-    ScenarioSpan, SettingSpan, Span, StateCondition, Statement, TestCase, TestCaseSpan, TestSuite,
-    TestSuiteSettings, Value,
+    ScenarioSpan, SettingSpan, Span, StateCondition, Statement, TaskArg, TaskBodyItem, TaskCall,
+    TaskDef, TestCase, TestCaseSpan, TestSuite, TestSuiteSettings, ThenStep, Value, WhenStep,
 };
 use crate::parser::helpers::{
-    substitute_string, substitute_variables_in_action, substitute_variables_in_condition,
-    substitute_variables_in_test_case,
+    substitute_string, substitute_variables_in_given_step, substitute_variables_in_test_case,
+    substitute_variables_in_then_step, substitute_variables_in_when_step,
 };
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
@@ -38,6 +38,7 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
             Rule::feature_def => build_feature_def(pair),
             Rule::scenario_def => build_scenario(pair),
             Rule::background_def => build_background_def(pair),
+            Rule::task_def => build_task_def(pair),
             _ => unimplemented!("Parser rule not handled: {:?}", pair.as_rule()),
         });
     }
@@ -196,6 +197,108 @@ fn build_feature_def(pair: Pair<Rule>) -> Statement {
 fn build_env_def(pair: Pair<Rule>) -> Statement {
     let identifiers: Vec<String> = pair.into_inner().map(|p| p.as_str().to_string()).collect();
     Statement::EnvDef(identifiers)
+}
+
+/// Builds a TaskDef from a parsed Pair.
+fn build_task_def(pair: Pair<Rule>) -> Statement {
+    let span = pair.as_span();
+    let mut inner = pair.into_inner();
+
+    // First is the task name (identifier)
+    let name = inner.next().unwrap().as_str().to_string();
+
+    // Next might be parameter list or task body items
+    let mut parameters = Vec::new();
+    let mut body = Vec::new();
+
+    for item in inner {
+        match item.as_rule() {
+            Rule::task_param_list => {
+                parameters = item.into_inner().map(|p| p.as_str().to_string()).collect();
+            }
+            Rule::task_body_item => {
+                let inner_item = item.into_inner().next().unwrap();
+                match inner_item.as_rule() {
+                    Rule::action => {
+                        let specific_action = inner_item.into_inner().next().unwrap();
+                        body.push(TaskBodyItem::Action(build_action(specific_action)));
+                    }
+                    Rule::condition => {
+                        body.push(TaskBodyItem::Condition(build_condition(inner_item)));
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Statement::TaskDef(TaskDef {
+        name,
+        parameters,
+        body,
+        span: Some(Span {
+            start: span.start(),
+            end: span.end(),
+            line: span.start_pos().line_col().0,
+            column: span.start_pos().line_col().1,
+        }),
+    })
+}
+
+/// Builds a TaskCall from a parsed Pair.
+pub fn build_task_call(pair: Pair<Rule>) -> TaskCall {
+    let mut inner = pair.into_inner();
+
+    // First is the task name (identifier)
+    let name = inner.next().unwrap().as_str().to_string();
+
+    // Next might be argument list
+    let mut arguments = Vec::new();
+
+    if let Some(arg_list) = inner.next() {
+        if arg_list.as_rule() == Rule::task_arg_list {
+            for arg in arg_list.into_inner() {
+                arguments.push(build_task_arg(arg));
+            }
+        }
+    }
+
+    TaskCall { name, arguments }
+}
+
+/// Builds a TaskArg from a parsed Pair.
+fn build_task_arg(pair: Pair<Rule>) -> TaskArg {
+    let inner = pair.into_inner().next().unwrap();
+    match inner.as_rule() {
+        Rule::wait_marker => {
+            let duration_str = inner.as_str();
+            let duration = if duration_str.ends_with("ms") {
+                let value_str = &duration_str[..duration_str.len() - 2];
+                value_str.parse::<f32>().unwrap_or(0.0) / 1000.0
+            } else if duration_str.ends_with('s') {
+                let value_str = &duration_str[..duration_str.len() - 1];
+                value_str.parse::<f32>().unwrap_or(0.0)
+            } else {
+                0.0
+            };
+            TaskArg::Duration(duration)
+        }
+        Rule::string => {
+            let s = inner.into_inner().next().unwrap().as_str();
+            TaskArg::String(unescape_string(s))
+        }
+        Rule::number => {
+            let n: i32 = inner.as_str().parse().unwrap_or(0);
+            TaskArg::Number(n)
+        }
+        Rule::variable_ref => TaskArg::VariableRef(inner.as_str().to_string()),
+        Rule::identifier => {
+            // Treat bare identifier as variable reference
+            TaskArg::VariableRef(format!("${{{}}}", inner.as_str()))
+        }
+        _ => TaskArg::String(inner.as_str().to_string()),
+    }
 }
 
 // This function builds the actions
@@ -359,8 +462,8 @@ pub fn build_test_case(pair: Pair<Rule>) -> TestCase {
         name,
         description,
         given: build_given_steps(given_block.into_inner()),
-        when: build_actions(when_block.into_inner()),
-        then: build_conditions(then_block.into_inner()),
+        when: build_when_steps(when_block.into_inner()),
+        then: build_then_steps(then_block.into_inner()),
         span: Some(Span {
             start: span.start(),
             end: span.end(),
@@ -460,30 +563,21 @@ pub fn expand_scenario_foreach_blocks(
                         expanded_test.given = test
                             .given
                             .iter()
-                            .map(|step| match step {
-                                GivenStep::Action(action) => GivenStep::Action(
-                                    substitute_variables_in_action(action, &loop_env),
-                                ),
-                                GivenStep::Condition(condition) => GivenStep::Condition(
-                                    substitute_variables_in_condition(condition, &loop_env),
-                                ),
-                            })
+                            .map(|step| substitute_variables_in_given_step(step, &loop_env))
                             .collect();
 
-                        // Substitute variables in when actions
+                        // Substitute variables in when steps
                         expanded_test.when = test
                             .when
                             .iter()
-                            .map(|action| substitute_variables_in_action(action, &loop_env))
+                            .map(|step| substitute_variables_in_when_step(step, &loop_env))
                             .collect();
 
-                        // Substitute variables in then conditions
+                        // Substitute variables in then steps
                         expanded_test.then = test
                             .then
                             .iter()
-                            .map(|condition| {
-                                substitute_variables_in_condition(condition, &loop_env)
-                            })
+                            .map(|step| substitute_variables_in_then_step(step, &loop_env))
                             .collect();
 
                         expanded_body.push(ScenarioBodyItem::Test(expanded_test));
@@ -641,11 +735,11 @@ pub fn expand_foreach_blocks(
     expanded
 }
 
-// Builds a vector of GivenSteps, which can be either an Action or a Condition.
+// Builds a vector of GivenSteps, which can be either an Action, Condition, or TaskCall.
 pub fn build_given_steps(pairs: Pairs<Rule>) -> Vec<GivenStep> {
     pairs
         .map(|pair| {
-            // The pair will be either an 'action' or a 'condition'.
+            // The pair will be either an 'action', 'condition', or 'task_call'.
             match pair.as_rule() {
                 Rule::action => {
                     // The 'action' rule contains one of the specific action types.
@@ -653,8 +747,34 @@ pub fn build_given_steps(pairs: Pairs<Rule>) -> Vec<GivenStep> {
                     GivenStep::Action(build_action(specific_action))
                 }
                 Rule::condition => GivenStep::Condition(build_condition(pair)),
+                Rule::task_call => GivenStep::TaskCall(build_task_call(pair)),
                 _ => unreachable!("Unexpected rule in given block: {:?}", pair.as_rule()),
             }
+        })
+        .collect()
+}
+
+// Builds a vector of WhenSteps, which can be either an Action or TaskCall.
+pub fn build_when_steps(pairs: Pairs<Rule>) -> Vec<WhenStep> {
+    pairs
+        .map(|pair| match pair.as_rule() {
+            Rule::action => {
+                let specific_action = pair.into_inner().next().unwrap();
+                WhenStep::Action(build_action(specific_action))
+            }
+            Rule::task_call => WhenStep::TaskCall(build_task_call(pair)),
+            _ => unreachable!("Unexpected rule in when block: {:?}", pair.as_rule()),
+        })
+        .collect()
+}
+
+// Builds a vector of ThenSteps, which can be either a Condition or TaskCall.
+pub fn build_then_steps(pairs: Pairs<Rule>) -> Vec<ThenStep> {
+    pairs
+        .map(|pair| match pair.as_rule() {
+            Rule::condition => ThenStep::Condition(build_condition(pair)),
+            Rule::task_call => ThenStep::TaskCall(build_task_call(pair)),
+            _ => unreachable!("Unexpected rule in then block: {:?}", pair.as_rule()),
         })
         .collect()
 }
@@ -1153,6 +1273,7 @@ pub fn build_condition(pair: Pair<Rule>) -> Condition {
 }
 
 /// Builds a vector of Conditions from parsed Pairs.
+#[allow(dead_code)]
 fn build_conditions(pairs: Pairs<Rule>) -> Vec<Condition> {
     pairs.map(build_condition).collect()
 }

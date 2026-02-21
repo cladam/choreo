@@ -2,20 +2,22 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="A personal site for projects, documentation, and thoughts on software development." />
-    <meta name="keywords" content="Claes Adamsson, cladam, TBD, DevOps, tbdflow, medi, choreo, ilseon, blog">
-    <meta name="robots" content="index, follow">
-    <meta name="google-site-verification" content="c7yBT2wAbZMG9ON-mYwt-HndBlthrBo1mhsx-88Iw7M" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="A personal site for projects, documentation, and thoughts on software development."
+          name="description"/>
+    <meta content="Claes Adamsson, cladam, TBD, DevOps, tbdflow, medi, choreo, ilseon, blog" name="keywords">
+    <meta content="index, follow" name="robots">
+    <meta content="c7yBT2wAbZMG9ON-mYwt-HndBlthrBo1mhsx-88Iw7M" name="google-site-verification"/>
 
     <title>choreo - The Model Client for CLI and APIs</title>
 
     <!-- Umami Analytics -->
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="6b6a0254-9e5f-4cf5-9ca8-eb306ada8f82"></script>
+    <script data-website-id="6b6a0254-9e5f-4cf5-9ca8-eb306ada8f82" defer
+            src="https://cloud.umami.is/script.js"></script>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/choreo/assets/favicon.png">
-    
+    <link href="/choreo/assets/favicon.png" rel="icon" type="image/png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -150,7 +152,7 @@
                                     <div className="w-3 h-3 rounded-full bg-slate-200"></div>
                                 </div>
                                 <div
-                                    className="text-xs font-bold font-mono text-[#7f8c8d] tracking-widest">web_health_check.chor
+                                    className="text-xs font-bold font-mono text-[#7f8c8d] tracking-widest">api_health_check.chor
                                 </div>
                                 <div className="w-10"></div>
                             </div>
@@ -159,7 +161,7 @@
                                 <div className="flex gap-6">
                                     <div
                                         className="text-[#adb5bd] select-none text-right w-8 border-r border-slate-200 pr-4">
-                                        1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28
+                                        1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19<br/>20<br/>21<br/>22<br/>23<br/>24<br/>25<br/>26<br/>27<br/>28<br/>29<br/>30<br/>31<br/>32<br/>33<br/>34<br/>35
                                     </div>
 
                                     <div className="flex-1 whitespace-pre">
@@ -173,7 +175,7 @@
                                         {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
                                         <span style={{color: theme.syntax.function}}>set_header </span>
                                         <span
-                                            style={{color: theme.syntax.string}}>"User-Agent" "choreo-test-runner/1.0"</span>{"\n"}
+                                            style={{color: theme.syntax.string}}>"User-Agent" "choreo/1.0"</span>{"\n"}
                                         {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
                                         <span style={{color: theme.syntax.function}}>set_header </span>
                                         <span
@@ -191,42 +193,57 @@
                                         <span className="text-[#24292f]">bearer_token </span>
                                         <span style={{color: theme.syntax.punctuation}}>= </span>
                                         <span style={{color: theme.syntax.string}}>"choreo-token-xyz"</span>{"\n\n"}
-                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>scenario </span>
+                                        <span style={{color: theme.syntax.comment}}># Implementation layer: reusable tasks</span>{"\n"}
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>task </span>
+                                        <span style={{color: theme.syntax.function}}>authenticate</span>
+                                        <span style={{color: theme.syntax.punctuation}}>(token) {"{"}</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>set_header </span>
                                         <span
-                                            style={{color: theme.syntax.string}}>"Health check for a web API endpoint" </span>
+                                            style={{color: theme.syntax.string}}>"Authorization" "Bearer $&#123;token&#125;"</span>{"\n"}
+                                        <span style={{color: theme.syntax.punctuation}}>{"}"}</span>{"\n\n"}
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>task </span>
+                                        <span style={{color: theme.syntax.function}}>verify_sla</span>
+                                        <span style={{color: theme.syntax.punctuation}}>() {"{"}</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>response_status </span>
+                                        <span style={{color: theme.syntax.builtin}}>is_success</span>{"\n"}
+                                        {"  "}<span style={{color: theme.syntax.builtin}}>Web </span>
+                                        <span style={{color: theme.syntax.function}}>response_time </span>
+                                        <span style={{color: theme.syntax.builtin}}>is_below </span>
+                                        <span style={{color: theme.syntax.string}}>2s</span>{"\n"}
+                                        <span style={{color: theme.syntax.punctuation}}>{"}"}</span>{"\n\n"}
+                                        <span
+                                            style={{color: theme.syntax.comment}}># Business layer: readable scenarios</span>{"\n"}
+                                        <span style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>scenario </span>
+                                        <span style={{color: theme.syntax.string}}>"Service Health Verification" </span>
                                         <span style={{color: theme.syntax.punctuation}}>{"{"}</span>{"\n"}
                                         {"  "}<span
                                         style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>test </span>
-                                        <span className="text-[#24292f]">HealthCheck </span>
+                                        <span className="text-[#24292f]">HealthSLA </span>
                                         <span
-                                            style={{color: theme.syntax.string}}>"Verify the API endpoint is healthy" </span>
+                                            style={{color: theme.syntax.string}}>"Verify service responds within SLA" </span>
                                         <span style={{color: theme.syntax.punctuation}}>{"{"}</span>{"\n"}
                                         {"    "}<span
                                         style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>given</span>
-                                        <span style={{color: theme.syntax.punctuation}}>:</span>{"\n"}
-                                        {"      "}<span
-                                        style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>Test </span>
-                                        <span style={{color: theme.syntax.builtin}}>can_start</span>{"\n"}
+                                        <span style={{color: theme.syntax.punctuation}}>:</span>
+                                        <span style={{color: theme.syntax.builtin}}> Test </span>
+                                        <span style={{color: theme.syntax.function}}>can_start</span>{"\n"}
                                         {"    "}<span
                                         style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>when</span>
                                         <span style={{color: theme.syntax.punctuation}}>:</span>{"\n"}
-                                        {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
-                                        <span style={{color: theme.syntax.function}}>set_header </span>
-                                        <span
-                                            style={{color: theme.syntax.string}}>"Authorization" "Bearer $&#123;bearer_token&#125;"</span>{"\n"}
+                                        {"      "}<span style={{color: theme.syntax.function}}>authenticate</span>
+                                        <span style={{color: theme.syntax.punctuation}}>(</span>
+                                        <span style={{color: theme.syntax.string}}>"$&#123;bearer_token&#125;"</span>
+                                        <span style={{color: theme.syntax.punctuation}}>)</span>{"\n"}
                                         {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
                                         <span style={{color: theme.syntax.function}}>http_get </span>
                                         <span style={{color: theme.syntax.string}}>"$&#123;url&#125;"</span>{"\n"}
                                         {"    "}<span
                                         style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>then</span>
-                                        <span style={{color: theme.syntax.punctuation}}>:</span>{"\n"}
-                                        {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
-                                        <span style={{color: theme.syntax.function}}>response_status </span>
-                                        <span style={{color: theme.syntax.builtin}}>is_success</span>{"\n"}
-                                        {"      "}<span style={{color: theme.syntax.builtin}}>Web </span>
-                                        <span style={{color: theme.syntax.function}}>response_time </span>
-                                        <span style={{color: theme.syntax.builtin}}>is_below </span>
-                                        <span style={{color: theme.syntax.string}}>2s</span>{"\n"}
+                                        <span style={{color: theme.syntax.punctuation}}>:</span>
+                                        <span style={{color: theme.syntax.function}}> verify_sla</span>
+                                        <span style={{color: theme.syntax.punctuation}}>()</span>{"\n"}
                                         {"  "}<span style={{color: theme.syntax.punctuation}}>{"}"}</span>{"\n"}
                                         {"  "}<span
                                         style={{color: theme.syntax.keyword, fontWeight: 'bold'}}>after </span>
@@ -247,7 +264,7 @@
                                      style={{backgroundColor: theme.teal}}>
                                     <Icon name="check-circle-2" size={14}/>
                                 </div>
-                                <span className="text-sm font-bold text-[#2c3e50]">The specification <strong>is</strong> the implementation. No glue code needed.</span>
+                                <span className="text-sm font-bold text-[#2c3e50]"><strong>Tasks</strong> separate business intent from implementation. No glue code needed.</span>
                             </div>
                         </div>
                     </div>
@@ -461,3 +478,5 @@
 </script>
 </body>
 </html>
+
+

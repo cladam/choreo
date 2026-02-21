@@ -90,8 +90,8 @@ pub struct TestCase {
     pub name: String,
     pub description: String,
     pub given: Vec<GivenStep>,
-    pub when: Vec<Action>,
-    pub then: Vec<Condition>,
+    pub when: Vec<WhenStep>,
+    pub then: Vec<ThenStep>,
     pub span: Option<Span>,
     pub testcase_spans: Option<TestCaseSpan>,
 }
@@ -119,6 +119,20 @@ impl Default for TestCase {
     }
 }
 
+/// Steps that can appear in a when block
+#[derive(Debug, Clone, PartialEq)]
+pub enum WhenStep {
+    Action(Action),
+    TaskCall(TaskCall),
+}
+
+/// Steps that can appear in a then block
+#[derive(Debug, Clone, PartialEq)]
+pub enum ThenStep {
+    Condition(Condition),
+    TaskCall(TaskCall),
+}
+
 // All possible top-level statements in a .chor file.
 #[derive(Debug, Clone)]
 pub enum Statement {
@@ -130,6 +144,39 @@ pub enum Statement {
     FeatureDef(String),
     Scenario(Scenario),
     TestCase(TestCase),
+    TaskDef(TaskDef),
+}
+
+/// A task definition - a reusable block of actions/conditions
+#[derive(Debug, Clone, PartialEq)]
+pub struct TaskDef {
+    pub name: String,
+    pub parameters: Vec<String>,
+    pub body: Vec<TaskBodyItem>,
+    pub span: Option<Span>,
+}
+
+/// Items that can appear in a task body
+#[derive(Debug, Clone, PartialEq)]
+pub enum TaskBodyItem {
+    Action(Action),
+    Condition(Condition),
+}
+
+/// Represents a task call with arguments
+#[derive(Debug, Clone, PartialEq)]
+pub struct TaskCall {
+    pub name: String,
+    pub arguments: Vec<TaskArg>,
+}
+
+/// Task argument can be a string, number, duration, or variable reference
+#[derive(Debug, Clone, PartialEq)]
+pub enum TaskArg {
+    String(String),
+    Number(i32),
+    Duration(f32),
+    VariableRef(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -174,6 +221,7 @@ impl Default for Scenario {
 pub enum GivenStep {
     Action(Action),
     Condition(Condition),
+    TaskCall(TaskCall),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -228,8 +228,46 @@ scenario "..." {
 
     after {  
         FileSystem delete_file "${FILENAME}"  
-    }  
+```
+
+#### `task`
+
+Defines a reusable, parameterised block of actions and/or conditions. Tasks act as "drivers" that encapsulate
+implementation details, allowing scenarios to remain focused on business intent. Tasks can be called from `given`,
+`when`, or `then` blocks.
+
+**Example:**
+
+```choreo
+# Define a task with parameters
+task authenticate(token, endpoint) {
+    Web set_header "Authorization" "Bearer ${token}"
+    Web http_get "${endpoint}"
 }
+
+task verify_success() {
+    Web response_status is_success
+    Web response_time is_below 2s
+}
+
+# Call tasks in a test
+scenario "API Health" {
+    test HealthCheck "Service responds correctly" {
+        given:
+            Web set_header "User-Agent" "test-runner/1.0"
+        when:
+            authenticate("my-token", "/health")
+        then:
+            verify_success()
+    }
+}
+```
+
+Tasks support string, number, and duration arguments. For a complete guide on using tasks effectively, see
+[Tasks and Drivers](../tasks-and-drivers).
+}  
+}
+
 ```
 
 ## Test Blocks: Given, When, Then

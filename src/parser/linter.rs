@@ -1,6 +1,6 @@
 use crate::parser::ast::{
     Action, Condition, GivenStep, Scenario, Statement, TestCase, TestSuite, TestSuiteSettings,
-    Value,
+    ThenStep, Value, WhenStep,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -586,13 +586,20 @@ impl Visitor for Linter {
             match step {
                 GivenStep::Action(a) => self.visit_action(a),
                 GivenStep::Condition(c) => self.visit_condition(c),
+                GivenStep::TaskCall(_) => {} // Task calls will be expanded before execution
             }
         }
-        for action in &test.when {
-            self.visit_action(action);
+        for step in &test.when {
+            match step {
+                WhenStep::Action(action) => self.visit_action(action),
+                WhenStep::TaskCall(_) => {} // Task calls will be expanded before execution
+            }
         }
-        for condition in &test.then {
-            self.visit_condition(condition);
+        for step in &test.then {
+            match step {
+                ThenStep::Condition(condition) => self.visit_condition(condition),
+                ThenStep::TaskCall(_) => {} // Task calls will be expanded before execution
+            }
         }
 
         // Check for missing User-Agent
@@ -616,6 +623,7 @@ impl Visitor for Linter {
         match step {
             GivenStep::Action(a) => self.visit_action(&a),
             GivenStep::Condition(c) => self.visit_condition(&c),
+            GivenStep::TaskCall(_) => {} // Task calls will be expanded before execution
         }
     }
 
@@ -903,17 +911,28 @@ impl Visitor for Linter {
 ///Helper function to check if a scenario contains file system creation actions.
 fn scenario_has_setup_actions(scenario: &Scenario) -> bool {
     for test in &scenario.tests {
-        let steps_to_check: Vec<_> = test
+        // Collect actions from given steps
+        let given_actions: Vec<_> = test
             .given
             .iter()
             .filter_map(|s| match s {
                 GivenStep::Action(a) => Some(a),
                 _ => None,
             })
-            .chain(test.when.iter())
             .collect();
 
-        for action in steps_to_check {
+        // Collect actions from when steps
+        let when_actions: Vec<_> = test
+            .when
+            .iter()
+            .filter_map(|s| match s {
+                WhenStep::Action(a) => Some(a),
+                _ => None,
+            })
+            .collect();
+
+        // Check all actions for filesystem creation
+        for action in given_actions.into_iter().chain(when_actions.into_iter()) {
             if action.is_filesystem_creation() {
                 return true;
             }

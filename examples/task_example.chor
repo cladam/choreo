@@ -1,0 +1,95 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Task Example - Separating Business Intent from Implementation
+# ═══════════════════════════════════════════════════════════════════════════════
+# This follows the Four-Layer Model pattern:
+#   - Implementation Layer (Drivers): Tasks encapsulate the "How"
+#   - Business Specification Layer: Scenarios describe the "What"
+# ═══════════════════════════════════════════════════════════════════════════════
+
+feature "Authentication Service SLA"
+actors: Web
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Settings: Configure test runner behaviour
+# ─────────────────────────────────────────────────────────────────────────────
+settings {
+    timeout_seconds = 10
+    stop_on_failure = true
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Background: Common setup applied before every scenario
+# ─────────────────────────────────────────────────────────────────────────────
+background {
+    Web set_header "User-Agent" "choreo-test-runner/1.0"
+    Web set_header "Accept" "application/json"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Variables: Define reusable values
+# ─────────────────────────────────────────────────────────────────────────────
+var bearer_token = "choreo-token-xyz"
+var health_endpoint = "https://httpbin.io/bearer"
+var html_endpoint = "https://httpbin.io/html"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMPLEMENTATION LAYER (Tasks/Drivers)
+# The "How" - hidden from stakeholders, executable by Choreo
+# ═══════════════════════════════════════════════════════════════════════════════
+
+task check_service_health(token, endpoint) {
+    Web set_header "Authorization" "Bearer ${token}"
+    Web http_get "${endpoint}"
+}
+
+task verify_sla_compliance() {
+    Web response_status is_success
+    Web response_time is_below 2s
+}
+
+task verify_response_contains(expected_text) {
+    Web response_body_contains "${expected_text}"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BUSINESS SPECIFICATION LAYER
+# The "What" - derived from Acceptance Criteria, readable by stakeholders
+# ═══════════════════════════════════════════════════════════════════════════════
+
+scenario "Authentication Service Reliability" {
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # User Story: As a Platform Owner, I want the Authentication Service
+    # to be highly responsive so customers never experience delays during login.
+    #
+    # AC1: The service must authorize requests using a secure token.
+    # AC2: The service must respond with a success status.
+    # AC3: The response time must stay under a 2-second SLA.
+    # ─────────────────────────────────────────────────────────────────────────
+
+    test HealthSLA "Verify service responds within SLA" {
+        given:
+            Test can_start
+        when:
+            check_service_health("${bearer_token}", "${health_endpoint}")
+        then:
+            verify_sla_compliance()
+    }
+
+    test ResponseContent "Verify response contains expected data" {
+        given:
+            Test has_succeeded HealthSLA
+        when:
+            Web http_get "${html_endpoint}"
+        then:
+            Web response_status is_success
+            verify_response_contains("Herman Melville")
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Cleanup: Runs after all tests complete (pass or fail)
+    # ─────────────────────────────────────────────────────────────────────────
+    after {
+        Web clear_header "Authorization"
+    }
+}

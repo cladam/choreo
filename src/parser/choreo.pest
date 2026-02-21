@@ -7,7 +7,17 @@ COMMENT                           = _{ "#" ~ (!NEWLINE ~ ANY)* }
 
 // choreo DSL is a series of statements.
 grammar                           = { SOI ~ statement* ~ EOI }
-statement                         = { feature_def | settings_def | env_def | var_def | actors_def | background_def | scenario_def }
+statement                         = { feature_def | settings_def | env_def | var_def | actors_def | background_def | task_def | scenario_def }
+
+// --- Task Definitions (Reusable Drivers) ---
+task_def                          = { "task" ~ identifier ~ "(" ~ task_param_list? ~ ")" ~ "{" ~ task_body_item+ ~ "}" }
+task_param_list                   = { identifier ~ ("," ~ identifier)* }
+task_body_item                    = { action | condition }
+
+// --- Task Calls (in given/when/then blocks) ---
+task_call                         = { identifier ~ "(" ~ task_arg_list? ~ ")" }
+task_arg_list                     = { task_arg ~ ("," ~ task_arg)* }
+task_arg                          = { wait_marker | string | number | variable_ref | identifier }
 
 // Setting up the test suite.
 settings_def = {
@@ -47,9 +57,9 @@ variable_ref = { "${" ~ identifier ~ ( ("[" ~ number ~ "]") | ("." ~ identifier)
 
 // Defining a test case.
 test                              = { "test" ~ (identifier | string | variable_ref) ~ string ~ "{" ~ given_block ~ when_block ~ then_block ~ "}" }
-given_block                       = { "given:" ~ (action | condition)* }
-when_block                        = { "when:"  ~ action+ }
-then_block                        = { "then:"  ~ condition+ }
+given_block                       = { "given:" ~ (task_call | action | condition)* }
+when_block                        = { "when:"  ~ (task_call | action)+ }
+then_block                        = { "then:"  ~ (task_call | condition)+ }
 
 // --- Generic Rule Block ---
 rule                              = { "rule" ~ string ~ "{" ~ when_block_rule ~ then_block_rule ~ "}" }

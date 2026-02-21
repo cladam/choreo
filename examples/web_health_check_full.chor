@@ -1,0 +1,128 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Web Health Check - A Comprehensive Choreo Example
+# ═══════════════════════════════════════════════════════════════════════════════
+# This example demonstrates all major Choreo features:
+#   - feature, actors, settings, background, after
+#   - var definitions and variable substitution
+#   - tasks (reusable drivers) separating intent from implementation
+#   - test dependencies with has_succeeded
+#   - rich Web actor assertions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+feature "API Health Check"
+actors: Web
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Settings: Configure the test runner behaviour
+# ─────────────────────────────────────────────────────────────────────────────
+settings {
+    timeout_seconds = 10
+    stop_on_failure = true
+    report_format = "json"
+    report_path = "reports/"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Background: Common setup applied before every scenario
+# ─────────────────────────────────────────────────────────────────────────────
+background {
+    Web set_header "User-Agent" "choreo-test-runner/1.0"
+    Web set_header "Accept" "application/json"
+    Web set_cookie "session_id" "abc123"
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Variables: Define reusable values (avoid magic strings)
+# ─────────────────────────────────────────────────────────────────────────────
+var url = "https://httpbin.io/bearer"
+var bearer_token = "choreo-token-xyz"
+var html_endpoint = "https://httpbin.io/html"
+var sla_threshold = "2s"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# IMPLEMENTATION LAYER (Tasks/Drivers)
+# The "How" - hidden from stakeholders, executable by Choreo
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Task: Authenticate and make an authorized request
+task authenticate_and_request(token, endpoint) {
+    Web set_header "Authorization" "Bearer ${token}"
+    Web http_get "${endpoint}"
+}
+
+# Task: Verify standard SLA compliance
+task verify_sla_compliance() {
+    Web response_status is_success
+    Web response_time is_below 2s
+}
+
+# Task: Verify response body contains expected content
+task verify_response_contains(expected) {
+    Web response_body_contains "${expected}"
+}
+
+# Task: Verify JSON structure has required fields
+task verify_authenticated_response() {
+    Web response_status is_success
+    Web json_body has_path "$.authenticated"
+    Web json_path at "$.authenticated" equals true
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BUSINESS SPECIFICATION LAYER (Scenarios & Tests)
+# The "What" - derived from Acceptance Criteria, readable by stakeholders
+# ═══════════════════════════════════════════════════════════════════════════════
+
+scenario "Health check for a web API endpoint" {
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Test 1: Basic Health Check
+    # AC: The service must respond with success within SLA
+    # ─────────────────────────────────────────────────────────────────────────
+    test HealthCheck "Verify the API endpoint is healthy" {
+        given:
+            Test can_start
+        when:
+            authenticate_and_request("${bearer_token}", "${url}")
+        then:
+            verify_sla_compliance()
+            verify_authenticated_response()
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Test 2: Response Content Validation
+    # AC: Response must contain expected authentication data
+    # ─────────────────────────────────────────────────────────────────────────
+    test ResponseValidation "Verify response contains token info" {
+        given:
+            Test has_succeeded HealthCheck
+        when:
+            authenticate_and_request("${bearer_token}", "${url}")
+        then:
+            Web response_status is_success
+            verify_response_contains("authenticated")
+            Web json_path at "$.token" equals "${bearer_token}"
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Test 3: HTML Endpoint Check
+    # AC: Non-JSON endpoints should also respond correctly
+    # ─────────────────────────────────────────────────────────────────────────
+    test HtmlEndpoint "Verify HTML content is served correctly" {
+        given:
+            Test has_succeeded HealthCheck
+        when:
+            Web http_get "${html_endpoint}"
+        then:
+            Web response_status is_success
+            verify_response_contains("Herman Melville")
+    }
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Cleanup: Runs after all tests complete (pass or fail)
+    # ─────────────────────────────────────────────────────────────────────────
+    after {
+        Web clear_header "Authorization"
+        Web clear_cookie "session_id"
+    }
+}

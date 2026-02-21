@@ -5,15 +5,15 @@ use crate::backend::web_backend::WebBackend;
 use crate::colours;
 use crate::error::AppError;
 use crate::parser::ast::{
-    Action, Condition, GivenStep, ReportFormat, Scenario, Statement, TestCase, TestState,
-    TestSuite, TestSuiteSettings,
+    Action, Condition, GivenStep, ReportFormat, Scenario, Statement, TaskArg, TaskBodyItem,
+    TaskCall, TaskDef, TestCase, TestState, TestSuite, TestSuiteSettings, ThenStep, WhenStep,
 };
 use crate::parser::helpers::{
-    check_all_conditions_met, is_synchronous, substitute_variables_in_action,
+    check_all_conditions_met, extract_conditions_from_then_steps, is_synchronous,
+    substitute_variables_in_action, substitute_variables_in_condition,
 };
 use crate::parser::parser::expand_foreach_blocks;
 use crate::reporting::generate_choreo_report;
-use itertools::Itertools;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -25,6 +25,8 @@ pub struct TestRunner {
     test_suite: TestSuite,
     base_dir: PathBuf,
     env_vars: HashMap<String, String>,
+    #[allow(dead_code)] // Will be used for task expansion in future implementation
+    tasks: HashMap<String, TaskDef>,
     verbose: bool,
 }
 
@@ -33,12 +35,14 @@ impl TestRunner {
         test_suite: TestSuite,
         base_dir: PathBuf,
         env_vars: HashMap<String, String>,
+        tasks: HashMap<String, TaskDef>,
         verbose: bool,
     ) -> Self {
         Self {
             test_suite,
             base_dir,
             env_vars,
+            tasks,
             verbose,
         }
     }
@@ -144,6 +148,7 @@ impl TestRunner {
                         &scenario,
                         &settings,
                         self.env_vars.clone(),
+                        &self.tasks,
                         self.verbose,
                         &self.base_dir,
                         Arc::clone(&test_states),
@@ -173,6 +178,7 @@ impl TestRunner {
                     &scenario,
                     &settings,
                     self.env_vars.clone(),
+                    &self.tasks,
                     self.verbose,
                     &self.base_dir,
                     Arc::clone(&test_states),
@@ -294,6 +300,7 @@ fn run_scenario(
     scenario: &Scenario,
     settings: &TestSuiteSettings,
     env_vars: HashMap<String, String>,
+    tasks: &HashMap<String, TaskDef>,
     verbose: bool,
     base_dir: &PathBuf,
     test_states: Arc<Mutex<HashMap<String, TestState>>>,
@@ -359,11 +366,22 @@ fn run_scenario(
 
             match current_state {
                 TestState::Pending => {
-                    let (given_conditions, given_actions): (Vec<Condition>, Vec<Action>) =
-                        test_case.given.iter().partition_map(|step| match step {
-                            GivenStep::Condition(c) => itertools::Either::Left(c.clone()),
-                            GivenStep::Action(a) => itertools::Either::Right(a.clone()),
-                        });
+                    // Extract conditions and actions from given steps, expanding task calls
+                    let mut given_conditions: Vec<Condition> = Vec::new();
+                    let mut given_actions: Vec<Action> = Vec::new();
+                    for step in &test_case.given {
+                        match step {
+                            GivenStep::Condition(c) => given_conditions.push(c.clone()),
+                            GivenStep::Action(a) => given_actions.push(a.clone()),
+                            GivenStep::TaskCall(tc) => {
+                                // Expand task call into actions and conditions
+                                let (task_actions, task_conditions) =
+                                    expand_task_call(tc, tasks, &variables);
+                                given_actions.extend(task_actions);
+                                given_conditions.extend(task_conditions);
+                            }
+                        }
+                    }
 
                     let is_sync = is_synchronous(&test_case);
                     //println!("Test is sync = {}", is_sync);
@@ -405,9 +423,17 @@ fn run_scenario(
                         .get(&test_case.name)
                         .map_or(0.0, |start| start.elapsed().as_secs_f32());
 
+                    // Extract conditions from then steps, expanding task calls
+                    let mut then_conditions = extract_conditions_from_then_steps(&test_case.then);
+                    for step in &test_case.then {
+                        if let ThenStep::TaskCall(tc) = step {
+                            let (_, task_conditions) = expand_task_call(tc, tasks, &variables);
+                            then_conditions.extend(task_conditions);
+                        }
+                    }
                     if check_all_conditions_met(
                         "then",
-                        &test_case.then,
+                        &then_conditions,
                         &states_snapshot,
                         &output_buffer,
                         &terminal_backend.last_stderr.clone(),
@@ -468,29 +494,61 @@ fn run_scenario(
                             verbose,
                         );
                     }
-                    for action in &test_case.when {
-                        let substituted_action =
-                            substitute_variables_in_action(action, &mut variables);
-                        execute_action(
-                            &substituted_action,
-                            &mut terminal_backend,
-                            &fs_backend,
-                            &mut web_backend,
-                            &mut system_backend,
-                            &mut last_exit_code,
-                            settings.timeout_seconds,
-                            &mut variables,
-                            verbose,
-                        );
+                    for step in &test_case.when {
+                        match step {
+                            WhenStep::Action(action) => {
+                                let substituted_action =
+                                    substitute_variables_in_action(action, &mut variables);
+                                execute_action(
+                                    &substituted_action,
+                                    &mut terminal_backend,
+                                    &fs_backend,
+                                    &mut web_backend,
+                                    &mut system_backend,
+                                    &mut last_exit_code,
+                                    settings.timeout_seconds,
+                                    &mut variables,
+                                    verbose,
+                                );
+                            }
+                            WhenStep::TaskCall(tc) => {
+                                // Expand task call and execute all resulting actions
+                                let (task_actions, _) = expand_task_call(tc, tasks, &variables);
+                                for action in task_actions {
+                                    let substituted_action =
+                                        substitute_variables_in_action(&action, &mut variables);
+                                    execute_action(
+                                        &substituted_action,
+                                        &mut terminal_backend,
+                                        &fs_backend,
+                                        &mut web_backend,
+                                        &mut system_backend,
+                                        &mut last_exit_code,
+                                        settings.timeout_seconds,
+                                        &mut variables,
+                                        verbose,
+                                    );
+                                }
+                            }
+                        }
                     }
 
                     if let Some(137) = last_exit_code {
                         break;
                     }
 
+                    // Extract conditions from then steps, expanding task calls
+                    let mut then_conditions_sync =
+                        extract_conditions_from_then_steps(&test_case.then);
+                    for step in &test_case.then {
+                        if let ThenStep::TaskCall(tc) = step {
+                            let (_, task_conditions) = expand_task_call(tc, tasks, &variables);
+                            then_conditions_sync.extend(task_conditions);
+                        }
+                    }
                     let passed = check_all_conditions_met(
                         "then",
-                        &test_case.then,
+                        &then_conditions_sync,
                         &{
                             let locked = test_states.lock().unwrap();
                             locked.clone()
@@ -567,20 +625,43 @@ fn run_scenario(
                             verbose,
                         );
                     }
-                    for action in &test_case.when {
-                        let substituted_action =
-                            substitute_variables_in_action(action, &mut variables);
-                        execute_action(
-                            &substituted_action,
-                            &mut terminal_backend,
-                            &fs_backend,
-                            &mut web_backend,
-                            &mut system_backend,
-                            &mut last_exit_code,
-                            settings.timeout_seconds,
-                            &mut variables,
-                            verbose,
-                        );
+                    for step in &test_case.when {
+                        match step {
+                            WhenStep::Action(action) => {
+                                let substituted_action =
+                                    substitute_variables_in_action(action, &mut variables);
+                                execute_action(
+                                    &substituted_action,
+                                    &mut terminal_backend,
+                                    &fs_backend,
+                                    &mut web_backend,
+                                    &mut system_backend,
+                                    &mut last_exit_code,
+                                    settings.timeout_seconds,
+                                    &mut variables,
+                                    verbose,
+                                );
+                            }
+                            WhenStep::TaskCall(tc) => {
+                                // Expand task call and execute all resulting actions
+                                let (task_actions, _) = expand_task_call(tc, tasks, &variables);
+                                for action in task_actions {
+                                    let substituted_action =
+                                        substitute_variables_in_action(&action, &mut variables);
+                                    execute_action(
+                                        &substituted_action,
+                                        &mut terminal_backend,
+                                        &fs_backend,
+                                        &mut web_backend,
+                                        &mut system_backend,
+                                        &mut last_exit_code,
+                                        settings.timeout_seconds,
+                                        &mut variables,
+                                        verbose,
+                                    );
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -726,4 +807,53 @@ fn execute_action(
         "[WARNING] Action not recognised by any backend: {:?}",
         action
     );
+}
+
+/// Expands a TaskCall into its constituent actions and conditions by binding arguments to parameters.
+pub fn expand_task_call(
+    task_call: &TaskCall,
+    tasks: &HashMap<String, TaskDef>,
+    env_vars: &HashMap<String, String>,
+) -> (Vec<Action>, Vec<Condition>) {
+    let mut actions = Vec::new();
+    let mut conditions = Vec::new();
+
+    let Some(task_def) = tasks.get(&task_call.name) else {
+        eprintln!("[WARNING] Task '{}' not found", task_call.name);
+        return (actions, conditions);
+    };
+
+    // Build parameter bindings
+    let mut task_scope = env_vars.clone();
+    for (i, param) in task_def.parameters.iter().enumerate() {
+        if let Some(arg) = task_call.arguments.get(i) {
+            let value = match arg {
+                TaskArg::String(s) => s.clone(),
+                TaskArg::Number(n) => n.to_string(),
+                TaskArg::Duration(d) => format!("{}s", d),
+                TaskArg::VariableRef(v) => {
+                    // Resolve variable reference from env_vars
+                    let var_name = v.trim_start_matches("${").trim_end_matches('}');
+                    env_vars.get(var_name).cloned().unwrap_or_else(|| v.clone())
+                }
+            };
+            task_scope.insert(param.clone(), value);
+        }
+    }
+
+    // Expand task body items with parameter substitution
+    for item in &task_def.body {
+        match item {
+            TaskBodyItem::Action(action) => {
+                let substituted = substitute_variables_in_action(action, &task_scope);
+                actions.push(substituted);
+            }
+            TaskBodyItem::Condition(condition) => {
+                let substituted = substitute_variables_in_condition(condition, &task_scope);
+                conditions.push(substituted);
+            }
+        }
+    }
+
+    (actions, conditions)
 }

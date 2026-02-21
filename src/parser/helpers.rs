@@ -3,7 +3,8 @@ use crate::backend::system_backend::SystemBackend;
 use crate::backend::terminal_backend::TerminalBackend;
 use crate::backend::web_backend::WebBackend;
 use crate::parser::ast::{
-    Action, Condition, GivenStep, StateCondition, TestCase, TestState, Value,
+    Action, Condition, GivenStep, StateCondition, TaskArg, TaskCall, TestCase, TestState, ThenStep,
+    Value, WhenStep,
 };
 use jsonpath_lib::selector;
 use std::collections::HashMap;
@@ -49,6 +50,17 @@ pub fn check_all_conditions_met(
         // }
         result
     })
+}
+
+/// Extracts conditions from a list of ThenSteps (ignoring TaskCalls for now)
+pub fn extract_conditions_from_then_steps(steps: &[ThenStep]) -> Vec<Condition> {
+    steps
+        .iter()
+        .filter_map(|step| match step {
+            ThenStep::Condition(c) => Some(c.clone()),
+            ThenStep::TaskCall(_) => None, // Task calls should be expanded before checking
+        })
+        .collect()
 }
 
 /// Checks a single condition.
@@ -609,6 +621,73 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
     }
 }
 
+/// Creates a new TaskArg with its string values substituted from the state map.
+pub fn substitute_variables_in_task_arg(arg: &TaskArg, state: &HashMap<String, String>) -> TaskArg {
+    match arg {
+        TaskArg::String(s) => TaskArg::String(substitute_string(s, state)),
+        TaskArg::VariableRef(v) => {
+            // Resolve the variable reference
+            let resolved = substitute_string(v, state);
+            TaskArg::String(resolved)
+        }
+        TaskArg::Number(n) => TaskArg::Number(*n),
+        TaskArg::Duration(d) => TaskArg::Duration(*d),
+    }
+}
+
+/// Creates a new TaskCall with its arguments substituted from the state map.
+pub fn substitute_variables_in_task_call(
+    task_call: &TaskCall,
+    state: &HashMap<String, String>,
+) -> TaskCall {
+    TaskCall {
+        name: task_call.name.clone(),
+        arguments: task_call
+            .arguments
+            .iter()
+            .map(|arg| substitute_variables_in_task_arg(arg, state))
+            .collect(),
+    }
+}
+
+/// Creates a new GivenStep with its values substituted from the state map.
+pub fn substitute_variables_in_given_step(
+    step: &GivenStep,
+    state: &HashMap<String, String>,
+) -> GivenStep {
+    match step {
+        GivenStep::Action(a) => GivenStep::Action(substitute_variables_in_action(a, state)),
+        GivenStep::Condition(c) => {
+            GivenStep::Condition(substitute_variables_in_condition(c, state))
+        }
+        GivenStep::TaskCall(tc) => {
+            GivenStep::TaskCall(substitute_variables_in_task_call(tc, state))
+        }
+    }
+}
+
+/// Creates a new WhenStep with its values substituted from the state map.
+pub fn substitute_variables_in_when_step(
+    step: &WhenStep,
+    state: &HashMap<String, String>,
+) -> WhenStep {
+    match step {
+        WhenStep::Action(a) => WhenStep::Action(substitute_variables_in_action(a, state)),
+        WhenStep::TaskCall(tc) => WhenStep::TaskCall(substitute_variables_in_task_call(tc, state)),
+    }
+}
+
+/// Creates a new ThenStep with its values substituted from the state map.
+pub fn substitute_variables_in_then_step(
+    step: &ThenStep,
+    state: &HashMap<String, String>,
+) -> ThenStep {
+    match step {
+        ThenStep::Condition(c) => ThenStep::Condition(substitute_variables_in_condition(c, state)),
+        ThenStep::TaskCall(tc) => ThenStep::TaskCall(substitute_variables_in_task_call(tc, state)),
+    }
+}
+
 /// Creates a new TestCase with its string values substituted from the state map.
 pub fn substitute_variables_in_test_case(
     test_case: &TestCase,
@@ -620,22 +699,17 @@ pub fn substitute_variables_in_test_case(
         given: test_case
             .given
             .iter()
-            .map(|step| match step {
-                GivenStep::Action(a) => GivenStep::Action(substitute_variables_in_action(a, state)),
-                GivenStep::Condition(c) => {
-                    GivenStep::Condition(substitute_variables_in_condition(c, state))
-                }
-            })
+            .map(|step| substitute_variables_in_given_step(step, state))
             .collect(),
         when: test_case
             .when
             .iter()
-            .map(|action| substitute_variables_in_action(action, state))
+            .map(|step| substitute_variables_in_when_step(step, state))
             .collect(),
         then: test_case
             .then
             .iter()
-            .map(|condition| substitute_variables_in_condition(condition, state))
+            .map(|step| substitute_variables_in_then_step(step, state))
             .collect(),
         span: test_case.span.clone(),
         testcase_spans: test_case.testcase_spans.clone(),
@@ -675,13 +749,17 @@ fn action_is_async(action: &Action) -> bool {
 /// Determines whether an entire test case should be executed synchronously.
 /// Returns `true` when the test contains no async actions; `false` otherwise.
 pub fn is_synchronous_new(test_case: &TestCase) -> bool {
-    // Check `given` (which contains GivenStep) and `when` (which contains Action).
+    // Check `given` (which contains GivenStep) and `when` (which contains WhenStep).
     let given_has_async = test_case.given.iter().any(|gs| match gs {
         GivenStep::Action(a) => action_is_async(a),
         GivenStep::Condition(_) => false,
+        GivenStep::TaskCall(_) => false, // Task calls are expanded before execution
     });
 
-    let when_has_async = test_case.when.iter().any(|a| action_is_async(a));
+    let when_has_async = test_case.when.iter().any(|ws| match ws {
+        WhenStep::Action(a) => action_is_async(a),
+        WhenStep::TaskCall(_) => false, // Task calls are expanded before execution
+    });
 
     // If any async action is present, the test is asynchronous.
     !(given_has_async || when_has_async)
@@ -689,8 +767,8 @@ pub fn is_synchronous_new(test_case: &TestCase) -> bool {
 
 /// Determines if a test case contains only synchronous actions.
 pub fn is_synchronous(test_case: &TestCase) -> bool {
-    test_case.when.iter().all(|action| {
-        matches!(
+    test_case.when.iter().all(|step| match step {
+        WhenStep::Action(action) => matches!(
             action,
             Action::Run { .. }
                 | Action::CreateFile { .. }
@@ -709,6 +787,7 @@ pub fn is_synchronous(test_case: &TestCase) -> bool {
                 | Action::HttpSetCookie { .. }
                 | Action::HttpClearCookie { .. }
                 | Action::HttpClearCookies
-        )
+        ),
+        WhenStep::TaskCall(_) => true, // Task calls are expanded before execution
     })
 }
