@@ -14,7 +14,7 @@ scenario "Demonstrate built-in System actions" {
 
     test SystemActions "Use log, pause, uuid, and timestamp" {
         given:
-            # This test can start immediately.
+            # This test can start immediately, no-op.
             Test can_start
         when:
             # Use the 'log' action to print debug messages.

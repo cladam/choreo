@@ -143,6 +143,21 @@ choreo run --file "examples/redirecting_output_tee.chor"
 choreo run --file "examples/redirecting_output_tee.chor" --verbose
 ```
 
+#### Parse a JSON report
+
+Use the helper script to summarize a report or show failing steps. Requires only Python 3 (no external dependencies).
+
+```bash
+# Parse the latest report in ./reports
+python3 scripts/parse_test_report.py
+
+# Parse a specific report
+python3 scripts/parse_test_report.py reports/choreo_test_report_20260227_202231.json
+
+# Output as structured JSON (for CI pipelines)
+python3 scripts/parse_test_report.py --json reports/choreo_test_report_20260227_202231.json
+```
+
 ### Status & Roadmap
 
 `choreo` is currently in the **beta stage**. The core engine is functional, but more to add before production-ready.
@@ -154,4 +169,3 @@ The journey ahead includes:
 ### **Contributing**
 
 Contributions are welcome! Please feel free to open an issue or submit a pull request.
-
