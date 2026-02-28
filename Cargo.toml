@@ -1,6 +1,6 @@
 [package]
 name = "choreo"
-version = "0.11.0"
+version = "0.12.0"
 authors = ["Claes Adamsson <claes.adamsson@gmail.com>"]
 homepage = "https://cladam.github.io/choreo/"
 repository = "https://github.com/cladam/choreo"

@@ -121,18 +121,22 @@ impl TestRunner {
         // --- Main Test Loop ---
         let suite_start_time = Instant::now();
 
+        // Use scenarios_vec (with Background already removed) for state registration
+        // and partitioning to prevent the Background scenario from being run a second time.
         {
             let mut states = test_states.lock().unwrap();
-            for sc in scenarios {
+            for sc in &scenarios_vec {
                 for t in &sc.tests {
-                    states.entry(t.name.clone()).or_insert(TestState::Pending);
+                    states
+                        .entry(scoped_name(&sc.name, &t.name))
+                        .or_insert(TestState::Pending);
                 }
             }
         }
 
         // Separate parallel and sequential scenarios
         let (parallel_scenarios, sequential_scenarios): (Vec<_>, Vec<_>) =
-            scenarios.iter().cloned().partition(|s| s.parallel);
+            scenarios_vec.iter().cloned().partition(|s| s.parallel);
 
         if !parallel_scenarios.is_empty() {
             if self.verbose {
@@ -223,7 +227,7 @@ impl TestRunner {
                 suite_name,
                 suite_start_time.elapsed(),
                 &feature_name,
-                &*scenarios,
+                &scenarios_vec,
                 &test_states_final,
                 &test_start_times_final,
                 &mut self.env_vars,
@@ -298,6 +302,13 @@ impl TestRunner {
 
 // --- Thread-safe run_scenario ---
 // Accepts shared Arcs for states/times so multiple scenarios can run in parallel.
+
+/// Creates a scoped test name: "ScenarioName::TestName"
+/// This ensures test names are unique across scenarios.
+fn scoped_name(scenario_name: &str, test_name: &str) -> String {
+    format!("{}::{}", scenario_name, test_name)
+}
+
 fn run_scenario(
     scenario: &Scenario,
     settings: &TestSuiteSettings,
@@ -328,7 +339,7 @@ fn run_scenario(
         let mut states = test_states.lock().unwrap();
         for test in &expanded_tests {
             states
-                .entry(test.name.clone())
+                .entry(scoped_name(&scenario.name, &test.name))
                 .or_insert(TestState::Pending);
         }
     }
@@ -354,16 +365,35 @@ fn run_scenario(
             locked.clone()
         };
 
+        // Build a scenario-scoped view of states for condition checking (e.g. HasSucceeded).
+        // This maps bare test names to states for tests within the current scenario,
+        // so `Test has_succeeded Setup` resolves to this scenario's `Setup`, not another's.
+        let scenario_prefix = format!("{}::", scenario.name);
+        let scoped_states_for_conditions: HashMap<String, TestState> = states_snapshot
+            .iter()
+            .filter_map(|(k, v)| {
+                k.strip_prefix(&scenario_prefix)
+                    .map(|bare| (bare.to_string(), v.clone()))
+            })
+            .collect();
+
         // Determine tests to evaluate (not done)
         let tests_to_check: Vec<TestCase> = expanded_tests
             .iter()
-            .filter(|tc| !states_snapshot.get(&tc.name).unwrap().is_done())
+            .filter(|tc| {
+                let key = scoped_name(&scenario.name, &tc.name);
+                !states_snapshot.get(&key).map_or(false, |s| s.is_done())
+            })
             .cloned()
             .collect();
 
         //println!("How many tests? '{}'", tests_to_check.len());
         for test_case in &tests_to_check {
-            let current_state = states_snapshot.get(&test_case.name).unwrap().clone();
+            let scoped = scoped_name(&scenario.name, &test_case.name);
+            let current_state = states_snapshot
+                .get(&scoped)
+                .cloned()
+                .unwrap_or(TestState::Pending);
             //println!("Running test: '{}'", test_case.name);
 
             match current_state {
@@ -396,7 +426,7 @@ fn run_scenario(
                     if check_all_conditions_met(
                         "given",
                         &given_conditions,
-                        &states_snapshot,
+                        &scoped_states_for_conditions,
                         &output_buffer,
                         &terminal_backend.last_stderr.clone(),
                         elapsed_since_scenario_start.as_secs_f32(),
@@ -422,7 +452,7 @@ fn run_scenario(
                     }
 
                     let elapsed_for_test = start_times_snapshot
-                        .get(&test_case.name)
+                        .get(&scoped)
                         .map_or(0.0, |start| start.elapsed().as_secs_f32());
 
                     // Extract conditions from then steps, expanding task calls
@@ -436,7 +466,7 @@ fn run_scenario(
                     if check_all_conditions_met(
                         "then",
                         &then_conditions,
-                        &states_snapshot,
+                        &scoped_states_for_conditions,
                         &output_buffer,
                         &terminal_backend.last_stderr.clone(),
                         elapsed_for_test,
@@ -450,7 +480,7 @@ fn run_scenario(
                     ) {
                         tests_to_pass.push(test_case.name.clone());
                     } else if start_times_snapshot
-                        .get(&test_case.name)
+                        .get(&scoped)
                         .map_or(false, |start| start.elapsed() > test_timeout)
                     {
                         immediate_failures.push((
@@ -468,16 +498,17 @@ fn run_scenario(
             progress_made = true;
             for (name, given_actions, is_sync) in tests_to_start {
                 let test_case = expanded_tests.iter().find(|tc| tc.name == name).unwrap();
+                let scoped = scoped_name(&scenario.name, &name);
 
                 if is_sync {
                     //println!(" ▶️ Starting SYNC test: {}", name);
                     {
                         let mut states = test_states.lock().unwrap();
-                        states.insert(name.clone(), TestState::Running);
+                        states.insert(scoped.clone(), TestState::Running);
                     }
                     {
                         let mut starts = test_start_times.lock().unwrap();
-                        starts.insert(name.clone(), Instant::now());
+                        starts.insert(scoped.clone(), Instant::now());
                     }
 
                     // execute given actions and when actions (no locks held)
@@ -552,15 +583,23 @@ fn run_scenario(
                         "then",
                         &then_conditions_sync,
                         &{
+                            // Build scoped view for condition checking
                             let locked = test_states.lock().unwrap();
-                            locked.clone()
+                            let prefix = format!("{}::", scenario.name);
+                            locked
+                                .iter()
+                                .filter_map(|(k, v)| {
+                                    k.strip_prefix(&prefix)
+                                        .map(|bare| (bare.to_string(), v.clone()))
+                                })
+                                .collect::<HashMap<String, TestState>>()
                         },
                         &output_buffer,
                         &terminal_backend.last_stderr.clone(),
                         test_start_times
                             .lock()
                             .unwrap()
-                            .get(&name)
+                            .get(&scoped)
                             .map_or(0.0, |start| start.elapsed().as_secs_f32()),
                         &mut variables,
                         &last_exit_code,
@@ -573,7 +612,7 @@ fn run_scenario(
 
                     if let Some(mut state_guard) = test_states.lock().ok() {
                         if passed {
-                            state_guard.insert(name.clone(), TestState::Passed);
+                            state_guard.insert(scoped.clone(), TestState::Passed);
                             colours::success(&format!(" 🟢 Test Passed: {}", name));
                         } else {
                             let mut error_msg = "Synchronous test conditions not met".to_string();
@@ -583,7 +622,8 @@ fn run_scenario(
                                     terminal_backend.last_stderr.trim()
                                 );
                             }
-                            state_guard.insert(name.clone(), TestState::Failed(error_msg.clone()));
+                            state_guard
+                                .insert(scoped.clone(), TestState::Failed(error_msg.clone()));
                             colours::error(&format!(" 🔴 Test Failed: {} - {}", name, error_msg));
                         }
                     }
@@ -602,11 +642,11 @@ fn run_scenario(
                     //println!(" ▶  Starting ASYNC test: {}", name);
                     {
                         let mut states = test_states.lock().unwrap();
-                        states.insert(name.clone(), TestState::Running);
+                        states.insert(scoped.clone(), TestState::Running);
                     }
                     {
                         let mut starts = test_start_times.lock().unwrap();
-                        starts.insert(name.clone(), Instant::now());
+                        starts.insert(scoped.clone(), Instant::now());
                     }
 
                     // Mark progress once the test has been started
@@ -673,7 +713,8 @@ fn run_scenario(
             progress_made = true;
             let mut states = test_states.lock().unwrap();
             for name in tests_to_pass {
-                if let Some(state) = states.get_mut(&name) {
+                let scoped = scoped_name(&scenario.name, &name);
+                if let Some(state) = states.get_mut(&scoped) {
                     if !state.is_done() {
                         *state = TestState::Passed;
                         colours::success(&format!(" 🟢  Test Passed: {}", name));
@@ -686,7 +727,8 @@ fn run_scenario(
             progress_made = true;
             let mut states = test_states.lock().unwrap();
             for (name, error_msg) in immediate_failures {
-                if let Some(state) = states.get_mut(&name) {
+                let scoped = scoped_name(&scenario.name, &name);
+                if let Some(state) = states.get_mut(&scoped) {
                     if !state.is_done() {
                         *state = TestState::Failed(error_msg.clone());
                         colours::error(&format!(" 🔴  Test Failed: {} - {}", name, error_msg));
@@ -695,13 +737,13 @@ fn run_scenario(
             }
         }
 
-        // Check if all tests in this scenario are done
+        // Check if all tests in this scenario are done (use expanded_tests to include foreach-generated tests)
         let all_done = {
             let states = test_states.lock().unwrap();
-            scenario
-                .tests
-                .iter()
-                .all(|t| states.get(&t.name).unwrap().is_done())
+            expanded_tests.iter().all(|t| {
+                let key = scoped_name(&scenario.name, &t.name);
+                states.get(&key).map_or(false, |s| s.is_done())
+            })
         };
 
         if all_done {
@@ -743,8 +785,9 @@ fn run_scenario(
             if elapsed_since_suite_start > test_timeout + Duration::from_secs(1) {
                 colours::warn("\nWarning: No progress was made in the last loop iteration, and the scenario is not complete. Marking remaining tests as skipped.");
                 let mut states = test_states.lock().unwrap();
-                for test in &scenario.tests {
-                    if let Some(state) = states.get_mut(&test.name) {
+                for test in &expanded_tests {
+                    let key = scoped_name(&scenario.name, &test.name);
+                    if let Some(state) = states.get_mut(&key) {
                         if matches!(*state, TestState::Pending | TestState::Running) {
                             *state = TestState::Skipped;
                         }

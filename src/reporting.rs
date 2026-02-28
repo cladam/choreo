@@ -29,14 +29,15 @@ pub fn generate_choreo_report(
         let mut after_hooks = Vec::new();
 
         for tc in scenario.tests.iter() {
-            let (status, error_message) = match test_states.get(&tc.name) {
+            let scoped_key = format!("{}::{}", scenario.name, tc.name);
+            let (status, error_message) = match test_states.get(&scoped_key) {
                 Some(TestState::Passed) => ("passed".to_string(), None),
                 Some(TestState::Failed(reason)) => ("failed".to_string(), Some(reason.clone())),
                 _ => ("skipped".to_string(), None),
             };
 
             let duration = test_start_times
-                .get(&tc.name)
+                .get(&scoped_key)
                 .map_or(Duration::default(), |s| s.elapsed());
 
             steps.push(Step {
