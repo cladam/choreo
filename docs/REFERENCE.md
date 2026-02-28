@@ -78,7 +78,9 @@ settings {
 
 #### `background`
 
-A block that provides a common set of readable `given` steps that apply to all scenarios in a feature.
+A block that provides a common set of readable `given` steps that apply to all scenarios in a feature. Background steps
+run **once** before all scenarios (not before each scenario), and any side-effects they produce — such as environment
+variable assignments or HTTP headers — are inherited by every subsequent scenario. Think of it as suite-level setup.
 
 **Example:**
 
@@ -236,6 +238,7 @@ This is the reference for all available commands that can be used within the `te
 | Syntax                     | Description                                                                             |
 |:---------------------------|:----------------------------------------------------------------------------------------|
 | `Terminal run "..."`       | Executes a shell command non-interactively. The command and a newline are sent at once. |
+| `Terminal set_cwd "..."`   | Sets the working directory for all subsequent `Terminal run` commands in this scenario. |
 | `Terminal types "..."`     | Simulates a user typing a string into the terminal.                                     |
 | `Terminal presses "Enter"` | Simulates a user pressing the Enter key.                                                |
 
@@ -247,6 +250,7 @@ This is the reference for all available commands that can be used within the `te
 | `Terminal last_command failed`             | Passes if the last `Terminal run` command exited with a non-zero code.            |
 | `Terminal last_command exit_code_is <num>` | Passes if the last `Terminal run` command exited with the specified code.         |
 | `Terminal output_contains "..."`           | Passes if the combined stdout/stderr stream from the PTY contains the substring.  |
+| `Terminal output_not_contains "..."`       | Passes if the combined stdout/stderr does NOT contain the specified substring.    |
 | `Terminal stdout_is_empty`                 | Passes if the stdout from the last `Terminal run` command was empty.              |
 | `Terminal stderr_is_empty`                 | Passes if the stderr from the last `Terminal run` command was empty.              |
 | `Terminal stderr_contains "..."`           | Passes if the stderr from the last `Terminal run` command contains the substring. |

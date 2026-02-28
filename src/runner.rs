@@ -70,6 +70,8 @@ impl TestRunner {
         let mut bg_http_headers: HashMap<String, String> = HashMap::new();
 
         // Run any Background scenario first so its actions (e.g. Web set_header) modify `self.env_vars`.
+        // NOTE: Background runs exactly ONCE for the entire suite (not before each scenario).
+        // Any side-effects it produces (env vars, HTTP headers) are inherited by all subsequent scenarios.
         if let Some(pos) = scenarios_vec.iter().position(|s| s.name == "Background") {
             if self.verbose {
                 colours::info("Running Background setup first...");

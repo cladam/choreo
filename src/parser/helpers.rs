@@ -104,6 +104,15 @@ pub fn check_condition(
             }
             content_to_check.contains(text)
         }
+        Condition::OutputNotContains { text, .. } => {
+            if verbose {
+                println!(
+                    "Checking if '{}' does NOT contain '{}'",
+                    content_to_check, text
+                );
+            }
+            !content_to_check.contains(text)
+        }
         Condition::OutputMatches {
             regex, capture_as, ..
         } => {
@@ -462,6 +471,10 @@ pub fn substitute_variables_in_condition(
             actor: actor.clone(),
             text: substitute_string(text, state),
         },
+        Condition::OutputNotContains { actor, text } => Condition::OutputNotContains {
+            actor: actor.clone(),
+            text: substitute_string(text, state),
+        },
         Condition::OutputMatches {
             actor,
             regex,
@@ -564,6 +577,9 @@ pub fn substitute_variables_in_action(action: &Action, state: &HashMap<String, S
         Action::Run { command, actor } => Action::Run {
             actor: actor.clone(),
             command: substitute_string(command, state),
+        },
+        Action::SetCwd { path } => Action::SetCwd {
+            path: substitute_string(path, state),
         },
         Action::Log { message } => Action::Log {
             message: substitute_string(message, state),
@@ -771,6 +787,7 @@ pub fn is_synchronous(test_case: &TestCase) -> bool {
         WhenStep::Action(action) => matches!(
             action,
             Action::Run { .. }
+                | Action::SetCwd { .. }
                 | Action::CreateFile { .. }
                 | Action::DeleteFile { .. }
                 | Action::CreateDir { .. }

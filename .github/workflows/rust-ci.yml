@@ -109,6 +109,9 @@ jobs:
       - name: Run `setting demo` example
         run: ./target/release/choreo run --file examples/setting_demo.chor
 
+      - name: Run `set_cwd and negative assertions` example
+        run: ./target/release/choreo run --file examples/set_cwd_and_negative_assertions.chor
+
       - name: Run `simulate mocking` example
         run: ./target/release/choreo run --file examples/simulate_mocking.chor
 

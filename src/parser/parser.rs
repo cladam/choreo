@@ -820,6 +820,19 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
                 .to_string();
             Condition::OutputContains { actor, text }
         }
+        Rule::output_not_contains_condition => {
+            let mut inner = inner_cond.into_inner();
+            let actor = "Terminal".to_string();
+            let text = inner
+                .next()
+                .unwrap()
+                .into_inner()
+                .next()
+                .unwrap()
+                .as_str()
+                .to_string();
+            Condition::OutputNotContains { actor, text }
+        }
         Rule::state_condition => {
             let mut inner = inner_cond.into_inner();
 
@@ -1293,6 +1306,12 @@ pub fn build_action(inner_action: Pair<Rule>) -> Action {
                 actor: "Terminal".to_string(),
                 command,
             }
+        }
+        Rule::set_cwd_action => {
+            let mut inner = inner_action.into_inner();
+            let path = inner.next().unwrap().into_inner().next().unwrap().as_str();
+            let path = unescape_string(path);
+            Action::SetCwd { path }
         }
         // --- System Actions ---
         Rule::system_action => {

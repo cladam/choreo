@@ -638,6 +638,7 @@ impl Visitor for Linter {
 
         match action {
             Action::Run { command, .. } => find_vars(command, &mut self.used_vars),
+            Action::SetCwd { path } => find_vars(path, &mut self.used_vars),
             Action::CreateFile { path, content } => {
                 find_vars(path, &mut self.used_vars);
                 find_vars(content, &mut self.used_vars);
@@ -700,6 +701,7 @@ impl Visitor for Linter {
             }
 
             Condition::OutputContains { text, .. }
+            | Condition::OutputNotContains { text, .. }
             | Condition::StderrContains(text)
             | Condition::OutputStartsWith(text)
             | Condition::OutputEndsWith(text)

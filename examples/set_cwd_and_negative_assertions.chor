@@ -1,0 +1,123 @@
+feature "Terminal set_cwd and output_not_contains"
+
+# Tests for the Terminal set_cwd action and output_not_contains condition.
+# set_cwd sets the working directory for all subsequent Terminal run commands.
+# output_not_contains is a negative assertion that passes when a substring is absent.
+
+var WORKDIR = "/tmp"
+
+scenario "set_cwd changes working directory" {
+    test SetCwdAbsolute "set_cwd with an absolute path" {
+        given:
+            Test can_start
+        when:
+            Terminal set_cwd "/tmp"
+        then:
+            Terminal last_command succeeded
+    }
+
+    test VerifyAbsoluteCwd "pwd reflects the new working directory" {
+        given:
+            Test has_succeeded SetCwdAbsolute
+        when:
+            Terminal run "pwd"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "/tmp"
+    }
+
+    test SetCwdVariable "set_cwd with variable substitution" {
+        given:
+            Test has_succeeded VerifyAbsoluteCwd
+        when:
+            Terminal set_cwd "${WORKDIR}"
+        then:
+            Terminal last_command succeeded
+    }
+
+    test RunAfterSetCwd "commands run in the set_cwd directory" {
+        given:
+            Test has_succeeded SetCwdVariable
+        when:
+            Terminal run "pwd"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "tmp"
+    }
+}
+
+scenario "output_not_contains negative assertions" {
+    test NotContainsPass "passes when substring is absent" {
+        given:
+            Test can_start
+        when:
+            Terminal run "echo 'hello world'"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "hello"
+            Terminal output_not_contains "ERROR"
+            Terminal output_not_contains "FATAL"
+    }
+
+    test NotContainsWithVariable "works with variable substitution" {
+        given:
+            Test has_succeeded NotContainsPass
+        when:
+            Terminal run "echo 'all systems operational'"
+        then:
+            Terminal last_command succeeded
+            Terminal output_not_contains "${WORKDIR}"
+    }
+
+    test CombinedAssertions "positive and negative assertions together" {
+        given:
+            Test has_succeeded NotContainsWithVariable
+        when:
+            Terminal run "echo 'status: OK'"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "OK"
+            Terminal output_not_contains "FAIL"
+            Terminal output_not_contains "ERROR"
+            Terminal output_not_contains "WARN"
+    }
+}
+
+scenario "set_cwd and output_not_contains combined" {
+    test SetupDir "create a temp directory and set_cwd to it" {
+        given:
+            Test can_start
+        when:
+            FileSystem create_dir "/tmp/choreo_set_cwd_test"
+            Terminal set_cwd "/tmp/choreo_set_cwd_test"
+        then:
+            Terminal last_command succeeded
+    }
+
+    test CreateAndVerify "create a file and verify contents" {
+        given:
+            Test has_succeeded SetupDir
+        when:
+            Terminal run "echo 'test data' > output.txt && cat output.txt"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "test data"
+            Terminal output_not_contains "No such file"
+    }
+
+    test ListDirectory "list files in the set_cwd directory" {
+        given:
+            Test has_succeeded CreateAndVerify
+        when:
+            Terminal run "ls"
+        then:
+            Terminal last_command succeeded
+            Terminal output_contains "output.txt"
+    }
+
+    after {
+        FileSystem delete_dir "/tmp/choreo_set_cwd_test"
+    }
+}
+
+

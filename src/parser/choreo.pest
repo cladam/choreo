@@ -94,6 +94,7 @@ port_is_closed_condition       = { "port_is_closed" ~ number }
 action = {
     system_action |
     filesystem_action |
+    set_cwd_action |
     run_action |
     web_action
 }
@@ -117,6 +118,7 @@ filesystem_condition              = { "FileSystem" ~ (
 
 // --- Terminal Conditions ---
 terminal_condition                = { "Terminal" ~ (
+    output_not_contains_condition |
     output_contains_condition |
     output_matches_condition |
     last_command_succeeded_cond |
@@ -176,6 +178,7 @@ json_path_equals_condition        = { "json_path" ~ "at" ~ non_empty_string ~ "e
 json_path_capture_condition       = { "json_path" ~ "at" ~ non_empty_string ~ "as" ~ identifier }
 
 // Terminal-specific condition parts
+output_not_contains_condition     = { "output_not_contains" ~ non_empty_string }
 output_contains_condition         = { "output_contains" ~ non_empty_string }
 output_matches_condition          = { "output_matches" ~ non_empty_string ~ ("as" ~ identifier)? }
 last_command_succeeded_cond       = { "last_command" ~ "succeeded" }
@@ -199,6 +202,7 @@ response_body_matches_condition      = { "response_body_matches" ~ string ~ ("as
 response_body_equals_json            = { "response_body_equals_json" ~ non_empty_string ~ ("ignore_fields" ~ "[" ~ (string ~ ("," ~ string)*)? ~ "]")? }
 
 // Action Types
+set_cwd_action                    = { "Terminal" ~ "set_cwd" ~ non_empty_string }
 run_action                        = { "Terminal" ~ "run" ~ non_empty_string }
 web_action                        = { "Web" ~ web_action_type }
 web_action_type = {

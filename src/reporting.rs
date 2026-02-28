@@ -107,6 +107,7 @@ pub fn generate_choreo_report(
 fn format_action_for_report(action: &Action) -> String {
     match action {
         Action::Run { actor, command } => format!("{} runs '{}'", actor, command),
+        Action::SetCwd { path } => format!("Terminal set_cwd '{}'", path),
         Action::Pause { duration } => format!("duration of '{}'", duration),
         Action::Log { message } => format!("logs '{}'", message),
         Action::Timestamp { variable } => format!("timestamp at ({})", variable),

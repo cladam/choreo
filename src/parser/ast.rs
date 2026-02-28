@@ -248,6 +248,10 @@ pub enum Condition {
         actor: String,
         text: String,
     },
+    OutputNotContains {
+        actor: String,
+        text: String,
+    },
     OutputMatches {
         actor: String,
         regex: String,
@@ -386,6 +390,9 @@ pub enum Action {
     Run {
         actor: String,
         command: String,
+    },
+    SetCwd {
+        path: String,
     },
     // --- Filesystem Actions ---
     CreateFile {

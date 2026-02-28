@@ -127,6 +127,32 @@ impl TerminalBackend {
     ) -> bool {
         let action = substitute_variables_in_action(action, _env_vars);
         match action {
+            Action::SetCwd { path } => {
+                let new_path = self.cwd.join(&path);
+                if new_path.is_dir() {
+                    self.cwd = new_path.canonicalize().unwrap_or_else(|_| new_path.clone());
+                    *last_exit_code = Some(0);
+                    self.last_stdout.clear();
+                    self.last_stderr.clear();
+                    if verbose {
+                        colours::info(&format!(
+                            "[TERMINAL] Working directory set to: {}",
+                            self.cwd.display()
+                        ));
+                    }
+                } else {
+                    *last_exit_code = Some(1);
+                    self.last_stdout.clear();
+                    self.last_stderr = format!("set_cwd: no such directory: {}", path);
+                    if verbose {
+                        eprintln!(
+                            "[TERMINAL] set_cwd failed: directory does not exist: {}",
+                            path
+                        );
+                    }
+                }
+                true
+            }
             Action::Run { command, .. } => {
                 // Special handling for bare 'cd' to update the backend's CWD.
                 // Chained commands (e.g. "cd /tmp && git init") are passed
