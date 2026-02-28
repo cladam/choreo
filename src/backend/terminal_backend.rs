@@ -128,10 +128,16 @@ impl TerminalBackend {
         let action = substitute_variables_in_action(action, _env_vars);
         match action {
             Action::Run { command, .. } => {
-                // Special handling for 'cd' to update the backend's CWD.
+                // Special handling for bare 'cd' to update the backend's CWD.
+                // Chained commands (e.g. "cd /tmp && git init") are passed
+                // through to the shell so that && / || / ; are honoured.
                 let mut choreo_command = command.clone();
                 let trimmed = choreo_command.trim();
-                if trimmed.starts_with("cd ") {
+                if trimmed.starts_with("cd ")
+                    && !trimmed.contains("&&")
+                    && !trimmed.contains("||")
+                    && !trimmed.contains(";")
+                {
                     let path_str = trimmed.strip_prefix("cd ").unwrap().trim();
                     let new_path = self.cwd.join(path_str);
                     if new_path.is_dir() {
