@@ -26,6 +26,8 @@ reports
 examples/temp_test_dir
 test_result/**
 
+# Don't commit local files for internal testing
 examples/web_cart_scenario.chor
 examples/tbdflow*
+
 examples/data/
