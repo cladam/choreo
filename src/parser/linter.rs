@@ -70,6 +70,10 @@ impl DiagnosticCodes {
         code: "W010",
         message: "Variable is defined but never used.",
     };
+    pub const UNUSED_ACTOR: DiagnosticRule = DiagnosticRule {
+        code: "W019",
+        message: "Actor is declared but never used.",
+    };
     pub const HTTP_URL_IS_LOCALHOST: DiagnosticRule = DiagnosticRule {
         code: "W011",
         message: "URL points to localhost. This may not be accessible in all environments.",
@@ -129,6 +133,8 @@ struct Linter {
     diagnostics: Vec<Diagnostic>,
     defined_vars: HashSet<String>,
     used_vars: HashSet<String>,
+    defined_actors: HashSet<String>,
+    used_actors: HashSet<String>,
     seen_scenario_names: HashSet<String>,
     current_headers: HashMap<String, String>,
 }
@@ -139,6 +145,8 @@ impl Linter {
             diagnostics: Vec::new(),
             defined_vars: HashSet::new(),
             used_vars: HashSet::new(),
+            defined_actors: HashSet::new(),
+            used_actors: HashSet::new(),
             seen_scenario_names: HashSet::new(),
             current_headers: HashMap::new(),
         }
@@ -411,6 +419,26 @@ impl Visitor for Linter {
                 Severity::Warning,
             );
         }
+
+        // Fourth pass: check for unused actors
+        let unused_actors: Vec<String> = self
+            .defined_actors
+            .difference(&self.used_actors)
+            .cloned()
+            .collect();
+        for actor in unused_actors {
+            self.add_diagnostic(
+                &DiagnosticCodes::UNUSED_ACTOR,
+                &format!(
+                    "{}: {} ({})",
+                    DiagnosticCodes::UNUSED_ACTOR.code,
+                    DiagnosticCodes::UNUSED_ACTOR.message,
+                    actor
+                ),
+                0,
+                Severity::Warning,
+            );
+        }
     }
 
     fn visit_statement(&mut self, stmt: &Statement) {
@@ -637,33 +665,54 @@ impl Visitor for Linter {
         };
 
         match action {
-            Action::Run { command, .. } => find_vars(command, &mut self.used_vars),
-            Action::SetCwd { path } => find_vars(path, &mut self.used_vars),
+            Action::Run { command, .. } => {
+                self.used_actors.insert("Terminal".to_string());
+                find_vars(command, &mut self.used_vars);
+            }
+            Action::SetCwd { path } => {
+                self.used_actors.insert("Terminal".to_string());
+                find_vars(path, &mut self.used_vars);
+            }
             Action::CreateFile { path, content } => {
+                self.used_actors.insert("FileSystem".to_string());
                 find_vars(path, &mut self.used_vars);
                 find_vars(content, &mut self.used_vars);
             }
             Action::DeleteFile { path }
             | Action::CreateDir { path }
             | Action::DeleteDir { path } => {
+                self.used_actors.insert("FileSystem".to_string());
+                find_vars(path, &mut self.used_vars);
+            }
+            Action::ReadFile { path, .. } => {
+                self.used_actors.insert("FileSystem".to_string());
                 find_vars(path, &mut self.used_vars);
             }
             Action::HttpSetHeader { key, value } | Action::HttpSetCookie { key, value } => {
+                self.used_actors.insert("Web".to_string());
                 find_vars(key, &mut self.used_vars);
                 find_vars(value, &mut self.used_vars);
                 self.lint_header(key, value);
             }
             Action::HttpGet { url } | Action::HttpDelete { url } => {
+                self.used_actors.insert("Web".to_string());
                 find_vars(url, &mut self.used_vars);
                 self.lint_url(url);
             }
             Action::HttpPost { url, body }
             | Action::HttpPut { url, body }
             | Action::HttpPatch { url, body } => {
+                self.used_actors.insert("Web".to_string());
                 find_vars(url, &mut self.used_vars);
                 find_vars(body, &mut self.used_vars);
                 self.lint_url(url);
                 self.lint_http_body(body);
+            }
+            Action::Pause { .. }
+            | Action::Log { .. }
+            | Action::Timestamp { .. }
+            | Action::Uuid { .. } => {
+                self.used_actors.insert("System".to_string());
             }
             // Other actions...
             _ => {}
@@ -706,10 +755,12 @@ impl Visitor for Linter {
             | Condition::OutputStartsWith(text)
             | Condition::OutputEndsWith(text)
             | Condition::OutputEquals(text) => {
+                self.used_actors.insert("Terminal".to_string());
                 find_cond_vars(text);
             }
 
             Condition::OutputMatches { regex, .. } => {
+                self.used_actors.insert("Terminal".to_string());
                 find_cond_vars(regex);
             }
 
@@ -743,10 +794,12 @@ impl Visitor for Linter {
             | Condition::DirDoesNotExist { path }
             | Condition::FileIsEmpty { path }
             | Condition::FileIsNotEmpty { path } => {
+                self.used_actors.insert("FileSystem".to_string());
                 find_cond_vars(path);
             }
 
             Condition::ResponseStatusIs(status) => {
+                self.used_actors.insert("Web".to_string());
                 // Invalid HTTP status code
                 if !VALID_HTTP_STATUS_RANGE.contains(status) {
                     self.add_diagnostic(
@@ -763,6 +816,7 @@ impl Visitor for Linter {
                 }
             }
             Condition::ResponseStatusIsIn(statuses) => {
+                self.used_actors.insert("Web".to_string());
                 for status in statuses {
                     if !VALID_HTTP_STATUS_RANGE.contains(status) {
                         self.add_diagnostic(
@@ -869,6 +923,9 @@ impl Visitor for Linter {
         let mut seen_actors = HashSet::new();
 
         for actor in actors {
+            // Track declared actors for unused-actor detection
+            self.defined_actors.insert(actor.clone());
+
             //println!("actor: {}", actor);
             // Check for duplicate actors
             if !seen_actors.insert(actor.clone()) {

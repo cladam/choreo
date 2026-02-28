@@ -51,10 +51,18 @@ pub fn generate_choreo_report(
             });
         }
 
-        for action in &scenario.after {
-            let substituted_action = substitute_variables_in_action(action, env_vars);
+        for step in &scenario.after {
+            let name = match step {
+                crate::parser::ast::WhenStep::Action(action) => {
+                    let substituted_action = substitute_variables_in_action(action, env_vars);
+                    format_action_for_report(&substituted_action)
+                }
+                crate::parser::ast::WhenStep::TaskCall(tc) => {
+                    format!("task {}()", tc.name)
+                }
+            };
             after_hooks.push(AfterHook {
-                name: format_action_for_report(&substituted_action),
+                name,
                 result: StepResult {
                     status: "passed".to_string(),
                     duration_in_ms: 0,

@@ -50,7 +50,7 @@ parallel_keyword                  = { "parallel" }
 scenario_body_item = { test | foreach_block }
 scenario_body = { scenario_body_item* }
 scenario_def = {  parallel_keyword? ~ "scenario" ~ string ~ "{" ~ scenario_body ~ after_block? ~ "}" }
-after_block                       = { "after" ~ "{" ~ action+ ~ "}" }
+after_block                       = { "after" ~ "{" ~ (task_call | action)+ ~ "}" }
 
 foreach_block = { "foreach" ~ identifier ~ "in" ~ (variable_ref | identifier) ~ "{" ~ test+ ~ "}" }
 variable_ref = { "${" ~ identifier ~ ( ("[" ~ number ~ "]") | ("." ~ identifier) )* ~ "}" }

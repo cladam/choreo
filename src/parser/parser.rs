@@ -302,6 +302,7 @@ fn build_task_arg(pair: Pair<Rule>) -> TaskArg {
 }
 
 // This function builds the actions
+#[allow(dead_code)]
 fn build_actions(pairs: Pairs<Rule>) -> Vec<Action> {
     pairs
         .map(|pair| {
@@ -384,7 +385,7 @@ fn build_scenario(pair: Pair<Rule>) -> Statement {
             }
             Rule::after_block => {
                 scenario_spans.after_span = Some(span_info);
-                scenario.after = build_actions(item.into_inner());
+                scenario.after = build_when_steps(item.into_inner());
             }
             _ => {}
         }

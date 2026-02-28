@@ -749,19 +749,42 @@ fn run_scenario(
         if all_done {
             if !scenario.after.is_empty() {
                 colours::info("\nRunning after block...");
-                for action in &scenario.after {
-                    let substituted_action = substitute_variables_in_action(action, &mut variables);
-                    execute_action(
-                        &substituted_action,
-                        &mut terminal_backend,
-                        &fs_backend,
-                        &mut web_backend,
-                        &mut system_backend,
-                        &mut last_exit_code,
-                        settings.timeout_seconds,
-                        &mut variables,
-                        verbose,
-                    );
+                for step in &scenario.after {
+                    match step {
+                        WhenStep::Action(action) => {
+                            let substituted_action =
+                                substitute_variables_in_action(action, &mut variables);
+                            execute_action(
+                                &substituted_action,
+                                &mut terminal_backend,
+                                &fs_backend,
+                                &mut web_backend,
+                                &mut system_backend,
+                                &mut last_exit_code,
+                                settings.timeout_seconds,
+                                &mut variables,
+                                verbose,
+                            );
+                        }
+                        WhenStep::TaskCall(tc) => {
+                            let (task_actions, _) = expand_task_call(tc, tasks, &variables);
+                            for action in task_actions {
+                                let substituted_action =
+                                    substitute_variables_in_action(&action, &mut variables);
+                                execute_action(
+                                    &substituted_action,
+                                    &mut terminal_backend,
+                                    &fs_backend,
+                                    &mut web_backend,
+                                    &mut system_backend,
+                                    &mut last_exit_code,
+                                    settings.timeout_seconds,
+                                    &mut variables,
+                                    verbose,
+                                );
+                            }
+                        }
+                    }
                 }
             }
             break;

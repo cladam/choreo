@@ -197,7 +197,7 @@ pub struct Scenario {
     pub name: String,
     pub tests: Vec<TestCase>,
     pub body: Vec<ScenarioBodyItem>,
-    pub after: Vec<Action>,
+    pub after: Vec<WhenStep>,
     pub parallel: bool,
     pub span: Option<Span>,
     pub scenario_span: Option<ScenarioSpan>,

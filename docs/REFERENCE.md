@@ -82,6 +82,10 @@ A block that provides a common set of readable `given` steps that apply to all s
 run **once** before all scenarios (not before each scenario), and any side-effects they produce — such as environment
 variable assignments or HTTP headers — are inherited by every subsequent scenario. Think of it as suite-level setup.
 
+> **Note:** `Terminal set_cwd` in a background block will **not** persist to scenarios. Each scenario creates its own
+> isolated terminal backend (with its own working directory) for test isolation. If you need a shared working directory,
+> use a `var` and reference it with `Terminal set_cwd "${WORKDIR}"` at the start of each scenario instead.
+
 **Example:**
 
 ```
@@ -155,8 +159,9 @@ test FileIsCreated "it creates a new file with content" {
 
 #### `after`
 
-An optional block inside a `scenario` that contains a list of cleanup actions. These actions are executed after all
-`test` blocks within that scenario have completed, regardless of whether they passed or failed.
+An optional block inside a `scenario` that contains a list of cleanup actions and/or task calls. These are executed
+after
+all `test` blocks within that scenario have completed, regardless of whether they passed or failed.
 
 **Example:**
 
@@ -165,7 +170,8 @@ scenario "..." {
     # ... tests ...
 
     after {  
-        FileSystem delete_file "${FILENAME}"  
+        FileSystem delete_file "${FILENAME}"
+        cleanup_repo("${REPO_DIR}")
     }  
 }
 ```
