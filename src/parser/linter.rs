@@ -24,8 +24,7 @@ impl DiagnosticCodes {
     };
     pub const INVALID_HEADER_NAME: DiagnosticRule = DiagnosticRule {
         code: "E003",
-        message:
-            "Invalid HTTP header name. Header names cannot contain spaces or special characters.",
+        message: "Invalid HTTP header name. Header names cannot contain spaces or special characters.",
     };
     pub const INVALID_JSON_BODY: DiagnosticRule = DiagnosticRule {
         code: "E004",
@@ -86,7 +85,10 @@ impl DiagnosticCodes {
         code: "W013",
         message: "HTTP header contains a common typo.",
     };
-    pub const CONFLICTING_HEADER: DiagnosticRule = DiagnosticRule { code: "W014", message: "Conflicting HTTP header. A header like 'Content-Type' should only be set once per request." };
+    pub const CONFLICTING_HEADER: DiagnosticRule = DiagnosticRule {
+        code: "W014",
+        message: "Conflicting HTTP header. A header like 'Content-Type' should only be set once per request.",
+    };
     pub const LARGE_REQUEST_BODY: DiagnosticRule = DiagnosticRule {
         code: "W015",
         message: "HTTP request body is very large and may cause performance issues or timeouts.",

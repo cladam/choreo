@@ -376,10 +376,7 @@ impl WebBackend {
                     if verbose {
                         println!(
                             "[WEB_BACKEND] Response time: {}ms ({:.3}s), expected below: {:.3}s -> {}",
-                            last_response.response_time_ms,
-                            actual_time_seconds,
-                            duration,
-                            result
+                            last_response.response_time_ms, actual_time_seconds, duration, result
                         );
                     }
                     result

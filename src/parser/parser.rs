@@ -7,8 +7,8 @@ use crate::parser::helpers::{
     substitute_string, substitute_variables_in_given_step, substitute_variables_in_test_case,
     substitute_variables_in_then_step, substitute_variables_in_when_step,
 };
-use pest::iterators::{Pair, Pairs};
 use pest::Parser;
+use pest::iterators::{Pair, Pairs};
 use pest_derive::Parser;
 use std::collections::HashMap;
 

@@ -164,6 +164,7 @@ python3 scripts/parse_test_report.py --json reports/choreo_test_report_20260227_
 
 The journey ahead includes:
 
+* [x] Support block comments
 * [ ] A dedicated editor with syntax highlighting and linting.
 
 ### **Contributing**

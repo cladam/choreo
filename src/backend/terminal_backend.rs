@@ -11,7 +11,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
-use terminal_size::{terminal_size, Height, Width};
+use terminal_size::{Height, Width, terminal_size};
 
 pub struct TerminalBackend {
     pty_output_receiver: Receiver<String>,

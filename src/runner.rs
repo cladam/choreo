@@ -50,7 +50,7 @@ impl TestRunner {
     pub fn run(&mut self, suite_name: &str, scenarios: &[Scenario]) -> Result<(), AppError> {
         let mut settings = TestSuiteSettings::default();
         let mut feature_name = "Choreo Test Feature".to_string(); // Default name
-                                                                  //let mut scenarios: Vec<crate::parser::ast::Scenario> = Vec::new();
+        //let mut scenarios: Vec<crate::parser::ast::Scenario> = Vec::new();
 
         for s in &self.test_suite.statements {
             match s {
@@ -806,7 +806,9 @@ fn run_scenario(
             thread::sleep(Duration::from_millis(50));
             let elapsed_since_suite_start = scenario_start_time.elapsed();
             if elapsed_since_suite_start > test_timeout + Duration::from_secs(1) {
-                colours::warn("\nWarning: No progress was made in the last loop iteration, and the scenario is not complete. Marking remaining tests as skipped.");
+                colours::warn(
+                    "\nWarning: No progress was made in the last loop iteration, and the scenario is not complete. Marking remaining tests as skipped.",
+                );
                 let mut states = test_states.lock().unwrap();
                 for test in &expanded_tests {
                     let key = scoped_name(&scenario.name, &test.name);
