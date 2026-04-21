@@ -31,3 +31,6 @@ examples/web_cart_scenario.chor
 examples/tbdflow*
 
 examples/data/
+
+# tbdflow intent log (local-only, never committed)
+.tbdflow-intent.json

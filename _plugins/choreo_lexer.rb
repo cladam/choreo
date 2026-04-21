@@ -53,7 +53,10 @@ module Rouge
       )).freeze
 
       state :root do
-        # Comments
+        # Block comments (/* ... */, supports nesting)
+        rule %r(/\*), Comment::Multiline, :block_comment
+
+        # Line comments
         rule %r/#.*$/, Comment::Single
 
         # Whitespace
@@ -94,6 +97,13 @@ module Rouge
         rule %r/"/, Str::Double, :pop!
         rule %r/\$\{.*?}/, Name::Variable
         rule %r/[^"]+/, Str::Double
+      end
+
+      state :block_comment do
+        rule %r(/\*), Comment::Multiline, :block_comment  # nested
+        rule %r(\*/), Comment::Multiline, :pop!
+        rule %r([^*/]+), Comment::Multiline
+        rule %r([*/]), Comment::Multiline
       end
     end
   end

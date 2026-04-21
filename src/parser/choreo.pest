@@ -3,7 +3,8 @@
 
 // Ignore whitespace and comments.
 WHITESPACE                        = _{ " " | "\t" | NEWLINE }
-COMMENT                           = _{ "#" ~ (!NEWLINE ~ ANY)* }
+COMMENT                           = _{ block_comment | "#" ~ (!NEWLINE ~ ANY)* }
+block_comment                     = _{ "/*" ~ (block_comment | (!"*/" ~ ANY))* ~ "*/" }
 
 // choreo DSL is a series of statements.
 grammar                           = { SOI ~ statement* ~ EOI }

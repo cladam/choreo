@@ -265,10 +265,6 @@ scenario "API Health" {
 
 Tasks support string, number, and duration arguments. For a complete guide on using tasks effectively, see
 [Tasks and Drivers](../tasks-and-drivers).
-}  
-}
-
-```
 
 ## Test Blocks: Given, When, Then
 
@@ -356,8 +352,10 @@ scenario "Adding multiple items to the cart" {
     # 1. The foreach loop iterates over the PRODUCTS array.
     foreach ITEM in ${PRODUCTS} {
 
-        # 2. A test block is defined inside. The loop variable `ITEM`
-        #    is used to create a unique and descriptive test name.
+        /*
+          2. A test block is defined inside. The loop variable `ITEM`
+          is used to create a unique and descriptive test name.
+        */
         test "AddToCart_${ITEM}" "Add ${ITEM} to cart" {
             given:
                 Test can_start

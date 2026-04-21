@@ -39,8 +39,11 @@ background {
 
 var URL = "https://httpbin.org/bearer"
 var BEARING_TOKEN = "choreo-token-xyz"
-# BEARING_TOKEN should come from an environment variable or secret manager in real scenarios
-# Example: env BEARING_TOKEN
+
+/*
+  BEARING_TOKEN should come from an environment variable or secret manager in real scenarios
+  Example: env BEARING_TOKEN
+*/
 
 scenario "Health check for a web API endpoint" {
     test HealthCheck "Verify the API endpoint is healthy" {
