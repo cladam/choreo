@@ -1048,7 +1048,7 @@ pub fn build_condition_from_specific(inner_cond: Pair<Rule>) -> Condition {
             let statuses: Vec<u16> = inner_cond
                 .into_inner()
                 .filter(|p| p.as_rule() == Rule::number)
-                .map(|p| p.as_str().parse().unwrap())
+                .map(|p| p.as_str().parse::<u16>().unwrap())
                 .collect();
             Condition::ResponseStatusIsIn(statuses)
         }

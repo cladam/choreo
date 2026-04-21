@@ -9,30 +9,28 @@ license = "MIT"
 description = "DSL for BDD type testing."
 keywords = ["dsl", "bdd", "testing", "cli"]
 categories = ["command-line-utilities", "development-tools"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 pest = "2.8.6"
-pest_derive = "2.8.5"
+pest_derive = "2.8.6"
 strip-ansi-escapes = "0.2.1"
-terminal_size = "0.4.3"
-clap = { version = "4.5.60", features = ["derive"] }
+terminal_size = "0.4.4"
+clap = { version = "4.6.1", features = ["derive"] }
 colored = "3.1.1"
-uuid = { version = "1.21.0", features = ["v4"] }
+uuid = { version = "1.23.1", features = ["v4"] }
 thiserror = "2.0.18"
-anyhow = "1.0.100"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 jsonpath_lib2 = "0.3.3"
-ureq = { version = "3.2.0", features = ["json", "charset"] }
-chrono = { version = "0.4.43", features = ["serde"] }
+ureq = { version = "3.3.0", features = ["json", "charset"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 portable-pty = "0.9.0"
-rayon = "1.11.0"
+rayon = "1.12.0"
 regex = "1.12.3"
-itertools = "0.14.0"
-self_update = "0.42.0"
-sysinfo = "0.38.2"
-which = "8.0.0"
+self_update = "0.44.0"
+sysinfo = "0.38.4"
+which = "8.0.2"
 [target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
 openssl-sys = { version = "0.9.109", features = ["vendored"] }
 
