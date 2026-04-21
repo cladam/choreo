@@ -136,6 +136,7 @@ pub enum ThenStep {
 // All possible top-level statements in a .chor file.
 #[derive(Debug, Clone)]
 pub enum Statement {
+    Import(String),
     SettingsDef(TestSuiteSettings),
     BackgroundDef(Vec<GivenStep>),
     EnvDef(Vec<String>),

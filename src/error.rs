@@ -19,6 +19,9 @@ pub enum AppError {
     #[error("File not found: {0}")]
     FileNotFound(String),
 
+    #[error("Import error: {0}")]
+    ImportError(String),
+
     #[error("Unsupported feature: {0}")]
     Unsupported(String),
 

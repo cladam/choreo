@@ -1,0 +1,37 @@
+/*
+    Test file demonstrating the import feature
+    Imports shared git tasks from a separate file
+*/
+
+import "shared/git_tasks.chor"
+
+feature "Import Feature Demo"
+actors: Terminal
+
+var REPO_DIR = "/tmp/choreo_import_test_repo"
+var BARE_REPO = "/tmp/choreo_import_test_bare"
+
+scenario "Shared tasks from import work" {
+    test Setup "Initialise git repository using imported task" {
+        given:
+            Test can_start
+        when:
+            init_repo("${REPO_DIR}", "${BARE_REPO}")
+        then:
+            Terminal last_command succeeded
+    }
+
+    test VerifyClean "Verify working tree is clean using imported task" {
+        given:
+            Test has_succeeded Setup
+        when:
+            Terminal run "cd ${REPO_DIR} && git status"
+        then:
+            verify_working_tree_clean()
+    }
+
+    after {
+        cleanup_repo("${REPO_DIR}", "${BARE_REPO}")
+    }
+}
+

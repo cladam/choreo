@@ -59,6 +59,23 @@ should contain exactly one `feature`.
 feature "User account management via the CLI"
 ```
 
+#### `import`
+
+Imports task and variable definitions from another `.chor` file. This enables sharing common setup, teardown, and
+verification drivers across multiple test files without copy-pasting.
+
+The path is resolved **relative to the importing file's directory**. Only `task` and `var` definitions are imported;
+`feature`, `actors`, `settings`, and `scenario` declarations in the imported file are ignored.
+
+**Example:**
+
+```choreo
+import "shared/git_tasks.chor"
+```
+
+See the full [Imports & Shared Tasks]({{ '/docs/imports' | relative_url }}) documentation for details on nested imports,
+circular import protection, and best practices.
+
 #### `settings`
 
 A block for configuring the behavior of the choreo test runner for the current file.

@@ -31,6 +31,7 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
 
         statements.push(match pair.as_rule() {
             // Now this will correctly match on the inner rule.
+            Rule::import_def => build_import_def(pair),
             Rule::actors_def => build_actors_def(pair),
             Rule::settings_def => build_settings_def(pair),
             Rule::env_def => build_env_def(pair),
@@ -44,6 +45,20 @@ pub fn parse(source: &str) -> Result<TestSuite, pest::error::Error<Rule>> {
     }
 
     Ok(TestSuite { statements })
+}
+
+// Helper function for an import definition.
+fn build_import_def(pair: Pair<Rule>) -> Statement {
+    let path = pair
+        .into_inner()
+        .next()
+        .unwrap()
+        .into_inner()
+        .next()
+        .unwrap()
+        .as_str()
+        .to_string();
+    Statement::Import(path)
 }
 
 // Helper function for a background definition.

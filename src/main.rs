@@ -8,7 +8,8 @@ use choreo::parser::{linter, parser};
 use choreo::runner::TestRunner;
 use clap::Parser;
 use colored::Colorize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use std::{env, fs};
 
 const INIT_TEMPLATE: &str = r#"# A test suite for your application
@@ -58,6 +59,83 @@ scenario "User can perform a basic workflow" {
     }
 }
 "#;
+
+/// Recursively resolves `import` statements from a parsed TestSuite.
+fn resolve_imports(
+    statements: &[Statement],
+    base_dir: &Path,
+    visited: &mut HashSet<String>,
+    verbose: bool,
+) -> Result<Vec<Statement>, AppError> {
+    let mut imported_statements: Vec<Statement> = Vec::new();
+
+    for s in statements {
+        if let Statement::Import(import_path) = s {
+            let resolved_path = base_dir.join(import_path);
+            let canonical = resolved_path.canonicalize().map_err(|_| {
+                AppError::ImportError(format!(
+                    "Import path not found: '{}' (resolved to '{}')",
+                    import_path,
+                    resolved_path.display()
+                ))
+            })?;
+
+            let canonical_str = canonical.to_string_lossy().to_string();
+
+            if !visited.insert(canonical_str.clone()) {
+                if verbose {
+                    colours::warn(&format!("Skipping already-imported file: {}", import_path));
+                }
+                continue;
+            }
+
+            if verbose {
+                colours::info(&format!("Importing: {}", canonical.display()));
+            }
+
+            let source = fs::read_to_string(&canonical).map_err(|_| {
+                AppError::ImportError(format!(
+                    "Failed to read imported file: '{}'",
+                    canonical.display()
+                ))
+            })?;
+
+            let imported_suite = parser::parse(&source).map_err(|e| {
+                AppError::ImportError(format!(
+                    "Parse error in imported file '{}': {}",
+                    import_path, e
+                ))
+            })?;
+
+            // Determine the imported file's directory for nested imports
+            let import_base_dir = canonical.parent().unwrap_or(base_dir);
+
+            // Recursively resolve imports within the imported file
+            let nested = resolve_imports(
+                &imported_suite.statements,
+                import_base_dir,
+                visited,
+                verbose,
+            )?;
+            imported_statements.extend(nested);
+
+            // Collect task definitions and variable definitions from the imported file
+            for imported_stmt in &imported_suite.statements {
+                match imported_stmt {
+                    Statement::TaskDef(_) | Statement::VarDef(_, _) => {
+                        imported_statements.push(imported_stmt.clone());
+                    }
+                    _ => {
+                        // Ignore non-portable statements (feature, scenario, settings, etc.)
+                        // from imported files, imports are for shared tasks and variables only.
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(imported_statements)
+}
 
 fn enhance_parse_error<E: ToString>(err: E, source: &str) -> String {
     let base = err.to_string();
@@ -137,6 +215,40 @@ pub fn run(cli: Cli) -> Result<(), AppError> {
                 .parent()
                 .filter(|p| !p.as_os_str().is_empty())
                 .unwrap_or_else(|| std::path::Path::new("."));
+
+            // Resolve imports first to make imported tasks/vars available
+            {
+                let mut visited = HashSet::new();
+                let imported_statements =
+                    resolve_imports(&test_suite.statements, &base_dir, &mut visited, verbose)?;
+
+                for s in imported_statements {
+                    match s {
+                        Statement::TaskDef(task_def) => {
+                            tasks.insert(task_def.name.clone(), task_def.clone());
+                        }
+                        Statement::VarDef(name, value) => match value {
+                            Value::Array(arr) => {
+                                // Convert array to JSON string for proper substitution
+                                let json_array = serde_json::to_string(
+                                    &arr.iter().map(|v| v.as_string()).collect::<Vec<_>>(),
+                                )
+                                .unwrap_or_else(|_| "[]".to_string());
+                                let substituted_value = substitute_string(&json_array, &env_vars);
+                                env_vars.insert(name.clone(), substituted_value.clone());
+                                //env_vars.insert(format!("${{{}}}", name), substituted_value);
+                            }
+                            _ => {
+                                let substituted_value =
+                                    substitute_string(&value.as_string(), &env_vars);
+                                env_vars.insert(name.clone(), substituted_value.clone());
+                                //env_vars.insert(format!("${{{}}}", name), substituted_value);
+                            }
+                        },
+                        _ => {} // Ignore other statement types
+                    }
+                }
+            }
 
             for s in &test_suite.statements {
                 match s {

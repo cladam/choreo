@@ -322,6 +322,36 @@ scenario "User API" {
 }
 ```
 
+## Sharing Tasks Across Files
+
+When you have tasks that are used across multiple `.chor` files (such as repository setup, cleanup routines, or common
+verification drivers) you can extract them into a shared file and use the `import` keyword to bring them into scope:
+
+```choreo
+import "shared/git_tasks.chor"
+
+feature "Branch Naming Conventions"
+actors: Terminal
+
+scenario "Branch creation" {
+    test Setup "Initialise repository" {
+        given:
+            Test can_start
+        when:
+            init_repo("${REPO_DIR}", "${BARE_REPO}")    # defined in git_tasks.chor
+        then:
+            Terminal last_command succeeded
+    }
+
+    after {
+        cleanup_repo("${REPO_DIR}", "${BARE_REPO}")     # defined in git_tasks.chor
+    }
+}
+```
+
+This eliminates copy-paste duplication and ensures that shared drivers are maintained in a single place. See the full
+[Imports & Shared Tasks]({{ '/docs/imports' | relative_url }}) documentation for details.
+
 ## Summary
 
 Tasks bring the best of both worlds to `choreo`:
@@ -330,6 +360,7 @@ Tasks bring the best of both worlds to `choreo`:
 - **Clean separation of concerns** — business intent vs implementation
 - **Reusability** — define once, use everywhere
 - **Maintainability** — change implementation in one place
+- **Shareability** — extract common tasks into shared files with `import`
 
 By using tasks effectively, your `.chor` files become living documentation that stakeholders can read and developers can
 execute — the true promise of Behaviour-Driven Development.

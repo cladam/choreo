@@ -1,0 +1,26 @@
+/*
+    Shared git tasks for CLI test suites
+    This file is imported by test files that need git repo setup/teardown.
+*/
+
+/* === SHARED TASK DEFINITIONS === */
+
+# Setup: initialise a bare repo and a working clone
+task init_repo(repo_dir, bare_repo) {
+    Terminal run "mkdir -p ${repo_dir} ${bare_repo}"
+    Terminal run "git init --bare ${bare_repo}"
+    Terminal run "git clone ${bare_repo} ${repo_dir}"
+    Terminal run "cd ${repo_dir} && git commit --allow-empty -m 'Initial commit'"
+}
+
+# Teardown: remove repo directories
+task cleanup_repo(repo_dir, bare_repo) {
+    Terminal run "rm -rf ${repo_dir} ${bare_repo}"
+}
+
+# Verify the working tree is clean
+task verify_working_tree_clean() {
+    Terminal last_command succeeded
+    Terminal output_contains "nothing to commit, working tree clean"
+}
+
