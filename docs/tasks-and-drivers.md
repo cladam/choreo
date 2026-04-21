@@ -129,10 +129,10 @@ Here's a full example demonstrating the power of tasks to separate business inte
 feature "Authentication Service SLA"
 actors: Web
 
-# ═══════════════════════════════════════════════════════════════════
-# IMPLEMENTATION LAYER (Drivers)
-# This is the "How" — hidden from stakeholders, executable by Choreo
-# ═══════════════════════════════════════════════════════════════════
+/*
+  === IMPLEMENTATION LAYER (Drivers) ===
+  This is the "How" — hidden from stakeholders, executable by Choreo
+*/
 
 task check_service_health(token, endpoint) {
     Web set_header "Authorization" "Bearer ${token}"
@@ -148,22 +148,22 @@ task verify_response_contains(expected_text) {
     Web response_body_contains "${expected_text}"
 }
 
-# ═══════════════════════════════════════════════════════════════════
-# BUSINESS SPECIFICATION LAYER
-# This is the "What" — derived directly from Acceptance Criteria
-# ═══════════════════════════════════════════════════════════════════
+/*
+  === BUSINESS SPECIFICATION LAYER ===
+  This is the "What" — derived directly from Acceptance Criteria
+*/
 
 scenario "Authentication Service Reliability" {
     
-    # ───────────────────────────────────────────────────────────────
-    # User Story: As a Platform Owner, I want the Authentication
-    # Service to be highly responsive so that our customers never
-    # experience delays during login.
-    #
-    # AC1: The service must authorize requests using a secure token.
-    # AC2: The service must respond with a success status.
-    # AC3: The response time must stay under a 2-second SLA.
-    # ───────────────────────────────────────────────────────────────
+    /**
+      User Story: As a Platform Owner, I want the Authentication
+      Service to be highly responsive so that our customers never
+      experience delays during login.
+    
+      AC1: The service must authorize requests using a secure token.
+      AC2: The service must respond with a success status.
+      AC3: The response time must stay under a 2-second SLA.
+    */
     
     test HealthSLA "Verify service responds within SLA" {
         given:
@@ -290,8 +290,10 @@ task authenticate_and_fetch_user_and_verify(token, user_id) {
 Add comments to explain what each task does, especially if the implementation is complex:
 
 ```choreo
-# Authenticates with the OAuth2 token endpoint and sets the bearer token.
-# This task handles the full OAuth2 client credentials flow.
+/*
+  Authenticates with the OAuth2 token endpoint and sets the bearer token.
+  This task handles the full OAuth2 client credentials flow.
+*/
 task oauth2_authenticate(client_id, client_secret) {
     Web set_header "Content-Type" "application/x-www-form-urlencoded"
     Web http_post "/oauth/token" "grant_type=client_credentials&client_id=${client_id}&client_secret=${client_secret}"

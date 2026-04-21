@@ -145,7 +145,7 @@ choreo run --file "examples/redirecting_output_tee.chor" --verbose
 
 #### Parse a JSON report
 
-Use the helper script to summarize a report or show failing steps. Requires only Python 3 (no external dependencies).
+Use the helper script to summarise a report or show failing steps. Requires only Python 3 (no external dependencies).
 
 ```bash
 # Parse the latest report in ./reports
@@ -165,6 +165,7 @@ python3 scripts/parse_test_report.py --json reports/choreo_test_report_20260227_
 The journey ahead includes:
 
 * [x] Support block comments
+* [x] Import statements
 * [ ] A dedicated editor with syntax highlighting and linting.
 
 ### **Contributing**
